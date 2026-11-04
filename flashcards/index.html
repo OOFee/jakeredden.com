@@ -224,6 +224,15 @@ img { max-width: 100%; }
 .deck .counts { display: flex; gap: 6px; margin-top: auto; padding-top: 16px; flex-wrap: wrap; }
 .chip { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
 .chip.due { background: color-mix(in srgb, var(--c, var(--accent)) 16%, transparent); color: color-mix(in srgb, var(--c, var(--accent)) 80%, var(--text)); }
+.chip.shared { background: color-mix(in srgb, var(--hard) 16%, transparent); color: color-mix(in srgb, var(--hard) 75%, var(--text)); }
+.chip.pub { background: color-mix(in srgb, var(--good) 15%, transparent); color: color-mix(in srgb, var(--good) 75%, var(--text)); }
+.catalog { display: grid; gap: 8px; max-height: 60vh; overflow: auto; }
+.cat-item { --c: var(--accent); display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 12px; align-items: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.cat-item .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); margin-top: 6px; }
+.cat-main { display: grid; gap: 2px; min-width: 0; }
+.cat-main b { overflow-wrap: anywhere; }
+.cat-preview { margin-top: 8px; }
+@media (max-width: 600px) { .cat-item { grid-template-columns: auto minmax(0, 1fr); } .cat-item .btn { grid-column: 2; justify-self: start; } }
 .chip.new { background: color-mix(in srgb, var(--easy) 14%, transparent); color: color-mix(in srgb, var(--easy) 85%, var(--text)); }
 .deck .go { position: absolute; right: 14px; bottom: 14px; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--c); color: #fff; opacity: 0; transform: translateY(6px); transition: opacity .25s, transform .25s var(--ease); border: 0; }
 .deck .go svg { width: 18px; height: 18px; }
@@ -1288,7 +1297,7 @@ var TextUtil = (function () {
           var n = andWorse ? [1, 2, 3, 4].filter(function (k) { return k >= l; }).reduce(function (s2, k) { return s2 + levelCounts[k]; }, 0) : levelCounts[l];
           return '<button class="level" data-level="' + l + '"' + (n ? '' : ' disabled') + '><span class="lv-face">' + FACES[l] + '</span><b>' + n + '</b><small>' + FACE_NAMES[l] + (andWorse && l < 4 ? ' and worse' : '') + '</small></button>';
         }).join('') + '</div><p class="hint" style="margin:8px 2px 0">Tap a face to study those cards from your chosen decks.</p></section>' : '') +
-      '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
+      '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span><button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Browse public decks</span></button>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
       '<div class="decks">' + allStats.map(deckTile).join('') +
       '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>' +
       '</div></main>';
@@ -1309,8 +1318,9 @@ var TextUtil = (function () {
         setSelected(ids); render();
       });
     });
+    $('[data-catalog]', app).addEventListener('click', openCatalog);
     var sa = $('[data-send-all]', app);
-    if (sa) sa.addEventListener('click', function () { openSend(null); });
+    if (sa) sa.addEventListener('click', function () { openSend(null, 'copy'); });
     var pa = $('[data-practise-all]', app);
     if (pa) pa.addEventListener('click', function () { startStudy(sel, 'home', true); });
     $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null); }); });
@@ -1346,7 +1356,7 @@ var TextUtil = (function () {
       '<span class="dot"></span><h3>' + esc(d.name) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
       '<div class="counts">' + (st.due + st.learn ? '<span class="chip due">' + (st.due + st.learn) + ' due</span>' : '') +
       (st.newToday ? '<span class="chip new">' + st.newToday + ' new</span>' : '') +
-      (!st.ready ? '<span class="chip">' + (st.total ? 'Done for today' : 'Empty') + '</span>' : '') + '</div>' +
+      (!st.ready ? '<span class="chip">' + (st.total ? 'Done for today' : 'Empty') + '</span>' : '') + deckBadges(d) + '</div>' +
       '<button class="go" aria-label="Study ' + esc(d.name) + '">' + (st.ready ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
   }
 
@@ -1356,7 +1366,7 @@ var TextUtil = (function () {
     app.innerHTML = topbar() + '<main class="wrap deckpage"><div class="appear">' +
       '<button class="btn ghost sm" data-back style="margin-left:-10px">' + I.back + 'Decks</button>' +
       '<div class="deck-hero"><span class="dot" style="background:' + esc(deck.color) + '"></span>' +
-      '<div style="flex:1;min-width:200px"><h1></h1><div class="hint">' + plural(st.total, 'card') + ' &middot; ' + (st.ready ? (st.due + st.learn) + ' due &middot; ' + st.newToday + ' new today' : st.total ? 'All done for now' + (nextDue([deck.id]) ? ' &middot; next cards due ' + whenLabel(nextDue([deck.id])) : '') : 'No cards yet') + '</div></div>' +
+      '<div style="flex:1;min-width:200px"><h1></h1>' + (deckBadges(deck) ? '<div class="counts" style="margin:0 0 6px">' + deckBadges(deck) + '</div>' : '') + '<div class="hint">' + plural(st.total, 'card') + ' &middot; ' + (st.ready ? (st.due + st.learn) + ' due &middot; ' + st.newToday + ' new today' : st.total ? 'All done for now' + (nextDue([deck.id]) ? ' &middot; next cards due ' + whenLabel(nextDue([deck.id])) : '') : 'No cards yet') + '</div></div>' +
       '<div class="row"><button class="btn primary" data-study ' + (st.total ? '' : 'disabled') + ' title="' + (st.ready ? 'Study what is due' : 'Run through every card. Your schedule does not change.') + '">' + I.play + (st.ready ? 'Study' : 'Practise') + '</button>' +
       (st.ready ? '<button class="btn" data-practise title="Run through every card now. Your schedule does not change.">' + I.cards + '<span class="hide-sm">Practise all</span></button>' : '') +
       '<button class="btn" data-add>' + I.plus + 'Add card</button>' +
@@ -1374,13 +1384,19 @@ var TextUtil = (function () {
     $('[data-import]', app).addEventListener('click', function () { openImport(deck.id); });
     $('[data-more]', app).addEventListener('click', function (e) {
       e.stopPropagation();
-      menu(e.currentTarget, [
+      var items = [
         { label: 'Edit deck', icon: 'edit', run: function () { openDeckEditor(deck); } },
-        { label: 'Send a copy to someone', icon: 'upload', run: function () { openSend([deck.id]); } },
-        { label: 'Practise every card', icon: 'cards', run: function () { startStudy([deck.id], 'deck', true); } },
-        { label: 'Reset progress', icon: 'reset', run: function () { resetDeck(deck); } },
-        { label: 'Delete deck', icon: 'trash', danger: true, run: function () { deleteDeck(deck); } }
-      ]);
+        { label: 'Send a copy to someone', icon: 'upload', run: function () { openSend([deck.id], 'copy'); } }
+      ];
+      if (deck.mine) {
+        items.push({ label: 'People who can edit', icon: 'cards', run: function () { openPeople(deck); } });
+        items.push({ label: deck.public ? 'Make private' : 'Make public', icon: 'search', run: function () { togglePublic(deck); } });
+      }
+      items.push({ label: 'Practise every card', icon: 'play', run: function () { startStudy([deck.id], 'deck', true); } });
+      items.push({ label: deck.mine ? 'Reset progress' : 'Reset my progress', icon: 'reset', run: function () { resetDeck(deck); } });
+      items.push(deck.mine ? { label: 'Delete deck', icon: 'trash', danger: true, run: function () { deleteDeck(deck); } }
+                           : { label: 'Leave deck', icon: 'logout', danger: true, run: function () { leaveDeck(deck); } });
+      menu(e.currentTarget, items);
     });
     var s = $('[data-search]', app);
     s.value = S.search;
@@ -1625,18 +1641,35 @@ var TextUtil = (function () {
   }
 
   /* ================= send a copy ================= */
-  function openSend(deckIds) {
+  function deckBadges(d) {
+    return (!d.mine ? '<span class="chip shared">Shared by ' + esc(d.ownerName || 'someone') + '</span>' : d.members ? '<span class="chip shared">' + plural(d.members, 'collaborator') + '</span>' : '') +
+      (d.public && d.mine ? '<span class="chip pub">Public</span>' : '');
+  }
+
+  function openSend(deckIds, startMode) {
+    var mode = startMode || 'copy';
     var picked = deckIds ? deckIds.slice() : S.decks.map(function (d) { return d.id; });
-    var m = modal('Send a copy',
-      '<p class="hint" style="margin:0 0 14px">They get their own copy of the cards, with fresh progress. Your decks stay as they are.</p>' +
+    var m = modal('Share decks',
+      '<div class="seg" data-mode style="width:100%;margin-bottom:12px"><button data-m="copy" style="flex:1">Send a copy</button><button data-m="collab" style="flex:1">Add as collaborator</button></div>' +
+      '<p class="hint" data-mode-hint style="margin:0 0 14px"></p>' +
       '<label class="field"><span>Their email (they need a Flash Cards account)</span><input class="input" type="email" data-email list="fc-users" autocomplete="off" autofocus placeholder="name@example.com"><datalist id="fc-users"></datalist></label>' +
       '<div class="field"><span>Decks</span><div class="preview-list" data-decks style="max-height:220px"></div></div>' +
       '<div class="error" data-err></div>',
       '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-go>Send</button>');
     var E = m.el;
-    $('[data-decks]', E).innerHTML = S.decks.map(function (d) {
-      return '<div style="grid-template-columns:auto 1fr auto;align-items:center"><input type="checkbox" data-d="' + esc(d.id) + '"' + (picked.indexOf(d.id) >= 0 ? ' checked' : '') + '><span>' + esc(d.name) + '</span><span class="hint">' + plural(cardsOf(d.id).length, 'card') + '</span></div>';
-    }).join('');
+    function paint() {
+      $$('[data-m]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-m') === mode); });
+      $('[data-mode-hint]', E).textContent = mode === 'copy'
+        ? 'They get their own copy of the cards, with fresh progress. Changes are not shared.'
+        : 'They see your deck in their list and can add, edit and delete cards. Everyone keeps their own progress. Only you can delete the deck or change who has access.';
+      $('[data-go]', E).textContent = mode === 'copy' ? 'Send copy' : 'Add collaborator';
+      var list = S.decks.filter(function (d) { return mode === 'copy' || d.mine; });
+      $('[data-decks]', E).innerHTML = list.map(function (d) {
+        return '<div style="grid-template-columns:auto 1fr auto;align-items:center"><input type="checkbox" data-d="' + esc(d.id) + '"' + (picked.indexOf(d.id) >= 0 ? ' checked' : '') + '><span>' + esc(d.name) + (d.mine ? '' : ' <span class="hint">(shared with you)</span>') + '</span><span class="hint">' + plural(cardsOf(d.id).length, 'card') + '</span></div>';
+      }).join('') || '<div><span class="hint">You have no decks of your own to share yet.</span></div>';
+    }
+    $$('[data-m]', E).forEach(function (b) { b.addEventListener('click', function () { mode = b.getAttribute('data-m'); paint(); }); });
+    paint();
     if (S.user.owner) api('listUsers').then(function (list) {
       $('#fc-users', E).innerHTML = list.map(function (u) { return '<option value="' + esc(u.email) + '">' + esc(u.name) + '</option>'; }).join('');
     }, function () {});
@@ -1644,10 +1677,101 @@ var TextUtil = (function () {
       var btn = this, ids = $$('[data-d]:checked', E).map(function (x) { return x.getAttribute('data-d'); });
       if (!ids.length) { $('[data-err]', E).textContent = 'Pick at least one deck.'; return; }
       busy(btn, true);
-      api('sendDecks', { email: $('[data-email]', E).value, deckIds: ids }).then(function (r) {
-        m.close(); toast('Sent ' + plural(r.decks, 'deck') + ' (' + plural(r.cards, 'card') + ') to ' + r.to + '.');
+      var email = $('[data-email]', E).value;
+      var call = mode === 'copy' ? api('sendDecks', { email: email, deckIds: ids }) : api('inviteCollaborator', { email: email, deckIds: ids });
+      call.then(function (r) {
+        m.close();
+        if (mode === 'copy') toast('Sent ' + plural(r.decks, 'deck') + ' (' + plural(r.cards, 'card') + ') to ' + r.to + '.');
+        else {
+          toast(r.added ? r.to + ' can now edit ' + plural(r.added, 'deck') + '.' : r.to + ' already had access.');
+          ids.forEach(function (id) { var d = deckById(id); if (d && r.added) d.members = (d.members || 0) + 1; });
+          cacheNow(); render();
+        }
       }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
     });
+  }
+
+  function openPeople(deck) {
+    var m = modal('People on "' + deck.name + '"', '<div data-people><div class="spinner"></div></div>' +
+      '<div class="row" style="margin-top:14px"><button class="btn sm" data-invite>' + I.plus + 'Add a collaborator</button></div><div class="error" data-err></div>', '');
+    var E = m.el;
+    function load() {
+      api('deckMembers', { deckId: deck.id }).then(function (list) {
+        deck.members = list.length; cacheNow();
+        $('[data-people]', E).innerHTML = list.length ? '<div class="preview-list">' + list.map(function (p) {
+          return '<div style="grid-template-columns:1fr auto;align-items:center"><span><b>' + esc(p.name || p.email) + '</b> <span class="hint">' + esc(p.email) + '</span></span><button class="btn sm ghost danger" data-rm="' + esc(p.email) + '">Remove</button></div>';
+        }).join('') + '</div>' : '<p class="hint" style="margin:0">Nobody else can edit this deck yet.</p>';
+        $$('[data-rm]', E).forEach(function (b) {
+          b.addEventListener('click', function () {
+            busy(b, true);
+            api('removeMember', { deckId: deck.id, email: b.getAttribute('data-rm') }).then(function () { load(); render(); }, function (e) { busy(b, false); $('[data-err]', E).textContent = e.message; });
+          });
+        });
+      }, function (e) { $('[data-err]', E).textContent = e.message; });
+    }
+    load();
+    $('[data-invite]', E).addEventListener('click', function () { m.close(); openSend([deck.id], 'collab'); });
+  }
+
+  function togglePublic(deck) {
+    var to = !deck.public;
+    confirmBox(to ? 'Make this deck public?' : 'Make this deck private?',
+      to ? 'Anyone with a Flash Cards account can find "' + deck.name + '" in Browse public decks and copy it. They cannot change yours. Your first name is shown, never your email.'
+         : '"' + deck.name + '" will be removed from the public catalog. Copies people already made stay theirs.',
+      to ? 'Make public' : 'Make private').then(function (ok) {
+      if (!ok) return;
+      api('setPublic', { deckId: deck.id, public: to }).then(function (d) { deck.public = d.public; cacheNow(); render(); toast(to ? 'Deck is public.' : 'Deck is private.'); }, fail);
+    });
+  }
+
+  function leaveDeck(deck) {
+    confirmBox('Leave this deck?', 'You will stop seeing "' + deck.name + '". ' + (deck.ownerName || 'The owner') + ' can add you back.', 'Leave', true).then(function (ok) {
+      if (!ok) return;
+      api('leaveDeck', { deckId: deck.id }).then(function () {
+        S.decks = S.decks.filter(function (d) { return d.id !== deck.id; });
+        S.cards = S.cards.filter(function (c) { return c.deckId !== deck.id; });
+        cacheNow(); go('home'); toast('You left the deck.');
+      }, fail);
+    });
+  }
+
+  function openCatalog() {
+    var m = modal('Public decks',
+      '<label class="search" style="display:block;margin-bottom:12px">' + I.search + '<input class="input" placeholder="Search public decks" data-q autofocus></label>' +
+      '<div data-list><div class="spinner"></div></div><div class="error" data-err></div>', '', { wide: true });
+    var E = m.el, timer = null;
+    function load() {
+      api('catalog', { q: $('[data-q]', E).value }).then(function (list) {
+        $('[data-list]', E).innerHTML = list.length ? '<div class="catalog">' + list.map(function (d) {
+          return '<div class="cat-item" style="--c:' + esc(d.color) + '"><span class="dot"></span><div class="cat-main"><b></b><span class="hint">' + plural(d.cards, 'card') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.mine ? ' &middot; yours' : '') + '</span><div class="cat-preview" hidden></div></div>' +
+            '<button class="btn sm ghost" data-prev="' + esc(d.id) + '">Preview</button>' + (d.mine ? '' : '<button class="btn sm primary" data-copy="' + esc(d.id) + '">' + I.plus + 'Copy</button>') + '</div>';
+        }).join('') + '</div>' : '<p class="hint" style="margin:0">No public decks' + ($('[data-q]', E).value ? ' match that search' : ' yet') + '.</p>';
+        $$('.cat-item b', E).forEach(function (b, i) { b.textContent = list[i].name; });
+        $$('[data-prev]', E).forEach(function (b) {
+          b.addEventListener('click', function () {
+            var box = $('.cat-preview', b.parentNode);
+            if (!box.hidden) { box.hidden = true; return; }
+            box.hidden = false; box.innerHTML = '<div class="spinner"></div>';
+            api('catalogPreview', { deckId: b.getAttribute('data-prev') }).then(function (cards) {
+              box.innerHTML = '<div class="preview-list">' + cards.map(function (c) { return '<div><span>' + esc(c.front) + '</span><span style="color:var(--muted)">' + esc(c.back) + '</span></div>'; }).join('') + '</div>';
+            }, function (e) { box.textContent = e.message; });
+          });
+        });
+        $$('[data-copy]', E).forEach(function (b) {
+          b.addEventListener('click', function () {
+            busy(b, true);
+            api('copyPublic', { deckId: b.getAttribute('data-copy') }).then(function (r) {
+              S.decks.push(r.deck); S.cards = S.cards.concat(r.cards);
+              var sel = S.user.settings.lastDecks; if (Array.isArray(sel)) sel.push(r.deck.id);
+              cacheNow(); busy(b, false); b.disabled = true; b.textContent = 'Copied';
+              toast('"' + r.deck.name + '" added to your decks.'); render();
+            }, function (e) { busy(b, false); $('[data-err]', E).textContent = e.message; });
+          });
+        });
+      }, function (e) { $('[data-err]', E).textContent = e.message; });
+    }
+    $('[data-q]', E).addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(load, 350); });
+    load();
   }
 
   /* ================= settings ================= */
