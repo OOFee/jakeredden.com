@@ -1217,13 +1217,15 @@ var TextUtil = (function () {
       '</div><div class="heat"><div class="heat-head"><span>Last 17 weeks</span><span>' + plural(totalReviews(), 'review') + '</span></div><div class="heat-grid">' + heatCells(goal) + '</div></div></div>' +
       '</section>' +
       (quote ? '<p class="quote"><b></b></p>' : '') +
-      '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span><button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
+      '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
       '<div class="decks">' + stats.map(deckTile).join('') +
       '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>' +
       '</div></main>';
     if (quote) $('.quote b', app).textContent = quote;
     wireTop(app);
     $('[data-study-all]', app).addEventListener('click', function () { startStudy(S.decks.map(function (d) { return d.id; }), 'home', !ready); });
+    var sa = $('[data-send-all]', app);
+    if (sa) sa.addEventListener('click', function () { openSend(null); });
     var pa = $('[data-practise-all]', app);
     if (pa) pa.addEventListener('click', function () { startStudy(S.decks.map(function (d) { return d.id; }), 'home', true); });
     $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null); }); });
@@ -1288,6 +1290,7 @@ var TextUtil = (function () {
       e.stopPropagation();
       menu(e.currentTarget, [
         { label: 'Edit deck', icon: 'edit', run: function () { openDeckEditor(deck); } },
+        { label: 'Send a copy to someone', icon: 'upload', run: function () { openSend([deck.id]); } },
         { label: 'Practise every card', icon: 'cards', run: function () { startStudy([deck.id], 'deck', true); } },
         { label: 'Reset progress', icon: 'reset', run: function () { resetDeck(deck); } },
         { label: 'Delete deck', icon: 'trash', danger: true, run: function () { deleteDeck(deck); } }
@@ -1532,6 +1535,32 @@ var TextUtil = (function () {
         S.cards = S.cards.concat(r.cards); cacheNow(); m.close(); render();
         toast(plural(r.cards.length, 'card') + ' imported.');
       }, function (e) { busy(go, false); $('[data-err]', E).textContent = e.message; });
+    });
+  }
+
+  /* ================= send a copy ================= */
+  function openSend(deckIds) {
+    var picked = deckIds ? deckIds.slice() : S.decks.map(function (d) { return d.id; });
+    var m = modal('Send a copy',
+      '<p class="hint" style="margin:0 0 14px">They get their own copy of the cards, with fresh progress. Your decks stay as they are.</p>' +
+      '<label class="field"><span>Their email (they need a Flash Cards account)</span><input class="input" type="email" data-email list="fc-users" autocomplete="off" autofocus placeholder="name@example.com"><datalist id="fc-users"></datalist></label>' +
+      '<div class="field"><span>Decks</span><div class="preview-list" data-decks style="max-height:220px"></div></div>' +
+      '<div class="error" data-err></div>',
+      '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-go>Send</button>');
+    var E = m.el;
+    $('[data-decks]', E).innerHTML = S.decks.map(function (d) {
+      return '<div style="grid-template-columns:auto 1fr auto;align-items:center"><input type="checkbox" data-d="' + esc(d.id) + '"' + (picked.indexOf(d.id) >= 0 ? ' checked' : '') + '><span>' + esc(d.name) + '</span><span class="hint">' + plural(cardsOf(d.id).length, 'card') + '</span></div>';
+    }).join('');
+    if (S.user.owner) api('listUsers').then(function (list) {
+      $('#fc-users', E).innerHTML = list.map(function (u) { return '<option value="' + esc(u.email) + '">' + esc(u.name) + '</option>'; }).join('');
+    }, function () {});
+    $('[data-go]', E).addEventListener('click', function () {
+      var btn = this, ids = $$('[data-d]:checked', E).map(function (x) { return x.getAttribute('data-d'); });
+      if (!ids.length) { $('[data-err]', E).textContent = 'Pick at least one deck.'; return; }
+      busy(btn, true);
+      api('sendDecks', { email: $('[data-email]', E).value, deckIds: ids }).then(function (r) {
+        m.close(); toast('Sent ' + plural(r.decks, 'deck') + ' (' + plural(r.cards, 'card') + ') to ' + r.to + '.');
+      }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
     });
   }
 
