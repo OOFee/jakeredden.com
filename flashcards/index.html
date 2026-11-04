@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Flash Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f6fa;
+  --bg-glow: rgba(109, 94, 252, .14);
+  --surface: #ffffff;
+  --surface-2: #f0f1f6;
+  --surface-3: #e6e8f0;
+  --line: rgba(15, 18, 30, .08);
+  --line-strong: rgba(15, 18, 30, .14);
+  --text: #11131a;
+  --muted: #5f6578;
+  --faint: #9298aa;
+  --accent: #6d5efc;
+  --accent-ink: #ffffff;
+  --again: #ef4f5a;
+  --hard: #f0a020;
+  --good: #1fb866;
+  --easy: #3b82f6;
+  --shadow-sm: 0 1px 2px rgba(15, 18, 30, .06), 0 2px 8px rgba(15, 18, 30, .04);
+  --shadow-lg: 0 24px 60px -18px rgba(15, 18, 30, .25), 0 8px 20px -10px rgba(15, 18, 30, .12);
+  --r-sm: 10px;
+  --r: 16px;
+  --r-lg: 24px;
+  --font: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --display: 'Inter Tight', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b0c11;
+  --bg-glow: rgba(109, 94, 252, .22);
+  --surface: #14161e;
+  --surface-2: #1b1e28;
+  --surface-3: #252936;
+  --line: rgba(255, 255, 255, .07);
+  --line-strong: rgba(255, 255, 255, .13);
+  --text: #eef0f7;
+  --muted: #9aa0b4;
+  --faint: #636a80;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 30px 70px -20px rgba(0, 0, 0, .7), 0 10px 24px -12px rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: -20vh -10vw auto;
+  height: 70vh;
+  background: radial-gradient(60% 60% at 30% 30%, var(--bg-glow), transparent 70%),
+    radial-gradient(40% 50% at 85% 10%, color-mix(in srgb, var(--bg-glow) 60%, transparent), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  transition: background .6s var(--ease);
+}
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+
+#app { position: relative; z-index: 1; min-height: 100vh; }
+.wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 20;
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  border-bottom: 1px solid var(--line);
+}
+.topbar .wrap { display: flex; align-items: center; gap: 12px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.02em; background: none; border: 0; padding: 0; }
+.mark {
+  width: 28px; height: 28px; border-radius: 8px; position: relative;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 40%, #22d3ee));
+  box-shadow: 0 6px 16px -6px var(--accent);
+}
+.mark::after { content: ''; position: absolute; inset: 7px 6px 9px 9px; border-radius: 3px; background: rgba(255, 255, 255, .9); transform: rotate(-8deg); }
+.spacer { flex: 1; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 16px; border-radius: 12px;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--text);
+  font-weight: 600; font-size: 14px; white-space: nowrap;
+  transition: transform .15s var(--ease), background .2s, border-color .2s, box-shadow .2s, opacity .2s;
+}
+.btn:hover { border-color: color-mix(in srgb, var(--text) 25%, transparent); }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .5; pointer-events: none; }
+.btn.primary { background: var(--accent); border-color: transparent; color: var(--accent-ink); box-shadow: 0 8px 20px -10px var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: var(--surface-2); }
+.btn.danger { color: var(--again); }
+.btn.lg { height: 48px; padding: 0 22px; border-radius: 14px; font-size: 15px; }
+.btn.sm { height: 32px; padding: 0 12px; border-radius: 10px; font-size: 13px; }
+.icon-btn { width: 40px; padding: 0; }
+.icon-btn.sm { width: 32px; }
+.btn svg, .icon svg { width: 18px; height: 18px; flex: none; }
+.btn.sm svg { width: 16px; height: 16px; }
+
+/* ---------- forms ---------- */
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field > span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.input, .textarea, .select {
+  width: 100%; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 12px;
+  padding: 10px 12px; outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.input { height: 44px; }
+.textarea { min-height: 96px; resize: vertical; line-height: 1.45; }
+.input:focus, .textarea:focus, .select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.select { height: 44px; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 19px, calc(100% - 13px) 19px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hint { font-size: 13px; color: var(--muted); }
+.error { color: var(--again); font-size: 14px; font-weight: 500; min-height: 20px; }
+
+.seg { display: inline-flex; padding: 4px; gap: 4px; background: var(--surface-2); border-radius: 12px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 7px 12px; border-radius: 9px; font-size: 13px; font-weight: 600; color: var(--muted); transition: background .2s, color .2s, box-shadow .2s; }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+
+.switch { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; cursor: pointer; user-select: none; }
+.switch input { display: none; }
+.switch i { width: 38px; height: 22px; border-radius: 99px; background: var(--surface-3); position: relative; transition: background .2s; flex: none; }
+.switch i::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: transform .25s var(--ease); }
+.switch input:checked + i { background: var(--accent); }
+.switch input:checked + i::after { transform: translateX(16px); }
+
+/* ---------- auth ---------- */
+.auth { min-height: 100vh; display: grid; place-items: center; padding: 32px 20px; }
+.auth-card { width: 100%; max-width: 400px; }
+.auth h1 { font-family: var(--display); font-size: 34px; letter-spacing: -.035em; line-height: 1.1; margin: 22px 0 8px; }
+.auth p.lead { color: var(--muted); margin: 0 0 26px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--shadow-lg); }
+.auth .seg { width: 100%; margin-bottom: 20px; }
+.auth .seg button { flex: 1; }
+.gbtn { display: flex; justify-content: center; min-height: 44px; margin-bottom: 4px; transition: opacity .2s; }
+.or { display: flex; align-items: center; gap: 12px; color: var(--faint); font-size: 12.5px; margin: 16px 0 18px; }
+.or::before, .or::after { content: ''; flex: 1; height: 1px; background: var(--line-strong); }
+.linkish { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; font-size: 14px; }
+
+/* ---------- home ---------- */
+.home { padding: 28px 0 80px; }
+.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; margin-bottom: 28px; }
+.hero-main {
+  position: relative; overflow: hidden; border-radius: var(--r-lg); padding: 28px;
+  background: linear-gradient(140deg, color-mix(in srgb, var(--accent) 92%, #000) 0%, color-mix(in srgb, var(--accent) 70%, #22d3ee) 100%);
+  color: #fff; box-shadow: 0 30px 60px -30px var(--accent);
+  display: flex; flex-direction: column; justify-content: space-between; min-height: 230px;
+}
+.hero-main::after { content: ''; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .22), transparent 65%); }
+.hero-main .eyebrow { font-size: 13px; font-weight: 600; opacity: .85; }
+.hero-main .big { font-family: var(--display); font-size: 64px; font-weight: 700; letter-spacing: -.05em; line-height: 1; margin: 8px 0 4px; }
+.hero-main .sub { opacity: .85; font-size: 14px; }
+.hero-main .btn { background: #fff; color: #111; border: 0; }
+.hero-main .btn.ghost-light { background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .35); }
+.hero-main .btn.ghost-light:hover { background: rgba(255, 255, 255, .24); }
+.hero-main .btn:disabled { opacity: .6; }
+.hero-side { display: grid; grid-template-rows: auto 1fr; gap: 16px; min-width: 0; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; align-items: center; gap: 14px; }
+.stat .num { font-family: var(--display); font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+.stat .lbl { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+.ring { width: 46px; height: 46px; flex: none; }
+.ring circle { fill: none; stroke-width: 5; }
+.ring .bg { stroke: var(--surface-3); }
+.ring .fg { stroke: var(--accent); stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset .8s var(--ease); }
+.flame { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: color-mix(in srgb, var(--hard) 16%, transparent); color: var(--hard); flex: none; }
+.flame svg { width: 24px; height: 24px; }
+.heat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+.heat-head { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+.heat-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 1fr); gap: 3px; overflow: hidden; }
+.heat-grid i { aspect-ratio: 1; border-radius: 3px; background: var(--surface-3); }
+.heat-grid i[data-l='1'] { background: color-mix(in srgb, var(--accent) 30%, var(--surface-3)); }
+.heat-grid i[data-l='2'] { background: color-mix(in srgb, var(--accent) 55%, var(--surface-3)); }
+.heat-grid i[data-l='3'] { background: color-mix(in srgb, var(--accent) 80%, var(--surface-3)); }
+.heat-grid i[data-l='4'] { background: var(--accent); }
+.heat-grid i.future { visibility: hidden; }
+
+.quote { margin: 0 0 28px; padding: 0 4px; font-size: 15px; color: var(--muted); display: flex; gap: 10px; align-items: baseline; }
+.quote b { color: var(--text); font-weight: 500; }
+
+.section-head { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; }
+.section-head h2 { font-family: var(--display); font-size: 22px; letter-spacing: -.03em; margin: 0; }
+.decks { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.deck {
+  --c: var(--accent);
+  position: relative; text-align: left; border: 1px solid var(--line); background: var(--surface);
+  border-radius: var(--r); padding: 18px; min-height: 150px; display: flex; flex-direction: column;
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease), border-color .25s;
+  overflow: hidden;
+}
+.deck::before { content: ''; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: var(--c); opacity: .9; }
+.deck:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--c) 35%, var(--line)); }
+.deck .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 20%, transparent); }
+.deck h3 { margin: 14px 0 2px; font-size: 16.5px; font-weight: 650; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.deck .meta { color: var(--muted); font-size: 13px; }
+.deck .counts { display: flex; gap: 6px; margin-top: auto; padding-top: 16px; flex-wrap: wrap; }
+.chip { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.chip.due { background: color-mix(in srgb, var(--c, var(--accent)) 16%, transparent); color: color-mix(in srgb, var(--c, var(--accent)) 80%, var(--text)); }
+.chip.new { background: color-mix(in srgb, var(--easy) 14%, transparent); color: color-mix(in srgb, var(--easy) 85%, var(--text)); }
+.deck .go { position: absolute; right: 14px; bottom: 14px; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--c); color: #fff; opacity: 0; transform: translateY(6px); transition: opacity .25s, transform .25s var(--ease); border: 0; }
+.deck .go svg { width: 18px; height: 18px; }
+.deck:hover .go, .deck:focus-within .go { opacity: 1; transform: none; }
+@media (hover: none) { .deck .go { opacity: 1; transform: none; } }
+.deck.add { align-items: center; justify-content: center; gap: 8px; border-style: dashed; border-color: var(--line-strong); background: transparent; color: var(--muted); font-weight: 600; }
+.deck.add::before { display: none; }
+.deck.add svg { width: 22px; height: 22px; }
+.empty { text-align: center; color: var(--muted); padding: 48px 20px; }
+
+/* ---------- deck page ---------- */
+.deckpage { padding: 24px 0 80px; }
+.deck-hero { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.deck-hero h1 { font-family: var(--display); font-size: 32px; letter-spacing: -.035em; line-height: 1.1; margin: 4px 0 6px; overflow-wrap: anywhere; }
+.deck-hero .dot { width: 14px; height: 14px; border-radius: 50%; margin-top: 16px; flex: none; }
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 14px; }
+.search { position: relative; flex: 1; min-width: 200px; }
+.search svg { position: absolute; left: 12px; top: 12px; width: 18px; height: 18px; color: var(--faint); }
+.search .input { padding-left: 38px; }
+.cards { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.crow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 210px; gap: 16px; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .15s; }
+.crow:last-child { border-bottom: 0; }
+.crow:hover { background: var(--surface-2); }
+.crow .f { font-weight: 600; }
+.crow .b { color: var(--muted); }
+.crow .f, .crow .b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crow .tags { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.tag { font-size: 11px; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted); }
+.more { padding: 14px; text-align: center; }
+
+/* ---------- study ---------- */
+.study { min-height: 100vh; display: flex; flex-direction: column; }
+.study-top { display: flex; align-items: center; gap: 12px; height: 64px; }
+.progress { flex: 1; height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .5s var(--ease); }
+.qcounts { display: flex; gap: 10px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.qcounts .n { color: var(--easy); } .qcounts .l { color: var(--again); } .qcounts .r { color: var(--good); }
+.qcounts span.cur { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+.stage { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 0 24px; perspective: 1600px; }
+.flip { position: relative; width: 100%; max-width: 640px; min-height: min(56vh, 440px); touch-action: pan-y; -webkit-user-select: none; user-select: none; }
+.flip input { -webkit-user-select: text; user-select: text; }
+.flip { cursor: pointer; }
+.flip .inner { position: relative; width: 100%; min-height: inherit; transform-style: preserve-3d; transition: transform .34s cubic-bezier(.2, .85, .2, 1); }
+.flip.flipped .inner { transform: rotateY(180deg); }
+.face {
+  position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  background:
+    radial-gradient(110% 70% at 12% -12%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
+    radial-gradient(80% 55% at 112% 6%, color-mix(in srgb, #3b82f6 16%, transparent), transparent 60%),
+    var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 28px;
+  box-shadow: var(--shadow-lg), 0 0 0 4px color-mix(in srgb, var(--accent) 13%, transparent);
+  display: flex; flex-direction: column; padding: 26px 28px; overflow: auto;
+}
+.face::before { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(135deg, rgba(255, 255, 255, .09), transparent 45%); pointer-events: none; }
+.face.back { transform: rotateY(180deg); }
+.face-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); display: flex; gap: 8px; align-items: center; }
+.face-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px; padding: 16px 0; }
+.face-text { font-family: var(--display); font-size: clamp(24px, 4.4vw, 40px); font-weight: 600; letter-spacing: -.025em; line-height: 1.2; white-space: pre-wrap; overflow-wrap: anywhere; }
+.face-text.long { font-size: clamp(17px, 2.4vw, 22px); font-family: var(--font); font-weight: 500; letter-spacing: 0; line-height: 1.5; text-align: left; }
+.face .q-small { color: var(--muted); font-size: 15px; white-space: pre-wrap; }
+.face-img { max-height: 220px; border-radius: 14px; object-fit: contain; }
+.audio-btn { width: 56px; height: 56px; border-radius: 50%; border: 0; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); display: grid; place-items: center; }
+.audio-btn svg { width: 24px; height: 24px; }
+.tap-hint { font-size: 13px; color: var(--faint); text-align: center; }
+.answer-in { width: 100%; max-width: 420px; display: flex; gap: 8px; }
+.answer-in .input { height: 50px; font-size: 17px; text-align: center; }
+.verdict { font-weight: 700; font-size: 14px; padding: 6px 12px; border-radius: 99px; }
+.verdict.exact { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.verdict.close { color: var(--hard); background: color-mix(in srgb, var(--hard) 14%, transparent); }
+.verdict.wrong { color: var(--again); background: color-mix(in srgb, var(--again) 14%, transparent); }
+.typed-was { color: var(--muted); font-size: 15px; }
+.typed-was s { color: var(--again); }
+.choices { width: 100%; max-width: 480px; display: grid; gap: 10px; }
+.choice { text-align: left; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 14px; padding: 14px 16px; font-weight: 500; display: flex; gap: 12px; align-items: center; transition: border-color .15s, background .15s, transform .15s var(--ease); }
+.choice:hover { border-color: var(--accent); }
+.choice:active { transform: scale(.98); }
+.choice kbd { font-family: var(--font); font-size: 12px; font-weight: 700; width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); flex: none; }
+.choice.right { border-color: var(--good); background: color-mix(in srgb, var(--good) 12%, var(--surface)); }
+.choice.wrong { border-color: var(--again); background: color-mix(in srgb, var(--again) 12%, var(--surface)); }
+.choice:disabled { cursor: default; }
+
+.dock { width: 100%; max-width: 640px; margin-top: 22px; min-height: 76px; }
+.grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.grades.two { grid-template-columns: 1fr 1fr; }
+.grade { border: 0; border-radius: 16px; padding: 11px 6px 9px; display: grid; gap: 2px; justify-items: center; color: #fff; font-weight: 700; font-size: 15px; transition: transform .15s var(--ease), filter .15s, box-shadow .2s; }
+.grade small { font-size: 12px; font-weight: 600; opacity: .85; }
+.grade:hover { filter: brightness(1.08); transform: translateY(-2px); }
+.grade:active { transform: scale(.96); }
+.grade.again { background: var(--again); box-shadow: 0 10px 22px -12px var(--again); }
+.grade.hard { background: var(--hard); box-shadow: 0 10px 22px -12px var(--hard); }
+.grade.good { background: var(--good); box-shadow: 0 10px 22px -12px var(--good); }
+.grade.easy { background: var(--easy); box-shadow: 0 10px 22px -12px var(--easy); }
+.grade.suggest { outline: 3px solid color-mix(in srgb, var(--text) 70%, transparent); outline-offset: 2px; }
+.show-btn { width: 100%; height: 56px; border-radius: 16px; font-size: 16px; }
+.keys { margin-top: 12px; text-align: center; font-size: 12px; color: var(--faint); }
+.keys kbd { font-family: var(--font); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line-strong); margin: 0 2px; }
+@media (hover: none) { .keys { display: none; } }
+.swipe-hint { position: absolute; top: 22px; font-weight: 800; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; padding: 6px 12px; border-radius: 10px; border: 2px solid; opacity: 0; z-index: 3; pointer-events: none; }
+.swipe-hint.l { left: 22px; color: var(--again); transform: rotate(-10deg); }
+.swipe-hint.r { right: 22px; color: var(--good); transform: rotate(10deg); }
+
+.done { text-align: center; max-width: 460px; margin: 0 auto; padding: 14vh 0 40px; }
+.done .burst { width: 88px; height: 88px; margin: 0 auto 18px; border-radius: 28px; display: grid; place-items: center; background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); animation: pop .6s var(--ease); }
+.done .burst svg { width: 40px; height: 40px; }
+.chroma { position: relative; }
+.chroma::before {
+  content: ''; position: absolute; inset: -3px; border-radius: 31px; padding: 3px;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6, #10b981, #ec4899, #7c3aed); background-size: 300% 300%;
+  animation: chroma 3s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+@keyframes chroma { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+.done h1 { font-family: var(--display); font-size: 34px; letter-spacing: -.035em; margin: 0 0 8px; }
+.done-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 26px 0; }
+.done-stats div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 8px; }
+.done-stats b { display: block; font-family: var(--display); font-size: 24px; letter-spacing: -.03em; }
+.done-stats span { font-size: 12.5px; color: var(--muted); }
+@keyframes pop { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: none; opacity: 1; } }
+
+/* ---------- modal ---------- */
+.scrim { position: fixed; inset: 0; z-index: 50; background: rgba(8, 9, 14, .5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: fade .2s ease; }
+.modal { width: 100%; max-width: 560px; max-height: calc(100vh - 40px); overflow: auto; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); border: 1px solid var(--line); animation: rise .3s var(--ease); }
+.modal.wide { max-width: 760px; }
+.modal-head { display: flex; align-items: center; gap: 10px; padding: 18px 20px 0; }
+.modal-head h2 { font-family: var(--display); font-size: 20px; letter-spacing: -.02em; margin: 0; flex: 1; }
+.modal-body { padding: 18px 20px; }
+.modal-foot { display: flex; gap: 10px; padding: 0 20px 20px; flex-wrap: wrap; align-items: center; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+@media (max-width: 600px) {
+  .scrim { align-items: flex-end; padding: 0; }
+  .modal { max-height: 92vh; border-radius: 22px 22px 0 0; animation: sheet .32s var(--ease); }
+  @keyframes sheet { from { transform: translateY(40px); opacity: 0; } }
+}
+
+.sides { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.side { display: grid; gap: 8px; }
+.side .lab { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 600; color: var(--muted); }
+.media-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.media-row:empty { display: none; }
+.thumb { position: relative; height: 56px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); display: grid; place-items: center; background: var(--surface-2); min-width: 56px; padding: 0 10px; font-size: 12px; color: var(--muted); }
+.thumb img { height: 56px; width: auto; display: block; }
+.thumb button { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .65); color: #fff; display: grid; place-items: center; padding: 0; }
+.thumb button svg { width: 12px; height: 12px; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.swatch { width: 32px; height: 32px; border-radius: 50%; border: 0; position: relative; transition: transform .15s var(--ease); }
+.swatch:hover { transform: scale(1.1); }
+.swatch.on::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid var(--text); }
+.preview-list { max-height: 180px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; font-size: 13px; }
+.preview-list div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--line); }
+.preview-list div:last-child { border-bottom: 0; }
+.danger-zone { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 16px; }
+
+/* ---------- menu, toast, loader ---------- */
+.menu { position: fixed; z-index: 60; min-width: 190px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 6px; animation: rise .18s var(--ease); }
+.menu button { display: flex; width: 100%; align-items: center; gap: 10px; border: 0; background: none; padding: 9px 10px; border-radius: 9px; font-size: 14px; font-weight: 500; text-align: left; }
+.menu button:hover { background: var(--surface-2); }
+.menu button.danger { color: var(--again); }
+.menu svg { width: 16px; height: 16px; color: var(--muted); }
+.menu button.danger svg { color: var(--again); }
+.toasts { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 70; display: grid; gap: 8px; justify-items: center; pointer-events: none; padding-bottom: env(safe-area-inset-bottom, 0); }
+.toast { background: var(--text); color: var(--bg); padding: 11px 16px; border-radius: 12px; font-size: 14px; font-weight: 500; box-shadow: var(--shadow-lg); animation: rise .25s var(--ease); max-width: calc(100vw - 40px); }
+.toast.err { background: var(--again); color: #fff; }
+.boot { min-height: 100vh; display: grid; place-items: center; }
+.spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--surface-3); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+.btn .spinner { width: 16px; height: 16px; border-width: 2px; border-color: rgba(255, 255, 255, .35); border-top-color: currentColor; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.sync { font-size: 12px; color: var(--faint); display: inline-flex; align-items: center; gap: 6px; }
+.sync i { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+.sync.busy i { background: var(--hard); animation: blink 1s infinite; }
+.sync.off i { background: var(--again); }
+@keyframes blink { 50% { opacity: .3; } }
+
+.appear > * { animation: rise .45s var(--ease) both; }
+.appear > *:nth-child(2) { animation-delay: .04s; }
+.appear > *:nth-child(3) { animation-delay: .08s; }
+.appear > *:nth-child(4) { animation-delay: .12s; }
+.appear > *:nth-child(5) { animation-delay: .16s; }
+
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .wrap { padding: 0 16px; }
+  .hero-main { padding: 22px; min-height: 200px; }
+  .hero-main .big { font-size: 52px; }
+  .sides, .grid2 { grid-template-columns: 1fr; }
+  .crow { grid-template-columns: minmax(0, 1fr) auto; }
+  .crow .b { grid-column: 1; grid-row: 2; margin-top: -10px; }
+  .crow .tags { grid-row: 1 / span 2; grid-column: 2; }
+  .face { padding: 22px 20px; border-radius: 24px; }
+  .grade { padding: 10px 4px 8px; font-size: 14px; border-radius: 14px; }
+  .flip { min-height: 64vh; min-height: 64svh; }
+  .hide-sm { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+</style>
+</head>
+<body>
+<div id="app"><div class="boot"><div class="spinner"></div></div></div>
+<script>window.FC_API = "https://script.google.com/macros/s/AKfycbwpv59moA65KNiGG7837BOf2X4prkA9w3g9OtRi867kPInYmFbi7f4tubvNhfXZAq6mPA/exec";</script>
+<script>
+/* Spaced repetition (SM-2 style with learning steps). Pure: no DOM, no Apps Script.
+   A progress state looks like:
+   { s: 'new'|'learn'|'review', due: ms, ivl: days, ease: 2.5, step: 0, reps: 0, lapses: 0 }
+   NOTE: client code must never contain a double slash (HtmlService strips it). */
+var SRS = (function () {
+  var MIN = 60 * 1000;
+  var DAY = 24 * 60 * MIN;
+  var SRS_DAY_ = DAY;
+  var LEARN_STEPS = [1 * MIN, 10 * MIN];
+  var RELEARN_STEP = 10 * MIN;
+  var START_EASE = 2.5;
+  var MIN_EASE = 1.3;
+  var GRADES = ['again', 'hard', 'good', 'easy'];
+
+  function fresh() {
+    return { s: 'new', due: 0, ivl: 0, ease: START_EASE, step: 0, reps: 0, lapses: 0, first: 0 };
+  }
+
+  function normalize(p) {
+    var f = fresh();
+    if (!p || typeof p !== 'object') return f;
+    return {
+      s: p.s === 'learn' || p.s === 'review' ? p.s : 'new',
+      due: Number(p.due) || 0,
+      ivl: Math.max(0, Number(p.ivl) || 0),
+      ease: Math.max(MIN_EASE, Number(p.ease) || START_EASE),
+      step: Math.max(0, Math.floor(Number(p.step) || 0)),
+      reps: Math.max(0, Math.floor(Number(p.reps) || 0)),
+      lapses: Math.max(0, Math.floor(Number(p.lapses) || 0)),
+      first: Math.max(0, Number(p.first) || 0)
+    };
+  }
+
+  /* Small deterministic-ish fuzz so cards learned together don't all land on the same day. */
+  function fuzz(days, rnd) {
+    if (days < 3) return days;
+    var spread = Math.max(1, Math.round(days * 0.05));
+    var r = typeof rnd === 'number' ? rnd : Math.random();
+    return days + Math.round((r * 2 - 1) * spread);
+  }
+
+  /* Start of the next study day: days roll over at 4am local time. */
+  function dayStart(now, offsetDays) {
+    var d = new Date(now);
+    if (d.getHours() < 4) d.setDate(d.getDate() - 1);
+    d.setHours(4, 0, 0, 0);
+    d.setDate(d.getDate() + (offsetDays || 0));
+    return d.getTime();
+  }
+
+  function graduate(p, days, now, rnd) {
+    var ivl = Math.max(1, fuzz(days, rnd));
+    p.s = 'review';
+    p.ivl = ivl;
+    p.step = 0;
+    p.due = dayStart(now, ivl);
+    return p;
+  }
+
+  /* Returns a NEW progress object after answering with grade (again|hard|good|easy). */
+  function grade(prev, g, now, rnd) {
+    if (GRADES.indexOf(g) < 0) throw new Error('Bad grade: ' + g);
+    now = now || Date.now();
+    var p = normalize(prev);
+    if (!p.first) p.first = now;
+    p.reps += 1;
+
+    if (p.s === 'new' || p.s === 'learn') {
+      var relearning = p.ivl > 0;
+      p.s = 'learn';
+      if (g === 'again') { p.step = 0; p.due = now + (relearning ? RELEARN_STEP : LEARN_STEPS[0]); return p; }
+      if (g === 'hard') {
+        p.due = now + (relearning ? RELEARN_STEP : Math.round((LEARN_STEPS[0] + LEARN_STEPS[1]) / 2));
+        return p;
+      }
+      if (g === 'easy') return graduate(p, relearning ? Math.max(1, p.ivl) + 1 : 4, now, rnd);
+      /* good */
+      if (relearning) return graduate(p, Math.max(1, p.ivl), now, rnd);
+      p.step += 1;
+      if (p.step >= LEARN_STEPS.length) return graduate(p, 1, now, rnd);
+      p.due = now + LEARN_STEPS[p.step];
+      return p;
+    }
+
+    /* review */
+    var late = Math.max(0, (now - p.due) / DAY);
+    if (g === 'again') {
+      p.lapses += 1;
+      p.ease = Math.max(MIN_EASE, p.ease - 0.2);
+      p.ivl = Math.max(1, Math.round(p.ivl * 0.5));
+      p.s = 'learn';
+      p.step = 0;
+      p.due = now + RELEARN_STEP;
+      return p;
+    }
+    var next;
+    if (g === 'hard') {
+      p.ease = Math.max(MIN_EASE, p.ease - 0.15);
+      next = Math.max(p.ivl + 1, Math.round(p.ivl * 1.2));
+    } else if (g === 'good') {
+      next = Math.max(p.ivl + 1, Math.round((p.ivl + late / 2) * p.ease));
+    } else {
+      p.ease = p.ease + 0.15;
+      next = Math.max(p.ivl + 2, Math.round((p.ivl + late) * p.ease * 1.3));
+    }
+    return graduate(p, Math.min(next, 3650), now, rnd);
+  }
+
+  /* Human label for when a grade would next show the card, e.g. "10m", "3d". */
+  function preview(prev, g, now) {
+    now = now || Date.now();
+    var p = grade(prev, g, now, 0.5);
+    var ms = p.due - now;
+    if (p.s === 'review') return p.ivl >= 365 ? (p.ivl / 365).toFixed(1).replace('.0', '') + 'y'
+      : p.ivl >= 30 ? Math.round(p.ivl / 30) + 'mo' : p.ivl + 'd';
+    if (ms < 60 * MIN) return Math.max(1, Math.round(ms / MIN)) + 'm';
+    return Math.round(ms / (60 * MIN)) + 'h';
+  }
+
+  function isDue(p, now) {
+    p = normalize(p);
+    return p.s !== 'new' && p.due <= now;
+  }
+
+  /* Map the old app's score (1 best .. 4 worst) and times seen to a progress state. */
+  function fromLegacy(score, times, now, idx) {
+    var p = fresh();
+    score = Number(score) || 4;
+    times = Number(times) || 0;
+    if (!times) return p;
+    p.reps = times;
+    p.first = now - SRS_DAY_ * 30;
+    if (score <= 1) { p.s = 'review'; p.ivl = 4; p.due = dayStart(now, 1 + ((idx || 0) % 4)); }
+    else if (score === 2) { p.s = 'review'; p.ivl = 1; p.due = now; }
+    else { p.s = 'learn'; p.step = 0; p.due = now; }
+    return p;
+  }
+
+  return {
+    fresh: fresh, normalize: normalize, grade: grade, preview: preview, isDue: isDue,
+    dayStart: dayStart, fromLegacy: fromLegacy, GRADES: GRADES, DAY: DAY, MIN: MIN
+  };
+})();
+
+/* Text helpers shared by client and server. Pure. No double slashes allowed in this file. */
+var TextUtil = (function () {
+  function fold(s) {
+    return String(s == null ? '' : s)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[\u2018\u2019\u201c\u201d"'`.,!?;:()\[\]{}\-_]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function lev(a, b) {
+    if (a === b) return 0;
+    if (!a.length) return b.length;
+    if (!b.length) return a.length;
+    var prev = [], cur = [], i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i];
+      for (j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  /* Compare a typed answer to the expected one.
+     Returns 'exact' | 'close' | 'wrong'. Several accepted answers can be separated by " / " or " | ". */
+  function check(typed, expected) {
+    var t = fold(typed);
+    if (!t) return 'wrong';
+    var options = String(expected == null ? '' : expected).split(/\s[\/|]\s|\n/).map(fold).filter(Boolean);
+    if (!options.length) return 'wrong';
+    var best = 'wrong';
+    for (var i = 0; i < options.length; i++) {
+      var o = options[i];
+      if (t === o) return 'exact';
+      var allowed = o.length <= 3 ? 0 : o.length <= 8 ? 1 : Math.floor(o.length / 6);
+      if (lev(t, o) <= allowed) best = 'close';
+    }
+    return best;
+  }
+
+  /* Parse pasted text into [front, back] pairs. Accepts tab, then ";" then "," as separators. */
+  function parsePairs(text) {
+    var lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
+    var sep = null;
+    var sample = lines.filter(function (l) { return l.trim(); }).slice(0, 10);
+    [ '\t', ';', ',' ].some(function (c) {
+      if (sample.length && sample.every(function (l) { return l.indexOf(c) >= 0; })) { sep = c; return true; }
+      return false;
+    });
+    if (!sep) sep = '\t';
+    var out = [];
+    lines.forEach(function (l) {
+      if (!l.trim()) return;
+      var i = l.indexOf(sep);
+      var front = i < 0 ? l : l.slice(0, i);
+      var back = i < 0 ? '' : l.slice(i + 1);
+      front = front.trim(); back = back.trim();
+      if (front || back) out.push([front, back]);
+    });
+    return out;
+  }
+
+  /* Stop text people type turning into a Sheet formula. */
+  function guard(v) {
+    if (typeof v !== 'string') return v;
+    return /^[=+\-@\t\r\n]/.test(v) ? "'" + v : v;
+  }
+
+  return { fold: fold, lev: lev, check: check, parsePairs: parsePairs, guard: guard };
+})();
+
+/* Flash Cards client. Plain JS, no build-time framework.
+   RULE: never write a double slash anywhere in this file (Apps Script HtmlService strips it). */
+(function () {
+  'use strict';
+
+  /* ================= icons ================= */
+  function svg(paths) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+  }
+  var I = {
+    plus: svg('<path d="M12 5v14M5 12h14"/>'),
+    play: svg('<path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/>'),
+    x: svg('<path d="M18 6 6 18M6 6l12 12"/>'),
+    back: svg('<path d="m15 18-6-6 6-6"/>'),
+    more: svg('<circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/>'),
+    gear: svg('<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'),
+    search: svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
+    edit: svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z"/>'),
+    trash: svg('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>'),
+    upload: svg('<path d="M12 16V4M6 10l6-6 6 6M4 20h16"/>'),
+    image: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>'),
+    audio: svg('<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>'),
+    flame: svg('<path d="M12 2s5 4.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 1-3.5S9 11 11 11c0-4 1-9 1-9Z" fill="currentColor" stroke="none"/>'),
+    check: svg('<path d="M20 6 9 17l-5-5"/>'),
+    reset: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>'),
+    logout: svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'),
+    moon: svg('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>'),
+    sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+    cards: svg('<rect x="2" y="6" width="15" height="14" rx="2"/><path d="M7 2h13a2 2 0 0 1 2 2v13"/>')
+  };
+
+  var COLORS = ['#6d5efc', '#3b82f6', '#06b6d4', '#10b981', '#22c55e', '#eab308', '#f97316', '#ef4444', '#ec4899', '#a855f7', '#64748b'];
+  var DEFAULT_ACCENT = '#6d5efc';
+
+  /* ================= state ================= */
+  var S = {
+    token: null, user: null, decks: [], cards: [], daily: [], quotes: [], config: {},
+    view: 'boot', deckId: null, from: 'home', study: null,
+    pending: [], pendingDay: {}, syncing: false, syncState: 'ok', flushTimer: null,
+    media: {}, search: '', listLimit: 200
+  };
+
+  /* ================= small utils ================= */
+  function ls(key, val) {
+    try {
+      if (arguments.length === 1) { var v = localStorage.getItem(key); return v == null ? null : JSON.parse(v); }
+      if (val == null) localStorage.removeItem(key); else localStorage.setItem(key, JSON.stringify(val));
+    } catch (e) { return null; }
+    return null;
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function el(html) { var t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : (many || one + 's')); }
+  function shuffle(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function dateKey(ms) { var d = new Date(ms - 4 * 3600000); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function today() { return dateKey(Date.now()); }
+  function firstName() { return (S.user && S.user.name || '').split(' ')[0]; }
+
+  function setAccent(c) { document.documentElement.style.setProperty('--accent', c || DEFAULT_ACCENT); document.documentElement.style.setProperty('--bg-glow', hexA(c || DEFAULT_ACCENT, 0.18)); }
+  function hexA(hex, a) {
+    var n = parseInt(String(hex).slice(1), 16);
+    return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+  function applyTheme() {
+    var t = (S.user && S.user.settings.theme) || ls('fc.theme') || 'dark';
+    var dark = t === 'dark' || (t === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }
+  function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+  function toggleTheme() {
+    var t = isDark() ? 'light' : 'dark';
+    if (S.user) S.user.settings.theme = t;
+    ls('fc.theme', t);
+    applyTheme(); render(); cacheNow();
+    if (S.user) api('saveSettings', { settings: S.user.settings }).catch(function () {});
+  }
+  if (window.matchMedia) {
+    var mq = matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', applyTheme);
+  }
+
+  /* ================= server ================= */
+  var GS = window.google && window.google.script;
+  function api(method, args) {
+    return new Promise(function (resolve, reject) {
+      if (!GS || !GS.run) {
+        if (!window.FC_API) { reject(new Error('Not connected.')); return; }
+        fetch(window.FC_API, { method: 'POST', body: JSON.stringify({ token: S.token, method: method, args: args || {} }) })
+          .then(function (res) { if (!res.ok) throw new Error('bad status'); return res.json(); })
+          .then(function (r) {
+            if (r && r.ok) { resolve(r.data); return; }
+            var e = new Error((r && r.error) || 'Something went wrong.'); e.auth = r && r.auth;
+            if (e.auth && S.token) signedOut();
+            reject(e);
+          }, function () { reject(new Error('Could not reach the server. Check your connection.')); });
+        return;
+      }
+      GS.run
+        .withSuccessHandler(function (r) {
+          if (!r) { reject(new Error('No response from the server.')); return; }
+          if (r.ok) { resolve(r.data); return; }
+          var e = new Error(r.error || 'Something went wrong.'); e.auth = r.auth;
+          if (r.auth && S.token) { signedOut(); }
+          reject(e);
+        })
+        .withFailureHandler(function () { reject(new Error('Could not reach the server. Check your connection.')); })
+        .api(S.token, method, args || {});
+    });
+  }
+
+  /* ================= toast, modal, menu, confirm ================= */
+  function toast(msg, isErr) {
+    var box = $('.toasts') || document.body.appendChild(el('<div class="toasts"></div>'));
+    var t = el('<div class="toast' + (isErr ? ' err' : '') + '"></div>');
+    t.textContent = msg;
+    box.appendChild(t);
+    setTimeout(function () { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(function () { t.remove(); }, 300); }, isErr ? 4200 : 2400);
+  }
+  function fail(e) { toast(e && e.message ? e.message : 'Something went wrong.', true); }
+
+  var openModals = [];
+  function modal(title, bodyHtml, footHtml, opts) {
+    opts = opts || {};
+    var scrim = el('<div class="scrim"><div class="modal' + (opts.wide ? ' wide' : '') + '" role="dialog" aria-modal="true">' +
+      '<div class="modal-head"><h2></h2><button class="btn ghost icon-btn sm" data-close aria-label="Close">' + I.x + '</button></div>' +
+      '<div class="modal-body">' + bodyHtml + '</div>' + (footHtml ? '<div class="modal-foot">' + footHtml + '</div>' : '') + '</div></div>');
+    $('h2', scrim).textContent = title;
+    var m = { el: scrim, close: close, onClose: null };
+    function close() {
+      if (!scrim.parentNode) return;
+      scrim.remove();
+      openModals.splice(openModals.indexOf(m), 1);
+      if (m.onClose) m.onClose();
+    }
+    scrim.addEventListener('mousedown', function (e) { if (e.target === scrim) close(); });
+    $$('[data-close]', scrim).forEach(function (b) { b.addEventListener('click', close); });
+    document.body.appendChild(scrim);
+    openModals.push(m);
+    setTimeout(function () { var f = $('[autofocus]', scrim); if (f) f.focus(); }, 30);
+    return m;
+  }
+  function confirmBox(title, text, okLabel, danger) {
+    return new Promise(function (resolve) {
+      var m = modal(title, '<p style="margin:0;color:var(--muted)"></p>',
+        '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn ' + (danger ? 'primary" style="background:var(--again)' : 'primary') + '" data-ok>' + esc(okLabel || 'OK') + '</button>');
+      $('p', m.el).textContent = text;
+      var done = false;
+      m.onClose = function () { if (!done) resolve(false); };
+      $('[data-ok]', m.el).addEventListener('click', function () { done = true; m.close(); resolve(true); });
+    });
+  }
+  function menu(anchor, items) {
+    closeMenus();
+    var m = el('<div class="menu"></div>');
+    items.forEach(function (it) {
+      var b = el('<button class="' + (it.danger ? 'danger' : '') + '">' + (I[it.icon] || '') + '<span></span></button>');
+      $('span', b).textContent = it.label;
+      b.addEventListener('click', function (e) { e.stopPropagation(); closeMenus(); it.run(); });
+      m.appendChild(b);
+    });
+    document.body.appendChild(m);
+    var r = anchor.getBoundingClientRect();
+    var left = Math.min(r.right - m.offsetWidth, window.innerWidth - m.offsetWidth - 12);
+    m.style.left = Math.max(12, left) + 'px';
+    var top = r.bottom + 6;
+    if (top + m.offsetHeight > window.innerHeight - 12) top = r.top - m.offsetHeight - 6;
+    m.style.top = top + 'px';
+    setTimeout(function () { document.addEventListener('click', closeMenus, { once: true }); }, 0);
+  }
+  function closeMenus() { $$('.menu').forEach(function (m) { m.remove(); }); }
+  function busy(btn, on) {
+    if (!btn) return;
+    if (on) { btn.dataset.label = btn.innerHTML; btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true; }
+    else if (btn.dataset.label != null) { btn.innerHTML = btn.dataset.label; btn.disabled = false; }
+  }
+
+  /* ================= data helpers ================= */
+  function deckById(id) { return S.decks.filter(function (d) { return d.id === id; })[0] || null; }
+  function cardById(id) { return S.cards.filter(function (c) { return c.id === id; })[0] || null; }
+  function cardsOf(deckId) { return S.cards.filter(function (c) { return c.deckId === deckId; }); }
+  function prog(card, dir) { return SRS.normalize(card.srs && card.srs[dir]); }
+  function dirsOf(card) { return card.reverse ? ['f', 'r'] : ['f']; }
+  function newLimit() { var n = S.user ? Number(S.user.settings.newPerDay) : 20; return isNaN(n) ? 20 : n; }
+
+  function deckStats(deckId, now) {
+    now = now || Date.now();
+    var start = SRS.dayStart(now, 0);
+    var st = { total: 0, due: 0, learn: 0, fresh: 0, newDone: 0 };
+    cardsOf(deckId).forEach(function (c) {
+      st.total++;
+      dirsOf(c).forEach(function (d) {
+        var p = prog(c, d);
+        if (p.first >= start) st.newDone++;
+        if (p.s === 'new') st.fresh++;
+        else if (p.s === 'learn') { if (p.due <= now + 20 * SRS.MIN) st.learn++; }
+        else if (p.due <= now) st.due++;
+      });
+    });
+    st.newToday = Math.max(0, Math.min(st.fresh, newLimit() - st.newDone));
+    st.ready = st.due + st.learn + st.newToday;
+    return st;
+  }
+
+  function nextDue(deckIds) {
+    var now = Date.now(), best = 0;
+    deckIds.forEach(function (id) {
+      cardsOf(id).forEach(function (c) {
+        dirsOf(c).forEach(function (d) { var p = prog(c, d); if (p.s !== 'new' && p.due > now && (!best || p.due < best)) best = p.due; });
+      });
+    });
+    return best;
+  }
+  function whenLabel(ms) {
+    if (!ms) return '';
+    var diff = ms - Date.now();
+    if (diff < 3600000) return 'in ' + Math.max(1, Math.round(diff / 60000)) + ' min';
+    if (ms < SRS.dayStart(Date.now(), 1)) return 'in ' + Math.round(diff / 3600000) + 'h';
+    if (ms < SRS.dayStart(Date.now(), 2)) return 'tomorrow';
+    return 'in ' + Math.round((SRS.dayStart(ms, 0) - SRS.dayStart(Date.now(), 0)) / SRS.DAY) + ' days';
+  }
+  function dayCount(date) {
+    var d = S.daily.filter(function (x) { return x.date === date; })[0];
+    return d ? d.reviews : 0;
+  }
+  function bumpDaily(correct) {
+    var t = today();
+    var d = S.daily.filter(function (x) { return x.date === t; })[0];
+    if (!d) { d = { date: t, reviews: 0, correct: 0 }; S.daily.push(d); }
+    d.reviews++; if (correct) d.correct++;
+    var p = S.pendingDay[t] || (S.pendingDay[t] = { reviews: 0, correct: 0 });
+    p.reviews++; if (correct) p.correct++;
+  }
+  function streak() {
+    var n = 0, t = Date.now();
+    if (!dayCount(dateKey(t))) t -= SRS.DAY;
+    while (dayCount(dateKey(t)) > 0) { n++; t -= SRS.DAY; }
+    return n;
+  }
+
+  /* ================= sync ================= */
+  function savePending() { ls('fc.pending', { items: S.pending, day: S.pendingDay, user: S.user && S.user.id }); }
+  function loadPending() {
+    var p = ls('fc.pending');
+    if (p && S.user && p.user === S.user.id) { S.pending = p.items || []; S.pendingDay = p.day || {}; }
+  }
+  function queueReview(cardId, dir, srs) {
+    S.pending = S.pending.filter(function (x) { return !(x.id === cardId && x.dir === dir); });
+    S.pending.push({ id: cardId, dir: dir, srs: srs });
+    savePending();
+    clearTimeout(S.flushTimer);
+    S.flushTimer = setTimeout(flush, S.pending.length >= 12 ? 200 : 4000);
+    setSync();
+  }
+  function flush() {
+    clearTimeout(S.flushTimer);
+    if (S.syncing || !S.token) return Promise.resolve();
+    var dates = Object.keys(S.pendingDay);
+    if (!S.pending.length && !dates.length) return Promise.resolve();
+    S.syncing = true; setSync();
+    var items = S.pending.slice(0, 300);
+    var date = dates[0];
+    var day = date ? { date: date, reviews: S.pendingDay[date].reviews, correct: S.pendingDay[date].correct } : null;
+    return api('review', { items: items, day: day }).then(function () {
+      S.pending = S.pending.filter(function (x) { return items.indexOf(x) < 0; });
+      if (date && S.pendingDay[date]) {
+        S.pendingDay[date].reviews -= day.reviews; S.pendingDay[date].correct -= day.correct;
+        if (S.pendingDay[date].reviews <= 0) delete S.pendingDay[date];
+      }
+      savePending();
+      S.syncing = false; S.syncState = 'ok'; setSync();
+      if (S.pending.length || Object.keys(S.pendingDay).length) return flush();
+    }, function (e) {
+      S.syncing = false; S.syncState = 'off'; setSync();
+      if (!e.auth) S.flushTimer = setTimeout(flush, 15000);
+    });
+  }
+  function setSync() {
+    var n = $('.sync');
+    if (!n) return;
+    var waiting = S.pending.length > 0;
+    n.className = 'sync' + (S.syncing || waiting ? ' busy' : '') + (S.syncState === 'off' ? ' off' : '');
+    $('span', n).textContent = S.syncState === 'off' ? 'Offline, will retry' : S.syncing || waiting ? 'Saving' : 'Saved';
+  }
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
+
+  /* ================= media ================= */
+  function mediaUrl(id) {
+    if (S.media[id]) return S.media[id];
+    S.media[id] = api('getMedia', { id: id }).then(function (m) { return 'data:' + m.mime + ';base64,' + m.data; });
+    S.media[id].catch(function () { delete S.media[id]; });
+    return S.media[id];
+  }
+  function hydrate(root) {
+    $$('img[data-media]', root).forEach(function (img) {
+      mediaUrl(img.getAttribute('data-media')).then(function (u) { img.src = u; }, function () { img.alt = 'Image could not load'; });
+    });
+    $$('[data-audio]', root).forEach(function (b) {
+      b.addEventListener('click', function (e) { e.stopPropagation(); playAudio(b.getAttribute('data-audio')); });
+    });
+  }
+  var audioEl = null;
+  function playAudio(id) {
+    mediaUrl(id).then(function (u) {
+      if (audioEl) audioEl.pause();
+      audioEl = new Audio(u); audioEl.play().catch(function () {});
+    }, fail);
+  }
+  function readFile(file) {
+    return new Promise(function (res, rej) {
+      var r = new FileReader();
+      r.onload = function () { res(r.result); };
+      r.onerror = function () { rej(new Error('Could not read that file.')); };
+      r.readAsDataURL(file);
+    });
+  }
+  function shrinkImage(dataUrl) {
+    return new Promise(function (res) {
+      var img = new Image();
+      img.onload = function () {
+        var max = 1200, w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        var g = c.getContext('2d');
+        g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/jpeg', 0.86));
+      };
+      img.onerror = function () { res(dataUrl); };
+      img.src = dataUrl;
+    });
+  }
+  function uploadFile(file) {
+    var isImg = file.type.indexOf('image/') === 0, isAudio = file.type.indexOf('audio/') === 0;
+    if (!isImg && !isAudio) return Promise.reject(new Error('Pick an image or audio file.'));
+    return readFile(file).then(function (url) {
+      return isImg && file.type !== 'image/gif' ? shrinkImage(url) : url;
+    }).then(function (url) {
+      var comma = url.indexOf(',');
+      var mime = url.slice(5, url.indexOf(';'));
+      if (mime === 'audio/x-m4a' || mime === 'audio/m4a') mime = 'audio/mp4';
+      var data = url.slice(comma + 1);
+      if (data.length > 4200000) throw new Error('That file is too big (max 3 MB).');
+      return api('uploadMedia', { mime: mime, data: data }).then(function (r) {
+        S.media[r.id] = Promise.resolve('data:' + mime + ';base64,' + data);
+        return { id: r.id, kind: isImg ? 'img' : 'audio' };
+      });
+    });
+  }
+
+  /* ================= boot ================= */
+  function boot() {
+    applyTheme();
+    S.token = ls('fc.token');
+    api('config').then(function (c) { S.config = c; addGoogleToAuth(); }, function () {});
+    if (!S.token) { go('auth'); return; }
+    var cached = ls('fc.cache');
+    if (cached && cached.user) { setData(cached); go('home'); }
+    else render();
+    load();
+  }
+  function load() {
+    return api('bootstrap').then(function (d) {
+      setData(d);
+      ls('fc.cache', d);
+      if (S.view === 'boot' || S.view === 'auth') go('home'); else if (S.view !== 'study') render();
+      flush();
+    }, function (e) {
+      if (e.auth) return;
+      if (S.view === 'boot') { go('auth'); }
+      fail(e);
+    });
+  }
+  function setData(d) {
+    S.user = d.user; S.decks = d.decks || []; S.daily = d.daily || []; S.quotes = d.quotes || [];
+    S.cards = d.cards || [];
+    loadPending();
+    S.pending.forEach(function (p) { var c = cardById(p.id); if (c) { c.srs = c.srs || {}; c.srs[p.dir] = p.srs; } });
+    Object.keys(S.pendingDay).forEach(function (date) {
+      var d2 = S.daily.filter(function (x) { return x.date === date; })[0];
+      if (!d2) { d2 = { date: date, reviews: 0, correct: 0 }; S.daily.push(d2); }
+      d2.reviews += S.pendingDay[date].reviews; d2.correct += S.pendingDay[date].correct;
+    });
+    ls('fc.theme', S.user.settings.theme);
+    applyTheme();
+  }
+  function cacheNow() { if (S.user) ls('fc.cache', { user: S.user, decks: S.decks, cards: S.cards, daily: S.daily, quotes: S.quotes }); }
+  function signedIn(token) { S.token = token; ls('fc.token', token); S.view = 'boot'; render(); load(); }
+  function signedOut() {
+    S.noAutoGoogle = true;
+    try { if (window.google && google.accounts) google.accounts.id.disableAutoSelect(); } catch (e) {}
+    S.token = null; S.user = null; S.decks = []; S.cards = []; S.pending = []; S.pendingDay = {};
+    ls('fc.token', null); ls('fc.cache', null); ls('fc.pending', null);
+    openModals.slice().forEach(function (m) { m.close(); });
+    go('auth');
+  }
+
+  /* ================= router ================= */
+  function go(view, opts) {
+    opts = opts || {};
+    if (S.view === 'study' && view !== 'study') { flush(); cacheNow(); }
+    S.view = view;
+    if (opts.deckId !== undefined) S.deckId = opts.deckId;
+    if (view !== 'deck') { S.search = ''; S.listLimit = 200; }
+    render();
+    window.scrollTo(0, 0);
+  }
+  function render() {
+    closeMenus();
+    var app = $('#app');
+    var deck = S.deckId && deckById(S.deckId);
+    if (S.view === 'deck' && !deck) S.view = 'home';
+    setAccent(S.view === 'deck' || S.view === 'study' ? (S.study && S.study.color) || (deck && deck.color) : DEFAULT_ACCENT);
+    if (S.view === 'boot') { app.innerHTML = '<div class="boot"><div class="spinner"></div></div>'; return; }
+    if (S.view === 'auth') return renderAuth(app);
+    if (S.view === 'home') return renderHome(app);
+    if (S.view === 'deck') return renderDeck(app, deck);
+    if (S.view === 'study') return renderStudy(app);
+  }
+
+  function topbar(extra) {
+    return '<header class="topbar"><div class="wrap"><button class="brand" data-home><span class="mark"></span>Flash Cards</button>' +
+      '<span class="spacer"></span><span class="sync hide-sm"><i></i><span>Saved</span></span>' + (extra || '') +
+      '<button class="btn ghost icon-btn" data-theme-toggle aria-label="Switch light or dark" title="Light / dark">' + (isDark() ? I.sun : I.moon) + '</button>' +
+      '<button class="btn ghost icon-btn" data-settings aria-label="Settings">' + I.gear + '</button></div></header>';
+  }
+  function wireTop(root) {
+    $('[data-home]', root).addEventListener('click', function () { go('home'); });
+    $('[data-settings]', root).addEventListener('click', openSettings);
+    $('[data-theme-toggle]', root).addEventListener('click', toggleTheme);
+    setSync();
+  }
+
+  /* ================= Google sign-in ================= */
+  /* Google does not allow its sign-in on Apps Script pages, only on the jakeredden.com copy. */
+  function googleOk() { return !!(S.config.googleClientId && !GS); }
+  var gisLoading = null;
+  function loadGis() {
+    if (gisLoading) return gisLoading;
+    gisLoading = new Promise(function (res, rej) {
+      var sc = document.createElement('script');
+      sc.src = 'https:' + '/' + '/accounts.google.com/gsi/client';
+      sc.async = true;
+      sc.onload = function () { res(window.google && window.google.accounts); };
+      sc.onerror = function () { gisLoading = null; rej(new Error('Could not load Google sign-in.')); };
+      document.head.appendChild(sc);
+    });
+    return gisLoading;
+  }
+  function mountGoogle(slot, onErr) {
+    loadGis().then(function (accounts) {
+      if (!accounts || !slot.isConnected) return;
+      accounts.id.initialize({
+        client_id: S.config.googleClientId,
+        auto_select: true,
+        itp_support: true,
+        callback: function (r) {
+          slot.style.opacity = '.5';
+          api('googleLogin', { credential: r.credential }).then(function (x) { signedIn(x.token); }, function (e) { slot.style.opacity = ''; onErr(e.message); });
+        }
+      });
+      accounts.id.renderButton(slot, {
+        theme: isDark() ? 'filled_black' : 'outline', size: 'large', shape: 'pill', text: 'continue_with', locale: 'en',
+        width: Math.min(352, Math.max(200, slot.clientWidth || 320))
+      });
+      if (!S.noAutoGoogle) accounts.id.prompt();
+    }, function (e) { slot.remove(); onErr(e.message); });
+  }
+
+  /* Add the Google button to an auth form that is already on screen, without redrawing it. */
+  function addGoogleToAuth() {
+    var form = S.view === 'auth' && $('#app form.panel');
+    if (!form || !googleOk() || $('[data-gbtn]', form) || S.authMode === 'reset') return;
+    var slot = el('<div class="gbtn" data-gbtn></div>'), or = el('<div class="or"><span>or use email</span></div>');
+    form.insertBefore(or, form.firstChild);
+    form.insertBefore(slot, or);
+    mountGoogle(slot, function (msg) { $('[data-err]', form).textContent = msg; });
+  }
+
+  /* ================= auth ================= */
+  function renderAuth(app) {
+    var mode = S.authMode || 'in';
+    app.innerHTML = '<div class="auth"><div class="auth-card appear">' +
+      '<div><span class="mark" style="display:block;width:44px;height:44px;border-radius:13px"></span></div>' +
+      '<div><h1>' + (mode === 'up' ? 'Make your account' : mode === 'reset' ? 'Reset password' : 'Welcome back') + '</h1>' +
+      '<p class="lead">' + (mode === 'up' ? 'Free. Build decks, study smarter, keep your streak.' : mode === 'reset' ? 'We will email you a 6 digit code.' : 'Sign in to pick up where you left off.') + '</p></div>' +
+      '<form class="panel" novalidate>' +
+      (mode !== 'reset' && googleOk() ? '<div class="gbtn" data-gbtn></div><div class="or"><span>or use email</span></div>' : '') +
+      (mode !== 'reset' ? '<div class="seg"><button type="button" data-m="in" class="' + (mode === 'in' ? 'on' : '') + '">Sign in</button><button type="button" data-m="up" class="' + (mode === 'up' ? 'on' : '') + '">Create account</button></div>' : '') +
+      (mode === 'up' ? '<label class="field"><span>Name</span><input class="input" name="name" autocomplete="name" maxlength="60"></label>' : '') +
+      '<label class="field"><span>Email</span><input class="input" name="email" type="email" autocomplete="email" required autofocus></label>' +
+      (mode === 'reset' ? '<div data-step2 hidden><label class="field"><span>Code from the email</span><input class="input" name="code" inputmode="numeric" maxlength="6"></label>' +
+        '<label class="field"><span>New password</span><input class="input" name="password" type="password" autocomplete="new-password" minlength="8"></label></div>'
+        : '<label class="field"><span>Password</span><input class="input" name="password" type="password" autocomplete="' + (mode === 'up' ? 'new-password' : 'current-password') + '" required minlength="8"></label>') +
+      '<div class="error" data-err></div>' +
+      '<button class="btn primary lg" style="width:100%" type="submit">' + (mode === 'up' ? 'Create account' : mode === 'reset' ? 'Send code' : 'Sign in') + '</button>' +
+      '<div class="row" style="justify-content:center;margin-top:16px">' +
+      (mode === 'in' ? '<button type="button" class="linkish" data-m="reset">Forgot password?</button>' : mode === 'reset' ? '<button type="button" class="linkish" data-m="in">Back to sign in</button>' : '<span class="hint">Use at least 8 characters for your password.</span>') +
+      '</div></form></div></div>';
+    var form = $('form', app), err = $('[data-err]', app), step2 = false;
+    var gslot = $('[data-gbtn]', app);
+    if (gslot) mountGoogle(gslot, function (msg) { err.textContent = msg; });
+    $$('[data-m]', app).forEach(function (b) { b.addEventListener('click', function () { S.authMode = b.getAttribute('data-m'); renderAuth(app); }); });
+    if (mode === 'in' && !S.config.resetEnabled) {
+      var fp = $('[data-m="reset"]', app);
+      fp.addEventListener('click', function (e) { e.stopImmediatePropagation(); }, true);
+      fp.onclick = function () { err.textContent = 'Password reset is not switched on yet. Ask the owner of this app to reset it for you.'; };
+    }
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      err.textContent = '';
+      var f = form.elements, btn = $('button[type=submit]', form);
+      var email = f.email.value.trim();
+      var p;
+      if (mode === 'reset' && !step2) {
+        p = api('resetRequest', { email: email }).then(function () {
+          step2 = true; $('[data-step2]', form).hidden = false; btn.textContent = 'Set new password'; f.code.focus();
+          toast('If that email has an account, a code is on its way.');
+        });
+      } else if (mode === 'reset') {
+        p = api('resetConfirm', { email: email, code: f.code.value, password: f.password.value }).then(function (r) { signedIn(r.token); });
+      } else {
+        p = api(mode === 'up' ? 'signup' : 'login', { email: email, password: f.password.value, name: f.name ? f.name.value : '' })
+          .then(function (r) { S.authMode = 'in'; signedIn(r.token); });
+      }
+      var label = btn.textContent;
+      btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+      p.catch(function (x) { err.textContent = x.message; }).then(function () { if (btn.isConnected) { btn.disabled = false; if (btn.querySelector('.spinner')) btn.textContent = step2 && mode === 'reset' ? 'Set new password' : label; } });
+    });
+  }
+
+  /* ================= home ================= */
+  function renderHome(app) {
+    var now = Date.now();
+    var stats = S.decks.map(function (d) { return { deck: d, st: deckStats(d.id, now) }; });
+    var ready = stats.reduce(function (n, x) { return n + x.st.ready; }, 0);
+    var due = stats.reduce(function (n, x) { return n + x.st.due + x.st.learn; }, 0);
+    var fresh = stats.reduce(function (n, x) { return n + x.st.newToday; }, 0);
+    var goal = Number(S.user.settings.goal) || 50;
+    var done = dayCount(today());
+    var pct = Math.min(1, done / goal);
+    var C = 2 * Math.PI * 18;
+    var hour = new Date().getHours();
+    var hello = (hour < 5 ? 'Late night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening') + (firstName() ? ', ' + esc(firstName()) : '');
+    var quote = S.quotes.length ? S.quotes[Math.floor(Math.random() * S.quotes.length)] : '';
+    var st = streak();
+
+    app.innerHTML = topbar() + '<main class="wrap home"><div class="appear">' +
+      '<section class="hero">' +
+      '<div class="hero-main"><div><div class="eyebrow">' + hello + '</div>' +
+      '<div class="big">' + ready + '</div>' +
+      '<div class="sub">' + (ready ? (due ? plural(due, 'review') + ' due' : 'No reviews due') + (fresh ? ' and ' + fresh + ' new' : '') + ' today' : S.cards.length ? 'All caught up.' + (nextDue(S.decks.map(function (d) { return d.id; })) ? ' Next cards are due ' + whenLabel(nextDue(S.decks.map(function (d) { return d.id; }))) + '.' : '') + ' Practise any time, it will not change your schedule.' : S.decks.length ? 'Add some cards to start studying.' : 'Make your first deck to get started.') + '</div></div>' +
+      '<div class="row" style="margin-top:20px"><button class="btn lg" data-study-all ' + (ready || S.cards.length ? '' : 'disabled') + '>' + I.play + (ready ? 'Study all' : 'Practise all') + '</button>' +
+      (ready ? '<button class="btn lg ghost-light" data-practise-all>Practise all</button>' : '') + '</div></div>' +
+      '<div class="hero-side"><div class="stats">' +
+      '<div class="stat"><svg class="ring" viewBox="0 0 46 46"><circle class="bg" cx="23" cy="23" r="18"/><circle class="fg" cx="23" cy="23" r="18" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct)) + '"/></svg>' +
+      '<div><div class="num">' + done + '<span style="font-size:15px;color:var(--faint);font-weight:600">/' + goal + '</span></div><div class="lbl">Today\'s goal</div></div></div>' +
+      '<div class="stat"><div class="flame">' + I.flame + '</div><div><div class="num">' + st + '</div><div class="lbl">Day streak</div></div></div>' +
+      '</div><div class="heat"><div class="heat-head"><span>Last 17 weeks</span><span>' + plural(totalReviews(), 'review') + '</span></div><div class="heat-grid">' + heatCells(goal) + '</div></div></div>' +
+      '</section>' +
+      (quote ? '<p class="quote"><b></b></p>' : '') +
+      '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span><button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
+      '<div class="decks">' + stats.map(deckTile).join('') +
+      '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>' +
+      '</div></main>';
+    if (quote) $('.quote b', app).textContent = quote;
+    wireTop(app);
+    $('[data-study-all]', app).addEventListener('click', function () { startStudy(S.decks.map(function (d) { return d.id; }), 'home', !ready); });
+    var pa = $('[data-practise-all]', app);
+    if (pa) pa.addEventListener('click', function () { startStudy(S.decks.map(function (d) { return d.id; }), 'home', true); });
+    $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null); }); });
+    $$('.deck[data-id]', app).forEach(function (n) {
+      var id = n.getAttribute('data-id');
+      n.addEventListener('click', function () { go('deck', { deckId: id }); });
+      $('.go', n).addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (deckStats(id).ready) startStudy([id], 'home'); else go('deck', { deckId: id });
+      });
+    });
+  }
+  function totalReviews() { var since = dateKey(Date.now() - 119 * SRS.DAY); return S.daily.reduce(function (n, d) { return d.date >= since ? n + d.reviews : n; }, 0); }
+  function heatCells(goal) {
+    var now = Date.now();
+    var t = new Date(now - 4 * 3600000);
+    var dow = t.getDay();
+    var cells = [];
+    var start = now - (16 * 7 + dow) * SRS.DAY;
+    for (var i = 0; i < 17 * 7; i++) {
+      var ms = start + i * SRS.DAY;
+      if (i > 16 * 7 + dow) { cells.push('<i class="future"></i>'); continue; }
+      var key = dateKey(ms), n = dayCount(key), r = n / goal;
+      var l = !n ? 0 : r < 0.5 ? 1 : r < 1 ? 2 : r < 2 ? 3 : 4;
+      cells.push('<i data-l="' + l + '" title="' + key + ': ' + n + '"></i>');
+    }
+    return cells.join('');
+  }
+  function deckTile(x) {
+    var d = x.deck, st = x.st;
+    return '<div class="deck" role="button" tabindex="0" data-id="' + esc(d.id) + '" style="--c:' + esc(d.color) + '">' +
+      '<span class="dot"></span><h3>' + esc(d.name) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
+      '<div class="counts">' + (st.due + st.learn ? '<span class="chip due">' + (st.due + st.learn) + ' due</span>' : '') +
+      (st.newToday ? '<span class="chip new">' + st.newToday + ' new</span>' : '') +
+      (!st.ready ? '<span class="chip">' + (st.total ? 'Done for today' : 'Empty') + '</span>' : '') + '</div>' +
+      '<button class="go" aria-label="Study ' + esc(d.name) + '">' + (st.ready ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
+  }
+
+  /* ================= deck page ================= */
+  function renderDeck(app, deck) {
+    var st = deckStats(deck.id);
+    app.innerHTML = topbar() + '<main class="wrap deckpage"><div class="appear">' +
+      '<button class="btn ghost sm" data-back style="margin-left:-10px">' + I.back + 'Decks</button>' +
+      '<div class="deck-hero"><span class="dot" style="background:' + esc(deck.color) + '"></span>' +
+      '<div style="flex:1;min-width:200px"><h1></h1><div class="hint">' + plural(st.total, 'card') + ' &middot; ' + (st.ready ? (st.due + st.learn) + ' due &middot; ' + st.newToday + ' new today' : st.total ? 'All done for now' + (nextDue([deck.id]) ? ' &middot; next cards due ' + whenLabel(nextDue([deck.id])) : '') : 'No cards yet') + '</div></div>' +
+      '<div class="row"><button class="btn primary" data-study ' + (st.total ? '' : 'disabled') + ' title="' + (st.ready ? 'Study what is due' : 'Run through every card. Your schedule does not change.') + '">' + I.play + (st.ready ? 'Study' : 'Practise') + '</button>' +
+      (st.ready ? '<button class="btn" data-practise title="Run through every card now. Your schedule does not change.">' + I.cards + '<span class="hide-sm">Practise all</span></button>' : '') +
+      '<button class="btn" data-add>' + I.plus + 'Add card</button>' +
+      '<button class="btn" data-import>' + I.upload + '<span class="hide-sm">Import</span></button>' +
+      '<button class="btn icon-btn" data-more aria-label="More">' + I.more + '</button></div></div>' +
+      '<div class="toolbar"><label class="search">' + I.search + '<input class="input" placeholder="Search cards" data-search></label></div>' +
+      '<div data-list></div></div></main>';
+    $('h1', app).textContent = deck.name;
+    wireTop(app);
+    $('[data-back]', app).addEventListener('click', function () { go('home'); });
+    $('[data-study]', app).addEventListener('click', function () { startStudy([deck.id], 'deck', !st.ready); });
+    var pr = $('[data-practise]', app);
+    if (pr) pr.addEventListener('click', function () { startStudy([deck.id], 'deck', true); });
+    $('[data-add]', app).addEventListener('click', function () { openCardEditor(null, deck.id); });
+    $('[data-import]', app).addEventListener('click', function () { openImport(deck.id); });
+    $('[data-more]', app).addEventListener('click', function (e) {
+      e.stopPropagation();
+      menu(e.currentTarget, [
+        { label: 'Edit deck', icon: 'edit', run: function () { openDeckEditor(deck); } },
+        { label: 'Practise every card', icon: 'cards', run: function () { startStudy([deck.id], 'deck', true); } },
+        { label: 'Reset progress', icon: 'reset', run: function () { resetDeck(deck); } },
+        { label: 'Delete deck', icon: 'trash', danger: true, run: function () { deleteDeck(deck); } }
+      ]);
+    });
+    var s = $('[data-search]', app);
+    s.value = S.search;
+    s.addEventListener('input', function () { S.search = s.value; S.listLimit = 200; renderList(app, deck); });
+    renderList(app, deck);
+  }
+  function statusTag(c) {
+    var now = Date.now(), best = null;
+    dirsOf(c).forEach(function (d) { var p = prog(c, d); if (!best || (p.s !== 'new' && (best.s === 'new' || p.due < best.due))) best = p; });
+    if (best.s === 'new') return '<span class="tag" style="color:var(--easy)">New</span>';
+    if (best.s === 'learn') return '<span class="tag" style="color:var(--again)">Learning</span>';
+    if (best.due <= now) return '<span class="tag" style="color:var(--good)">Due</span>';
+    var days = Math.max(1, Math.round((best.due - now) / SRS.DAY));
+    return '<span class="tag">' + (days >= 60 ? Math.round(days / 30) + 'mo' : days + 'd') + '</span>';
+  }
+  function renderList(app, deck) {
+    var box = $('[data-list]', app);
+    var q = TextUtil.fold(S.search);
+    var list = cardsOf(deck.id).filter(function (c) { return !q || TextUtil.fold(c.front + ' ' + c.back).indexOf(q) >= 0; });
+    if (!cardsOf(deck.id).length) {
+      box.innerHTML = '<div class="cards"><div class="empty"><p style="margin:0 0 14px">No cards yet.</p><div class="row" style="justify-content:center"><button class="btn primary" data-add2>' + I.plus + 'Add a card</button><button class="btn" data-import2>' + I.upload + 'Paste a list</button></div></div></div>';
+      $('[data-add2]', box).addEventListener('click', function () { openCardEditor(null, deck.id); });
+      $('[data-import2]', box).addEventListener('click', function () { openImport(deck.id); });
+      return;
+    }
+    if (!list.length) { box.innerHTML = '<div class="cards"><div class="empty">No cards match.</div></div>'; return; }
+    var shown = list.slice(0, S.listLimit);
+    box.innerHTML = '<div class="cards">' + shown.map(function (c) {
+      var types = (c.type === 'typed' ? '<span class="tag">Typed</span>' : c.type === 'choice' ? '<span class="tag">Choice</span>' : '') +
+        (c.reverse ? '<span class="tag">Both ways</span>' : '') +
+        ((c.frontMedia && (c.frontMedia.img || c.frontMedia.audio)) || (c.backMedia && (c.backMedia.img || c.backMedia.audio)) ? '<span class="tag">Media</span>' : '');
+      return '<div class="crow" data-id="' + esc(c.id) + '"><div class="f">' + (esc(c.front) || '<span class="hint">(media)</span>') + '</div><div class="b">' + esc(c.back) + '</div><div class="tags">' + types + statusTag(c) + '</div></div>';
+    }).join('') + (list.length > shown.length ? '<div class="more"><button class="btn sm" data-more-cards>Show ' + Math.min(200, list.length - shown.length) + ' more</button></div>' : '') + '</div>';
+    $$('.crow', box).forEach(function (r) { r.addEventListener('click', function () { openCardEditor(cardById(r.getAttribute('data-id')), deck.id); }); });
+    var more = $('[data-more-cards]', box);
+    if (more) more.addEventListener('click', function () { S.listLimit += 200; renderList(app, deck); });
+  }
+
+  function resetDeck(deck) {
+    confirmBox('Reset progress?', 'Every card in "' + deck.name + '" goes back to new. Your cards stay.', 'Reset').then(function (ok) {
+      if (!ok) return;
+      api('resetDeckProgress', { id: deck.id }).then(function () {
+        cardsOf(deck.id).forEach(function (c) { c.srs = {}; });
+        S.pending = S.pending.filter(function (p) { var c = cardById(p.id); return c && c.deckId !== deck.id; });
+        savePending(); cacheNow(); render(); toast('Progress reset.');
+      }, fail);
+    });
+  }
+  function deleteDeck(deck) {
+    var n = cardsOf(deck.id).length;
+    confirmBox('Delete deck?', '"' + deck.name + '" and its ' + plural(n, 'card') + ' will be deleted. This cannot be undone.', 'Delete', true).then(function (ok) {
+      if (!ok) return;
+      api('deleteDeck', { id: deck.id }).then(function () {
+        S.decks = S.decks.filter(function (d) { return d.id !== deck.id; });
+        S.cards = S.cards.filter(function (c) { return c.deckId !== deck.id; });
+        cacheNow(); go('home'); toast('Deck deleted.');
+      }, fail);
+    });
+  }
+
+  /* ================= deck editor ================= */
+  function openDeckEditor(deck) {
+    var color = deck ? deck.color : COLORS[S.decks.length % COLORS.length];
+    var m = modal(deck ? 'Edit deck' : 'New deck',
+      '<label class="field"><span>Name</span><input class="input" data-name maxlength="80" autofocus placeholder="e.g. Japanese verbs"></label>' +
+      '<div class="field"><span>Colour</span><div class="swatches">' + COLORS.map(function (c) { return '<button class="swatch" data-c="' + c + '" style="background:' + c + '" aria-label="' + c + '"></button>'; }).join('') +
+      '<label class="swatch" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);cursor:pointer" title="Custom"><input type="color" data-custom style="opacity:0;width:100%;height:100%;cursor:pointer"></label></div></div>' +
+      '<div class="error" data-err></div>',
+      '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>' + (deck ? 'Save' : 'Create deck') + '</button>');
+    var name = $('[data-name]', m.el);
+    name.value = deck ? deck.name : '';
+    function paint() { $$('.swatch[data-c]', m.el).forEach(function (s) { s.classList.toggle('on', s.getAttribute('data-c') === color); }); }
+    $$('.swatch[data-c]', m.el).forEach(function (s) { s.addEventListener('click', function () { color = s.getAttribute('data-c'); paint(); }); });
+    $('[data-custom]', m.el).value = color;
+    $('[data-custom]', m.el).addEventListener('input', function (e) { color = e.target.value; paint(); });
+    paint();
+    function save() {
+      var btn = $('[data-save]', m.el);
+      busy(btn, true);
+      api('saveDeck', { id: deck && deck.id, name: name.value, color: color }).then(function (d) {
+        if (deck) { Object.assign(deck, d); } else { S.decks.push(d); }
+        cacheNow(); m.close();
+        if (deck) render(); else go('deck', { deckId: d.id });
+      }, function (e) { busy(btn, false); $('[data-err]', m.el).textContent = e.message; });
+    }
+    $('[data-save]', m.el).addEventListener('click', save);
+    name.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
+  }
+
+  /* ================= card editor ================= */
+  var TYPE_HINTS = {
+    basic: 'Flip the card, then grade yourself.',
+    typed: 'Type the answer. Small typos, capitals and accents are forgiven. Separate accepted answers with " / ".',
+    choice: 'Pick from 4 answers. Wrong options come from other cards in the deck.'
+  };
+  function openCardEditor(card, deckId, onSaved) {
+    var st = {
+      type: card ? card.type : (ls('fc.lastType') || 'basic'),
+      reverse: card ? card.reverse : !!ls('fc.lastReverse'),
+      fm: card ? Object.assign({}, card.frontMedia) : {},
+      bm: card ? Object.assign({}, card.backMedia) : {}
+    };
+    var deckOpts = S.decks.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === (card ? card.deckId : deckId) ? ' selected' : '') + '>' + esc(d.name) + '</option>'; }).join('');
+    function side(key, label) {
+      return '<div class="side"><div class="lab"><span>' + label + '</span><span class="row" style="gap:4px">' +
+        '<button class="btn ghost icon-btn sm" data-addimg="' + key + '" title="Add image" aria-label="Add image">' + I.image + '</button>' +
+        '<button class="btn ghost icon-btn sm" data-addaudio="' + key + '" title="Add audio" aria-label="Add audio">' + I.audio + '</button></span></div>' +
+        '<textarea class="textarea" data-text="' + key + '" maxlength="5000"' + (key === 'f' ? ' autofocus' : '') + '></textarea>' +
+        '<div class="media-row" data-media-row="' + key + '"></div></div>';
+    }
+    var m = modal(card ? 'Edit card' : 'New card',
+      '<div class="row" style="justify-content:space-between;margin-bottom:6px"><div class="seg" data-type>' +
+      '<button data-t="basic">Flip</button><button data-t="typed">Type answer</button><button data-t="choice">Multiple choice</button></div>' +
+      '<label class="switch"><input type="checkbox" data-rev><i></i>Both ways</label></div>' +
+      '<p class="hint" data-type-hint style="margin:4px 0 16px"></p>' +
+      '<div class="sides">' + side('f', 'Front') + side('b', 'Back') + '</div>' +
+      (S.decks.length > 1 ? '<label class="field" style="margin-top:14px"><span>Deck</span><select class="select" data-deck>' + deckOpts + '</select></label>' : '') +
+      '<p class="hint" style="margin:10px 0 0">Tip: paste an image straight into a side.</p>' +
+      '<div class="error" data-err></div>' +
+      '<input type="file" data-file hidden accept="image/*,audio/*">',
+      (card ? '<button class="btn ghost danger" data-del>' + I.trash + 'Delete</button>' : '') +
+      '<span class="spacer"></span><button class="btn" data-close>' + (card ? 'Cancel' : 'Done') + '</button><button class="btn primary" data-save>' + (card ? 'Save' : 'Add card') + '</button>', { wide: true });
+    var E = m.el;
+    var tf = $('[data-text="f"]', E), tb = $('[data-text="b"]', E);
+    tf.value = card ? card.front : ''; tb.value = card ? card.back : '';
+    var rev = $('[data-rev]', E); rev.checked = st.reverse;
+    function paintType() {
+      $$('[data-t]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-t') === st.type); });
+      $('[data-type-hint]', E).textContent = TYPE_HINTS[st.type];
+    }
+    $$('[data-t]', E).forEach(function (b) { b.addEventListener('click', function () { st.type = b.getAttribute('data-t'); paintType(); }); });
+    paintType();
+    function paintMedia() {
+      ['f', 'b'].forEach(function (k) {
+        var md = k === 'f' ? st.fm : st.bm, row = $('[data-media-row="' + k + '"]', E);
+        row.innerHTML = (md.img ? '<div class="thumb"><img data-media="' + esc(md.img) + '" alt=""><button data-rm="' + k + ':img" aria-label="Remove image">' + I.x + '</button></div>' : '') +
+          (md.audio ? '<div class="thumb"><span class="row" style="gap:6px">' + I.audio.replace('<svg', '<svg width="16" height="16"') + 'Audio</span><button data-rm="' + k + ':audio" aria-label="Remove audio">' + I.x + '</button></div>' : '');
+        hydrate(row);
+        $$('[data-rm]', row).forEach(function (b) {
+          b.addEventListener('click', function () { var p = b.getAttribute('data-rm').split(':'); delete (p[0] === 'f' ? st.fm : st.bm)[p[1]]; paintMedia(); });
+        });
+      });
+    }
+    paintMedia();
+    var fileInput = $('[data-file]', E), target = 'f';
+    function attach(file, k) {
+      var row = $('[data-media-row="' + k + '"]', E);
+      var spin = el('<div class="thumb"><span class="spinner"></span></div>');
+      row.appendChild(spin);
+      uploadFile(file).then(function (r) { (k === 'f' ? st.fm : st.bm)[r.kind] = r.id; paintMedia(); }, function (e) { spin.remove(); $('[data-err]', E).textContent = e.message; });
+    }
+    $$('[data-addimg],[data-addaudio]', E).forEach(function (b) {
+      b.addEventListener('click', function () {
+        target = b.getAttribute('data-addimg') || b.getAttribute('data-addaudio');
+        fileInput.accept = b.hasAttribute('data-addimg') ? 'image/*' : 'audio/*';
+        fileInput.click();
+      });
+    });
+    fileInput.addEventListener('change', function () { if (fileInput.files[0]) attach(fileInput.files[0], target); fileInput.value = ''; });
+    [tf, tb].forEach(function (ta) {
+      ta.addEventListener('paste', function (e) {
+        var items = (e.clipboardData && e.clipboardData.files) || [];
+        for (var i = 0; i < items.length; i++) {
+          if (/^image/.test(items[i].type)) { e.preventDefault(); attach(items[i], ta.getAttribute('data-text')); return; }
+        }
+      });
+      ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); save(); } });
+    });
+    function save() {
+      var btn = $('[data-save]', E), err = $('[data-err]', E);
+      err.textContent = '';
+      var deckSel = $('[data-deck]', E);
+      var payload = {
+        id: card && card.id, deckId: deckSel ? deckSel.value : (card ? card.deckId : deckId),
+        type: st.type, reverse: rev.checked, front: tf.value, back: tb.value, frontMedia: st.fm, backMedia: st.bm
+      };
+      if (!payload.front.trim() && !st.fm.img && !st.fm.audio) { err.textContent = 'Add something to the front.'; tf.focus(); return; }
+      if (st.type !== 'basic' && !payload.back.trim()) { err.textContent = 'This card type needs text on the back.'; tb.focus(); return; }
+      busy(btn, true);
+      api('saveCard', payload).then(function (c) {
+        busy(btn, false);
+        ls('fc.lastType', st.type); ls('fc.lastReverse', rev.checked);
+        if (card) {
+          Object.assign(card, c); cacheNow(); m.close(); toast('Saved.');
+          if (onSaved) onSaved(card); else render();
+          return;
+        }
+        S.cards.push(c); cacheNow();
+        toast('Card added.');
+        tf.value = ''; tb.value = ''; st.fm = {}; st.bm = {}; paintMedia(); tf.focus();
+        if (S.view === 'deck') render();
+      }, function (e) { busy(btn, false); err.textContent = e.message; });
+    }
+    $('[data-save]', E).addEventListener('click', save);
+    if (card) {
+      $('[data-del]', E).addEventListener('click', function () {
+        confirmBox('Delete card?', 'This card and its progress will be deleted.', 'Delete', true).then(function (ok) {
+          if (!ok) return;
+          api('deleteCards', { ids: [card.id] }).then(function () {
+            S.cards = S.cards.filter(function (c) { return c.id !== card.id; });
+            cacheNow(); m.close(); toast('Card deleted.');
+            if (onSaved) onSaved(null); else render();
+          }, fail);
+        });
+      });
+    }
+  }
+
+  /* ================= import ================= */
+  function openImport(deckId) {
+    var st = { type: 'basic', reverse: false, pairs: [] };
+    var m = modal('Import cards',
+      '<p class="hint" style="margin:0 0 12px">Paste two columns: front then back, one card per line. Copying from Google Sheets or Excel works, as do commas or semicolons.</p>' +
+      '<textarea class="textarea" data-paste style="min-height:160px;font-family:ui-monospace,monospace;font-size:13px" placeholder="hola\thello&#10;gato\tcat" autofocus></textarea>' +
+      '<div class="row" style="margin:12px 0"><button class="btn sm" data-csv>' + I.upload + 'Choose a CSV file</button><input type="file" data-file hidden accept=".csv,.tsv,.txt,text/*"></div>' +
+      '<div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="seg" data-type><button data-t="basic" class="on">Flip</button><button data-t="typed">Type answer</button><button data-t="choice">Multiple choice</button></div>' +
+      '<label class="switch"><input type="checkbox" data-rev><i></i>Both ways</label></div>' +
+      '<div data-preview></div><div class="error" data-err></div>',
+      '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-go disabled>Import</button>', { wide: true });
+    var E = m.el, ta = $('[data-paste]', E), go = $('[data-go]', E);
+    function update() {
+      st.pairs = TextUtil.parsePairs(ta.value);
+      go.disabled = !st.pairs.length;
+      go.textContent = st.pairs.length ? 'Import ' + plural(st.pairs.length, 'card') : 'Import';
+      $('[data-preview]', E).innerHTML = st.pairs.length ? '<div class="preview-list">' + st.pairs.slice(0, 50).map(function (p) { return '<div><span>' + esc(p[0]) + '</span><span style="color:var(--muted)">' + esc(p[1]) + '</span></div>'; }).join('') + '</div>' +
+        (st.pairs.length > 50 ? '<p class="hint">and ' + (st.pairs.length - 50) + ' more</p>' : '') : '';
+    }
+    ta.addEventListener('input', update);
+    $('[data-csv]', E).addEventListener('click', function () { $('[data-file]', E).click(); });
+    $('[data-file]', E).addEventListener('change', function (e) {
+      var f = e.target.files[0]; if (!f) return;
+      var r = new FileReader(); r.onload = function () { ta.value = String(r.result); update(); }; r.readAsText(f);
+    });
+    $$('[data-t]', E).forEach(function (b) { b.addEventListener('click', function () { st.type = b.getAttribute('data-t'); $$('[data-t]', E).forEach(function (x) { x.classList.toggle('on', x === b); }); }); });
+    go.addEventListener('click', function () {
+      busy(go, true);
+      api('importCards', { deckId: deckId, pairs: st.pairs, type: st.type, reverse: $('[data-rev]', E).checked }).then(function (r) {
+        S.cards = S.cards.concat(r.cards); cacheNow(); m.close(); render();
+        toast(plural(r.cards.length, 'card') + ' imported.');
+      }, function (e) { busy(go, false); $('[data-err]', E).textContent = e.message; });
+    });
+  }
+
+  /* ================= settings ================= */
+  function openSettings() {
+    var u = S.user, s = u.settings, theme = s.theme;
+    var m = modal('Settings',
+      '<div class="grid2"><label class="field"><span>Name</span><input class="input" data-name maxlength="60"></label>' +
+      '<label class="field"><span>Email</span><input class="input" disabled data-email></label></div>' +
+      '<div class="grid2"><label class="field"><span>New cards per deck per day</span><input class="input" type="number" min="0" max="500" data-new></label>' +
+      '<label class="field"><span>Daily goal (reviews)</span><input class="input" type="number" min="1" max="2000" data-goal></label></div>' +
+      '<div class="field"><span>Theme</span><div class="seg" data-theme><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>' +
+      '<label class="field"><span>Quotes on the home screen (one per line)</span><textarea class="textarea" data-quotes></textarea></label>' +
+      '<div class="row" style="justify-content:flex-end;margin-bottom:6px"><span class="error" data-err style="flex:1"></span><button class="btn primary" data-save>Save settings</button></div>' +
+      '<div class="danger-zone"><div class="field"><span>' + (u.hasPassword ? 'Change password' : 'You sign in with Google. You can also set a password.') + '</span><div class="grid2">' +
+      (u.hasPassword ? '<input class="input" type="password" placeholder="Current password" data-old autocomplete="current-password">' : '<input class="input" placeholder="Type your email to delete account" data-old autocomplete="off">') +
+      '<input class="input" type="password" placeholder="New password (8+ characters)" data-pw autocomplete="new-password"></div></div>' +
+      '<div class="row"><button class="btn sm" data-change>' + (u.hasPassword ? 'Change password' : 'Set password') + '</button><span class="spacer"></span><button class="btn sm" data-out>' + I.logout + 'Sign out</button>' +
+      (u.owner ? '' : '<button class="btn sm danger" data-delacct>' + I.trash + 'Delete account</button>') + '</div></div>', '');
+    var E = m.el;
+    $('[data-name]', E).value = u.name; $('[data-email]', E).value = u.email;
+    $('[data-new]', E).value = s.newPerDay; $('[data-goal]', E).value = s.goal;
+    $('[data-quotes]', E).value = S.quotes.join('\n');
+    function paintTheme() { $$('[data-v]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === theme); }); }
+    $$('[data-v]', E).forEach(function (b) { b.addEventListener('click', function () { theme = b.getAttribute('data-v'); paintTheme(); }); });
+    paintTheme();
+    $('[data-save]', E).addEventListener('click', function () {
+      var btn = this; busy(btn, true);
+      var quotes = $('[data-quotes]', E).value.split('\n');
+      Promise.all([
+        api('saveSettings', { name: $('[data-name]', E).value, settings: { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme } }),
+        api('saveQuotes', { quotes: quotes })
+      ]).then(function (r) {
+        S.user = r[0]; S.quotes = r[1].quotes; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
+        m.close(); render(); toast('Settings saved.');
+      }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
+    });
+    $('[data-change]', E).addEventListener('click', function () {
+      var btn = this; busy(btn, true);
+      api('changePassword', { oldPassword: $('[data-old]', E).value, newPassword: $('[data-pw]', E).value }).then(function () {
+        busy(btn, false); $('[data-old]', E).value = ''; $('[data-pw]', E).value = ''; toast('Password saved.');
+        if (!S.user.hasPassword) { S.user.hasPassword = true; cacheNow(); m.close(); openSettings(); }
+      }, function (e) { busy(btn, false); toast(e.message, true); });
+    });
+    $('[data-out]', E).addEventListener('click', function () {
+      flush().then(function () { return api('logout'); }).catch(function () {}).then(signedOut);
+    });
+    var del = $('[data-delacct]', E);
+    if (del) del.addEventListener('click', function () {
+      var pw = $('[data-old]', E).value;
+      if (!pw) { toast(u.hasPassword ? 'Type your current password in the password box first.' : 'Type your email address in the box first.', true); $('[data-old]', E).focus(); return; }
+      confirmBox('Delete your account?', 'All your decks, cards and progress will be deleted for good.', 'Delete account', true).then(function (ok) {
+        if (!ok) return;
+        api('deleteAccount', { password: pw }).then(function () { signedOut(); toast('Account deleted.'); }, fail);
+      });
+    });
+  }
+
+  /* ================= study ================= */
+  function startStudy(deckIds, from, practice) {
+    if (practice) return startPractice(deckIds, from);
+    var now = Date.now(), start = SRS.dayStart(now, 0);
+    var learn = [], review = [], fresh = [];
+    deckIds.forEach(function (id) {
+      var newDone = 0, newPool = [];
+      cardsOf(id).forEach(function (c) {
+        dirsOf(c).forEach(function (d) {
+          var p = prog(c, d);
+          if (p.first >= start) newDone++;
+          var item = { card: c, dir: d };
+          if (p.s === 'new') newPool.push(item);
+          else if (p.s === 'learn') learn.push(item);
+          else if (p.due <= now) review.push(item);
+        });
+      });
+      var left = Math.max(0, newLimit() - newDone);
+      fresh = fresh.concat(newPool.slice(0, left));
+    });
+    if (!learn.length && !review.length && !fresh.length) return startPractice(deckIds, from);
+    var deck = deckIds.length === 1 ? deckById(deckIds[0]) : null;
+    S.study = {
+      learn: learn, review: shuffle(review), fresh: fresh, n: 0, correct: 0, started: now, from: from,
+      color: deck ? deck.color : DEFAULT_ACCENT, title: deck ? deck.name : 'All decks', total: learn.length + review.length + fresh.length, cur: null
+    };
+    if (deck) S.deckId = deck.id;
+    nextItem();
+    go('study');
+  }
+  function startPractice(deckIds, from) {
+    var items = [];
+    deckIds.forEach(function (id) { cardsOf(id).forEach(function (c) { dirsOf(c).forEach(function (d) { items.push({ card: c, dir: d }); }); }); });
+    if (!items.length) { toast('Add some cards first.'); return; }
+    var deck = deckIds.length === 1 ? deckById(deckIds[0]) : null;
+    S.study = {
+      practice: true, learn: [], review: shuffle(items), fresh: [], n: 0, correct: 0, started: Date.now(), from: from,
+      color: deck ? deck.color : DEFAULT_ACCENT, title: deck ? deck.name : 'All decks', total: items.length, cur: null
+    };
+    if (deck) S.deckId = deck.id;
+    nextItem();
+    go('study');
+  }
+  function nextItem() {
+    var s = S.study, now = Date.now();
+    s.learn.sort(function (a, b) { return prog(a.card, a.dir).due - prog(b.card, b.dir).due; });
+    var item = null;
+    if (s.learn.length && prog(s.learn[0].card, s.learn[0].dir).due <= now) item = s.learn.shift();
+    else if (s.review.length && s.fresh.length) item = (s.n % 4 === 3 ? s.fresh : s.review).shift();
+    else if (s.review.length) item = s.review.shift();
+    else if (s.fresh.length) item = s.fresh.shift();
+    else if (s.learn.length && prog(s.learn[0].card, s.learn[0].dir).due <= now + 20 * SRS.MIN) item = s.learn.shift();
+    if (item && !cardById(item.card.id)) return nextItem();
+    s.cur = item ? { item: item, revealed: false, verdict: null, typed: '', picked: null, options: null } : null;
+    if (item && item.card.type === 'choice') s.cur.options = choiceOptions(item);
+    if (s.cur) preload();
+  }
+  function preload() {
+    var s = S.study, list = [s.cur.item].concat(s.learn.slice(0, 2), s.review.slice(0, 2), s.fresh.slice(0, 2));
+    list.forEach(function (it) {
+      [it.card.frontMedia, it.card.backMedia].forEach(function (m) { if (m && m.img) mediaUrl(m.img); if (m && m.audio) mediaUrl(m.audio); });
+    });
+  }
+  function qa(item) {
+    var c = item.card, f = item.dir === 'f';
+    return { q: f ? c.front : c.back, a: f ? c.back : c.front, qm: (f ? c.frontMedia : c.backMedia) || {}, am: (f ? c.backMedia : c.frontMedia) || {} };
+  }
+  function choiceOptions(item) {
+    var x = qa(item), right = x.a;
+    var seen = {}; seen[TextUtil.fold(right)] = 1;
+    var pool = shuffle(cardsOf(item.card.deckId).filter(function (c) { return c.id !== item.card.id; }).map(function (c) { return item.dir === 'f' ? c.back : c.front; }))
+      .filter(function (t) { var k = TextUtil.fold(t); if (!k || seen[k]) return false; seen[k] = 1; return true; }).slice(0, 3);
+    if (pool.length < 1) return null;
+    return shuffle(pool.concat([right])).map(function (t) { return { text: t, right: t === right }; });
+  }
+  function remaining() {
+    var s = S.study;
+    return { n: s.fresh.length, l: s.learn.length, r: s.review.length };
+  }
+  function mediaHtml(m) {
+    return (m.img ? '<img class="face-img" data-media="' + esc(m.img) + '" alt="">' : '') +
+      (m.audio ? '<button class="audio-btn" data-audio="' + esc(m.audio) + '" aria-label="Play audio">' + I.audio + '</button>' : '');
+  }
+  function textHtml(t) {
+    if (!t) return '';
+    return '<div class="face-text' + (t.length > 90 ? ' long' : '') + '">' + esc(t) + '</div>';
+  }
+
+  function renderStudy(app) {
+    var s = S.study;
+    if (!s) { go('home'); return; }
+    if (!s.cur) return renderDone(app);
+    var rem = remaining(), done = s.n, total = done + rem.n + rem.l + rem.r + 1;
+    var item = s.cur.item, x = qa(item), c = item.card, p = prog(c, item.dir);
+    var kind = c.type === 'choice' && !s.cur.options ? 'basic' : c.type;
+    var curKey = p.s === 'new' ? 'n' : p.s === 'learn' ? 'l' : 'r';
+    var label = (item.dir === 'r' ? 'Reverse' : 'Front') + (S.decks.length > 1 && s.title === 'All decks' ? ' &middot; ' + esc((deckById(c.deckId) || {}).name || '') : '');
+
+    var frontBody = '<div class="face-body">' + mediaHtml(x.qm) + textHtml(x.q);
+    if (kind === 'typed') frontBody += '<form class="answer-in" data-typed><input class="input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the answer" data-answer></form>';
+    if (kind === 'choice') frontBody += '<div class="choices">' + s.cur.options.map(function (o, i) { return '<button class="choice" data-opt="' + i + '"><kbd>' + (i + 1) + '</kbd><span></span></button>'; }).join('') + '</div>';
+    frontBody += '</div>' + (kind === 'basic' ? '<div class="tap-hint">Tap to flip</div>' : '');
+
+    app.innerHTML = '<div class="study"><div class="wrap" style="display:flex;flex-direction:column;flex:1">' +
+      '<div class="study-top"><button class="btn ghost icon-btn" data-exit aria-label="End session">' + I.x + '</button>' +
+      '<div class="progress"><i style="width:' + Math.round(100 * done / total) + '%"></i></div>' +
+      (s.practice ? '<div class="qcounts"><span style="color:var(--muted)">Practice &middot; ' + (rem.r + 1) + ' left</span></div>' : '') +
+      (s.practice ? '' : '<div class="qcounts"><span class="n' + (curKey === 'n' ? ' cur' : '') + '">' + (rem.n + (curKey === 'n' ? 1 : 0)) + '</span><span class="l' + (curKey === 'l' ? ' cur' : '') + '">' + (rem.l + (curKey === 'l' ? 1 : 0)) + '</span><span class="r' + (curKey === 'r' ? ' cur' : '') + '">' + (rem.r + (curKey === 'r' ? 1 : 0)) + '</span></div>') +
+      '<button class="btn ghost icon-btn" data-edit aria-label="Edit card" title="Edit card (E)">' + I.edit + '</button></div>' +
+      '<div class="stage"><div class="flip" data-flip><span class="swipe-hint l">Oh no!</span><span class="swipe-hint r">Okay</span><div class="inner">' +
+      '<div class="face front"><div class="face-label">' + label + '</div>' + frontBody + '</div>' +
+      '<div class="face back"><div class="face-label">Answer</div><div class="face-body" data-back></div></div>' +
+      '</div></div><div class="dock" data-dock></div></div></div></div>';
+    $$('.choice span', app).forEach(function (sp, i) { sp.textContent = s.cur.options[i].text; });
+    hydrate($('.face.front', app));
+    if (x.qm.audio && !s.cur.autoplayed) { s.cur.autoplayed = true; playAudio(x.qm.audio); }
+
+    $('[data-exit]', app).addEventListener('click', endStudy);
+    $('[data-edit]', app).addEventListener('click', editCurrent);
+    var flipEl = $('[data-flip]', app);
+    flipEl.style.animation = 'rise .4s var(--ease)';
+    if (kind === 'typed') {
+      var inp = $('[data-answer]', app);
+      setTimeout(function () { inp.focus(); }, 60);
+      $('[data-typed]', app).addEventListener('submit', function (e) {
+        e.preventDefault();
+        s.cur.typed = inp.value;
+        s.cur.verdict = TextUtil.check(inp.value, x.a);
+        reveal();
+      });
+    }
+    $$('[data-opt]', app).forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); pick(Number(b.getAttribute('data-opt'))); }); });
+    wireSwipe(flipEl, kind);
+    paintDock();
+    if (s.cur.revealed) showBack(true);
+  }
+
+  function pick(i) {
+    var s = S.study;
+    if (!s.cur || s.cur.revealed || !s.cur.options || !s.cur.options[i]) return;
+    s.cur.picked = i;
+    s.cur.verdict = s.cur.options[i].right ? 'exact' : 'wrong';
+    $$('[data-opt]').forEach(function (b, j) {
+      b.disabled = true;
+      if (s.cur.options[j].right) b.classList.add('right'); else if (j === i) b.classList.add('wrong');
+    });
+    setTimeout(reveal, 650);
+  }
+  function reveal() {
+    var s = S.study;
+    if (!s || !s.cur || s.cur.revealed) return;
+    s.cur.revealed = true;
+    showBack(false);
+    paintDock();
+  }
+  function showBack(instant) {
+    var s = S.study, x = qa(s.cur.item), back = $('[data-back]');
+    if (!back) return;
+    var v = s.cur.verdict;
+    var html = '<div class="q-small"></div>' + mediaHtml(x.am) + textHtml(x.a);
+    if (v) html += '<span class="verdict ' + v + '">' + (v === 'exact' ? 'Correct' : v === 'close' ? 'Almost, check the spelling' : 'Not quite') + '</span>';
+    if (s.cur.typed && v !== 'exact') html += '<div class="typed-was">You wrote: <s></s></div>';
+    back.innerHTML = html;
+    $('.q-small', back).textContent = x.q;
+    var was = $('.typed-was s', back); if (was) was.textContent = s.cur.typed;
+    hydrate(back);
+    var flip = $('[data-flip]');
+    if (instant) { $('.inner', flip).style.transition = 'none'; flip.classList.add('flipped'); flip.offsetWidth; $('.inner', flip).style.transition = ''; }
+    else flip.classList.add('flipped');
+    if (x.am.audio) playAudio(x.am.audio);
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  }
+  var GRADE_LABELS = { again: 'Oh no!', hard: 'Hard', good: 'Okay', easy: 'Good' };
+  function paintDock() {
+    var s = S.study, dock = $('[data-dock]');
+    if (!dock) return;
+    var c = s.cur.item.card, p = prog(c, s.cur.item.dir), kind = c.type === 'choice' && !s.cur.options ? 'basic' : c.type;
+    if (!s.cur.revealed) {
+      dock.innerHTML = kind === 'basic' ? '<button class="btn primary show-btn" data-show>Flip</button><div class="keys"><kbd>Space</kbd> flip</div>'
+        : kind === 'typed' ? '<button class="btn primary show-btn" data-check>Check</button><div class="keys"><kbd>Enter</kbd> check &middot; <kbd>Esc</kbd> end</div>'
+        : '<div class="keys"><kbd>1</kbd>-<kbd>4</kbd> pick an answer</div>';
+      var sb = $('[data-show]', dock); if (sb) sb.addEventListener('click', reveal);
+      var cb = $('[data-check]', dock); if (cb) cb.addEventListener('click', function () { $('[data-typed]').requestSubmit(); });
+      return;
+    }
+    var v = s.cur.verdict, suggest = v === 'exact' ? 'good' : v === 'close' ? 'hard' : v === 'wrong' ? 'again' : null;
+    if (s.practice) {
+      dock.innerHTML = '<div class="grades two"><button class="grade again' + (suggest === 'again' ? ' suggest' : '') + '" data-g="again">Oh no!<small>see it again</small></button>' +
+        '<button class="grade good' + (suggest && suggest !== 'again' ? ' suggest' : '') + '" data-g="good">Got it<small>next card</small></button></div>' +
+        '<div class="keys">Practice: your schedule does not change &middot; <kbd>1</kbd> oh no <kbd>3</kbd> got it</div>';
+      $$('[data-g]', dock).forEach(function (b) { b.addEventListener('click', function () { grade(b.getAttribute('data-g')); }); });
+      return;
+    }
+    var now = Date.now();
+    dock.innerHTML = '<div class="grades">' + ['again', 'hard', 'good', 'easy'].map(function (g, i) {
+      return '<button class="grade ' + g + (g === suggest ? ' suggest' : '') + '" data-g="' + g + '">' + GRADE_LABELS[g] + '<small>' + SRS.preview(p, g, now) + '</small></button>';
+    }).join('') + '</div><div class="keys"><kbd>1</kbd>-<kbd>4</kbd> grade &middot; <kbd>Space</kbd> flip back &middot; swipe on touch</div>';
+    $$('[data-g]', dock).forEach(function (b) { b.addEventListener('click', function () { grade(b.getAttribute('data-g')); }); });
+  }
+  function grade(g, dirOut) {
+    var s = S.study;
+    if (!s || !s.cur || !s.cur.revealed || s.grading) return;
+    s.grading = true;
+    var item = s.cur.item, c = item.card, now = Date.now();
+    if (s.practice) {
+      s.n++;
+      if (g === 'again') s.review.splice(Math.min(s.review.length, 3), 0, item); else s.correct++;
+      return animateOut(g, dirOut);
+    }
+    var before = prog(c, item.dir);
+    var after = SRS.grade(before, g, now);
+    c.srs = c.srs || {};
+    c.srs[item.dir] = after;
+    queueReview(c.id, item.dir, after);
+    bumpDaily(g !== 'again');
+    s.n++; if (g !== 'again') s.correct++;
+    if (after.s === 'learn') s.learn.push(item);
+    animateOut(g, dirOut);
+  }
+  function animateOut(g, dirOut) {
+    var s = S.study;
+    var flip = $('[data-flip]');
+    var dx = dirOut != null ? dirOut : g === 'again' ? -1 : g === 'hard' ? 0 : 1;
+    if (flip) {
+      flip.style.transition = 'transform .32s var(--ease), opacity .32s';
+      flip.style.transform = 'translate(' + (dx * 70) + 'px,' + (dx === 0 ? 30 : -10) + 'px) rotate(' + (dx * 6) + 'deg)';
+      flip.style.opacity = '0';
+    }
+    setTimeout(function () {
+      s.grading = false;
+      nextItem();
+      if (S.view === 'study') render();
+    }, flip ? 230 : 0);
+  }
+  function wireSwipe(flip, kind) {
+    var sx = 0, sy = 0, dx = 0, active = false, moved = false;
+    var hl = $('.swipe-hint.l', flip), hr = $('.swipe-hint.r', flip);
+    flip.addEventListener('pointerdown', function (e) {
+      if (e.target.closest('input,button,form')) return;
+      active = true; moved = false; sx = e.clientX; sy = e.clientY; dx = 0;
+    });
+    flip.addEventListener('pointermove', function (e) {
+      if (!active) return;
+      dx = e.clientX - sx;
+      var dy = e.clientY - sy;
+      if (!moved && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) { moved = true; try { flip.setPointerCapture(e.pointerId); } catch (x) {} }
+      if (!moved || !S.study.cur.revealed) return;
+      flip.style.transition = 'none';
+      flip.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 22) + 'deg)';
+      hl.style.opacity = Math.max(0, Math.min(1, -dx / 90));
+      hr.style.opacity = Math.max(0, Math.min(1, dx / 90));
+    });
+    function up() {
+      if (!active) return;
+      active = false;
+      var s = S.study;
+      if (!moved) {
+        if (!s.cur.revealed && kind === 'basic') reveal();
+        else if (s.cur.revealed) flip.classList.toggle('flipped');
+        return;
+      }
+      if (s.cur.revealed && Math.abs(dx) > 100) { grade(dx > 0 ? 'good' : 'again', dx > 0 ? 3 : -3); return; }
+      flip.style.transition = 'transform .3s var(--ease)';
+      flip.style.transform = '';
+      hl.style.opacity = 0; hr.style.opacity = 0;
+    }
+    flip.addEventListener('pointerup', up);
+    flip.addEventListener('pointercancel', up);
+  }
+  function editCurrent() {
+    var s = S.study;
+    if (!s || !s.cur) return;
+    var item = s.cur.item;
+    openCardEditor(item.card, item.card.deckId, function (card) {
+      if (!card) { nextItem(); }
+      else if (item.card.type === 'choice') s.cur.options = choiceOptions(item);
+      if (S.view === 'study') render();
+    });
+  }
+  function endStudy() {
+    var s = S.study;
+    var back = s && s.from === 'deck' && deckById(S.deckId) ? 'deck' : 'home';
+    S.study = null;
+    go(back);
+  }
+  function renderDone(app) {
+    var s = S.study;
+    var mins = Math.max(1, Math.round((Date.now() - s.started) / 60000));
+    var acc = s.n ? Math.round(100 * s.correct / s.n) : 0;
+    var nextLearn = s.learn.length ? prog(s.learn[0].card, s.learn[0].dir).due : 0;
+    app.innerHTML = '<div class="study"><div class="wrap"><div class="done appear">' +
+      '<div class="burst chroma">' + I.check + '</div><h1>' + (s.practice ? 'Practice done' : 'Session complete') + '</h1>' +
+      '<p class="hint" style="font-size:15px">' + (s.practice ? 'Your schedule stays the same.' : nextLearn ? plural(s.learn.length, 'card') + ' still learning. They come back in about ' + Math.max(1, Math.round((nextLearn - Date.now()) / 60000)) + ' min.' : 'Nice work. Everything due here is done.') + '</p>' +
+      '<div class="done-stats"><div><b>' + s.n + '</b><span>Reviews</span></div><div><b>' + acc + '%</b><span>Correct</span></div><div><b>' + mins + 'm</b><span>Time</span></div></div>' +
+      '<div class="row" style="justify-content:center"><button class="btn primary lg" data-fin>Done</button></div></div></div></div>';
+    $('[data-fin]', app).addEventListener('click', endStudy);
+    flush();
+  }
+
+  /* ================= keyboard ================= */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (openModals.length) { openModals[openModals.length - 1].close(); return; }
+      closeMenus();
+      if (S.view === 'study') endStudy();
+      return;
+    }
+    if (openModals.length || S.view !== 'study' || !S.study || !S.study.cur) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var typing = /INPUT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName);
+    var s = S.study, cur = s.cur;
+    if (typing) return;
+    if (!cur.revealed) {
+      if (cur.options && /^[1-4]$/.test(e.key)) { e.preventDefault(); pick(Number(e.key) - 1); return; }
+      if ((e.key === ' ' || e.key === 'Enter') && cur.item.card.type !== 'typed' && !(cur.options)) { e.preventDefault(); reveal(); return; }
+    } else {
+      var g = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' }[e.key];
+      if (g && s.practice && g !== 'again') g = 'good';
+      if (g) { e.preventDefault(); grade(g); return; }
+      if (e.key === ' ') { e.preventDefault(); var fl = $('[data-flip]'); if (fl) fl.classList.toggle('flipped'); return; }
+      if (e.key === 'Enter') { e.preventDefault(); grade(cur.verdict === 'wrong' ? 'again' : cur.verdict === 'close' ? 'hard' : 'good'); return; }
+    }
+    if (e.key === 'e' || e.key === 'E') { e.preventDefault(); editCurrent(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var t = e.target;
+    if (t && t.classList && t.classList.contains('deck') && t.hasAttribute('data-id')) { e.preventDefault(); t.click(); }
+  });
+
+  window.addEventListener('beforeunload', function () { savePending(); cacheNow(); });
+  boot();
+})();
+
+</script>
+</body>
+</html>
