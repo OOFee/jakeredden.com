@@ -310,15 +310,39 @@ img { max-width: 100%; }
 .dock { width: 100%; max-width: 640px; margin-top: 22px; min-height: 76px; }
 .grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .grades.two { grid-template-columns: 1fr 1fr; }
-.grade { border: 0; border-radius: 16px; padding: 11px 6px 9px; display: grid; gap: 2px; justify-items: center; color: #fff; font-weight: 700; font-size: 15px; transition: transform .15s var(--ease), filter .15s, box-shadow .2s; }
-.grade small { font-size: 12px; font-weight: 600; opacity: .85; }
-.grade:hover { filter: brightness(1.08); transform: translateY(-2px); }
-.grade:active { transform: scale(.96); }
-.grade.again { background: var(--again); box-shadow: 0 10px 22px -12px var(--again); }
-.grade.hard { background: var(--hard); box-shadow: 0 10px 22px -12px var(--hard); }
-.grade.good { background: var(--good); box-shadow: 0 10px 22px -12px var(--good); }
-.grade.easy { background: var(--easy); box-shadow: 0 10px 22px -12px var(--easy); }
-.grade.suggest { outline: 3px solid color-mix(in srgb, var(--text) 70%, transparent); outline-offset: 2px; }
+.grade-wrap { display: grid; gap: 6px; justify-items: stretch; }
+.grade {
+  border: 1px solid var(--line-strong); border-radius: 16px; min-height: 52px; padding: 0 6px;
+  background: var(--surface-2); color: var(--text); font-weight: 800; font-size: 16px;
+  transition: transform .12s var(--ease), background .15s, border-color .15s;
+}
+.grade:hover { background: var(--surface-3); border-color: color-mix(in srgb, var(--text) 22%, transparent); }
+.grade:active { transform: scale(.97); }
+.grade.suggest { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.grade-hint { text-align: center; font-size: 12.5px; font-weight: 700; color: var(--faint); }
+.faces { display: flex; gap: 14px; justify-content: center; font-size: 24px; user-select: none; -webkit-user-select: none; margin-bottom: 16px; }
+.faces span { opacity: .35; transform: scale(.9); filter: saturate(.6); transition: opacity .15s, transform .15s, filter .15s; }
+.faces span.on { opacity: 1; transform: scale(1.25); filter: none; }
+.row-face { font-size: 16px; line-height: 1; width: 20px; text-align: center; }
+.levels { margin: 0 0 28px; }
+.levels-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.levels-head h2 { font-family: var(--display); font-size: clamp(18px, 4.6vw, 22px); letter-spacing: -.03em; margin: 0; }
+.levels-head .switch { white-space: nowrap; }
+.level-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.level { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 14px 8px 12px; display: grid; justify-items: center; gap: 2px; transition: transform .2s var(--ease), box-shadow .2s, border-color .2s; }
+.level:hover:not(:disabled) { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--line-strong); }
+.level:disabled { opacity: .45; cursor: default; }
+.level .lv-face { font-size: 34px; line-height: 1.1; }
+.level b { font-family: var(--display); font-size: 22px; letter-spacing: -.02em; }
+.level small { font-size: 12px; color: var(--muted); font-weight: 600; text-align: center; }
+.chosen { margin-top: 10px; font-size: 12.5px; opacity: .8; position: relative; z-index: 1; }
+.deck .pick { position: absolute; top: 12px; right: 12px; z-index: 2; cursor: pointer; }
+.deck .pick input { display: none; }
+.deck .pick i { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--line-strong); background: var(--surface); transition: background .15s, border-color .15s; }
+.deck .pick input:checked + i { background: var(--c); border-color: var(--c); }
+.deck .pick input:checked + i::after { content: ''; width: 10px; height: 6px; border: solid #fff; border-width: 0 0 2.5px 2.5px; transform: translate(0, -1px) rotate(-45deg); }
+.deck:not(.picked) { opacity: .55; }
+.deck:not(.picked):hover { opacity: .85; }
 .show-btn { width: 100%; height: 56px; border-radius: 16px; font-size: 16px; }
 .keys { margin-top: 12px; text-align: center; font-size: 12px; color: var(--faint); }
 .keys kbd { font-family: var(--font); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line-strong); margin: 0 2px; }
@@ -417,7 +441,11 @@ img { max-width: 100%; }
   .crow .b { grid-column: 1; grid-row: 2; margin-top: -10px; }
   .crow .tags { grid-row: 1 / span 2; grid-column: 2; }
   .face { padding: 22px 20px; border-radius: 24px; }
-  .grade { padding: 10px 4px 8px; font-size: 14px; border-radius: 14px; }
+  .grade { min-height: 48px; font-size: 15px; border-radius: 14px; }
+  .grade-hint { font-size: 11px; }
+  .level-row { gap: 8px; }
+  .level .lv-face { font-size: 28px; }
+  .level small { font-size: 11px; }
   .flip { min-height: 64vh; min-height: 64svh; }
   .hide-sm { display: none; }
 }
@@ -446,7 +474,7 @@ var SRS = (function () {
   var GRADES = ['again', 'hard', 'good', 'easy'];
 
   function fresh() {
-    return { s: 'new', due: 0, ivl: 0, ease: START_EASE, step: 0, reps: 0, lapses: 0, first: 0 };
+    return { s: 'new', due: 0, ivl: 0, ease: START_EASE, step: 0, reps: 0, lapses: 0, first: 0, g: '' };
   }
 
   function normalize(p) {
@@ -460,7 +488,8 @@ var SRS = (function () {
       step: Math.max(0, Math.floor(Number(p.step) || 0)),
       reps: Math.max(0, Math.floor(Number(p.reps) || 0)),
       lapses: Math.max(0, Math.floor(Number(p.lapses) || 0)),
-      first: Math.max(0, Number(p.first) || 0)
+      first: Math.max(0, Number(p.first) || 0),
+      g: GRADES.indexOf(p.g) >= 0 ? p.g : ''
     };
   }
 
@@ -496,6 +525,7 @@ var SRS = (function () {
     now = now || Date.now();
     var p = normalize(prev);
     if (!p.first) p.first = now;
+    p.g = g;
     p.reps += 1;
 
     if (p.s === 'new' || p.s === 'learn') {
@@ -562,6 +592,7 @@ var SRS = (function () {
     times = Number(times) || 0;
     if (!times) return p;
     p.reps = times;
+    p.g = score <= 1 ? 'easy' : score === 2 ? 'good' : score === 3 ? 'hard' : 'again';
     p.first = now - SRS_DAY_ * 30;
     if (score <= 1) { p.s = 'review'; p.ivl = 4; p.due = dayStart(now, 1 + ((idx || 0) % 4)); }
     else if (score === 2) { p.s = 'review'; p.ivl = 1; p.due = now; }
@@ -569,8 +600,14 @@ var SRS = (function () {
     return p;
   }
 
+  /* How well a card is known, 1 (best) .. 4 (worst), like the old app's score. Never graded = 4. */
+  function level(p) {
+    p = normalize(p);
+    return { easy: 1, good: 2, hard: 3, again: 4 }[p.g] || 4;
+  }
+
   return {
-    fresh: fresh, normalize: normalize, grade: grade, preview: preview, isDue: isDue,
+    level: level, fresh: fresh, normalize: normalize, grade: grade, preview: preview, isDue: isDue,
     dayStart: dayStart, fromLegacy: fromLegacy, GRADES: GRADES, DAY: DAY, MIN: MIN
   };
 })();
@@ -840,6 +877,27 @@ var TextUtil = (function () {
   function prog(card, dir) { return SRS.normalize(card.srs && card.srs[dir]); }
   function dirsOf(card) { return card.reverse ? ['f', 'r'] : ['f']; }
   function newLimit() { var n = S.user ? Number(S.user.settings.newPerDay) : 20; return isNaN(n) ? 20 : n; }
+
+  var FACES = { 1: '🤩', 2: '😐', 3: '😓', 4: '🥶' };
+  var FACE_NAMES = { 1: 'Know it', 2: 'Okay', 3: 'Hard', 4: 'Oh no' };
+  function cardLevel(c) { return Math.max.apply(null, dirsOf(c).map(function (d) { return SRS.level(c.srs && c.srs[d]); })); }
+  function selectedDecks() {
+    var saved = S.user && S.user.settings.lastDecks;
+    var ids = S.decks.map(function (d) { return d.id; });
+    if (!Array.isArray(saved)) return ids;
+    var keep = saved.filter(function (id) { return ids.indexOf(id) >= 0; });
+    return keep.length ? keep : ids;
+  }
+  function setSelected(ids) {
+    S.user.settings.lastDecks = ids;
+    cacheNow();
+    api('saveSettings', { settings: S.user.settings }).catch(function () {});
+  }
+  function faceRow(active, cls) {
+    return '<div class="faces ' + (cls || '') + '" aria-label="How well you know this card">' + [4, 3, 2, 1].map(function (l) {
+      return '<span data-l="' + l + '" class="' + (l === active ? 'on' : '') + '" title="' + FACE_NAMES[l] + '">' + FACES[l] + '</span>';
+    }).join('') + '</div>';
+  }
 
   function deckStats(deckId, now) {
     now = now || Date.now();
@@ -1190,7 +1248,13 @@ var TextUtil = (function () {
   /* ================= home ================= */
   function renderHome(app) {
     var now = Date.now();
-    var stats = S.decks.map(function (d) { return { deck: d, st: deckStats(d.id, now) }; });
+    var sel = selectedDecks();
+    var allStats = S.decks.map(function (d) { return { deck: d, st: deckStats(d.id, now), on: sel.indexOf(d.id) >= 0 }; });
+    var stats = allStats.filter(function (x) { return x.on; });
+    var allOn = sel.length === S.decks.length;
+    var levelCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    S.cards.forEach(function (c) { if (sel.indexOf(c.deckId) >= 0) levelCounts[cardLevel(c)]++; });
+    var andWorse = ls('fc.andWorse') !== false;
     var ready = stats.reduce(function (n, x) { return n + x.st.ready; }, 0);
     var due = stats.reduce(function (n, x) { return n + x.st.due + x.st.learn; }, 0);
     var fresh = stats.reduce(function (n, x) { return n + x.st.newToday; }, 0);
@@ -1207,9 +1271,10 @@ var TextUtil = (function () {
       '<section class="hero">' +
       '<div class="hero-main"><div><div class="eyebrow">' + hello + '</div>' +
       '<div class="big">' + ready + '</div>' +
-      '<div class="sub">' + (ready ? (due ? plural(due, 'review') + ' due' : 'No reviews due') + (fresh ? ' and ' + fresh + ' new' : '') + ' today' : S.cards.length ? 'All caught up.' + (nextDue(S.decks.map(function (d) { return d.id; })) ? ' Next cards are due ' + whenLabel(nextDue(S.decks.map(function (d) { return d.id; }))) + '.' : '') + ' Practise any time, it will not change your schedule.' : S.decks.length ? 'Add some cards to start studying.' : 'Make your first deck to get started.') + '</div></div>' +
-      '<div class="row" style="margin-top:20px"><button class="btn lg" data-study-all ' + (ready || S.cards.length ? '' : 'disabled') + '>' + I.play + (ready ? 'Study all' : 'Practise all') + '</button>' +
-      (ready ? '<button class="btn lg ghost-light" data-practise-all>Practise all</button>' : '') + '</div></div>' +
+      '<div class="sub">' + (ready ? (due ? plural(due, 'review') + ' due' : 'No reviews due') + (fresh ? ' and ' + fresh + ' new' : '') + ' today' : S.cards.length ? 'All caught up' + (allOn ? '' : ' in your chosen decks') + '.' + (nextDue(sel) ? ' Next cards are due ' + whenLabel(nextDue(sel)) + '.' : '') + ' Practise any time, it will not change your schedule.' : S.decks.length ? 'Add some cards to start studying.' : 'Make your first deck to get started.') + '</div></div>' +
+      '<div class="row" style="margin-top:20px"><button class="btn lg" data-study-all ' + (ready || S.cards.length ? '' : 'disabled') + '>' + I.play + (ready ? (allOn ? 'Study all' : 'Study chosen') : (allOn ? 'Practise all' : 'Practise chosen')) + '</button>' +
+      (ready ? '<button class="btn lg ghost-light" data-practise-all>' + (allOn ? 'Practise all' : 'Practise chosen') + '</button>' : '') + '</div>' +
+      '<div class="chosen">' + (allOn ? 'All ' + plural(S.decks.length, 'deck') : sel.length + ' of ' + plural(S.decks.length, 'deck') + ' chosen') + ' &middot; tick decks below to choose</div></div>' +
       '<div class="hero-side"><div class="stats">' +
       '<div class="stat"><svg class="ring" viewBox="0 0 46 46"><circle class="bg" cx="23" cy="23" r="18"/><circle class="fg" cx="23" cy="23" r="18" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct)) + '"/></svg>' +
       '<div><div class="num">' + done + '<span style="font-size:15px;color:var(--faint);font-weight:600">/' + goal + '</span></div><div class="lbl">Today\'s goal</div></div></div>' +
@@ -1217,17 +1282,37 @@ var TextUtil = (function () {
       '</div><div class="heat"><div class="heat-head"><span>Last 17 weeks</span><span>' + plural(totalReviews(), 'review') + '</span></div><div class="heat-grid">' + heatCells(goal) + '</div></div></div>' +
       '</section>' +
       (quote ? '<p class="quote"><b></b></p>' : '') +
+      (S.cards.length ? '<section class="levels"><div class="levels-head"><h2>By how well you know them</h2><span class="spacer"></span>' +
+        '<label class="switch"><input type="checkbox" data-worse' + (andWorse ? ' checked' : '') + '><i></i>And worse</label></div>' +
+        '<div class="level-row">' + [4, 3, 2, 1].map(function (l) {
+          var n = andWorse ? [1, 2, 3, 4].filter(function (k) { return k >= l; }).reduce(function (s2, k) { return s2 + levelCounts[k]; }, 0) : levelCounts[l];
+          return '<button class="level" data-level="' + l + '"' + (n ? '' : ' disabled') + '><span class="lv-face">' + FACES[l] + '</span><b>' + n + '</b><small>' + FACE_NAMES[l] + (andWorse && l < 4 ? ' and worse' : '') + '</small></button>';
+        }).join('') + '</div><p class="hint" style="margin:8px 2px 0">Tap a face to study those cards from your chosen decks.</p></section>' : '') +
       '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
-      '<div class="decks">' + stats.map(deckTile).join('') +
+      '<div class="decks">' + allStats.map(deckTile).join('') +
       '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>' +
       '</div></main>';
     if (quote) $('.quote b', app).textContent = quote;
     wireTop(app);
-    $('[data-study-all]', app).addEventListener('click', function () { startStudy(S.decks.map(function (d) { return d.id; }), 'home', !ready); });
+    $('[data-study-all]', app).addEventListener('click', function () { startStudy(sel, 'home', !ready); });
+    $$('[data-level]', app).forEach(function (b) {
+      b.addEventListener('click', function () { startPractice(sel, 'home', Number(b.getAttribute('data-level')), andWorse); });
+    });
+    var wb = $('[data-worse]', app);
+    if (wb) wb.addEventListener('change', function () { ls('fc.andWorse', wb.checked); render(); });
+    $$('.deck .pick', app).forEach(function (l) { l.addEventListener('click', function (e) { e.stopPropagation(); }); });
+    $$('[data-pick]', app).forEach(function (cb) {
+      cb.addEventListener('click', function (e) { e.stopPropagation(); });
+      cb.addEventListener('change', function () {
+        var ids = $$('[data-pick]', app).filter(function (x) { return x.checked; }).map(function (x) { return x.getAttribute('data-pick'); });
+        if (!ids.length) { cb.checked = true; toast('Keep at least one deck chosen.'); return; }
+        setSelected(ids); render();
+      });
+    });
     var sa = $('[data-send-all]', app);
     if (sa) sa.addEventListener('click', function () { openSend(null); });
     var pa = $('[data-practise-all]', app);
-    if (pa) pa.addEventListener('click', function () { startStudy(S.decks.map(function (d) { return d.id; }), 'home', true); });
+    if (pa) pa.addEventListener('click', function () { startStudy(sel, 'home', true); });
     $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null); }); });
     $$('.deck[data-id]', app).forEach(function (n) {
       var id = n.getAttribute('data-id');
@@ -1256,7 +1341,8 @@ var TextUtil = (function () {
   }
   function deckTile(x) {
     var d = x.deck, st = x.st;
-    return '<div class="deck" role="button" tabindex="0" data-id="' + esc(d.id) + '" style="--c:' + esc(d.color) + '">' +
+    return '<div class="deck' + (x.on ? ' picked' : '') + '" role="button" tabindex="0" data-id="' + esc(d.id) + '" style="--c:' + esc(d.color) + '">' +
+      '<label class="pick" title="Include in Study"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
       '<span class="dot"></span><h3>' + esc(d.name) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
       '<div class="counts">' + (st.due + st.learn ? '<span class="chip due">' + (st.due + st.learn) + ' due</span>' : '') +
       (st.newToday ? '<span class="chip new">' + st.newToday + ' new</span>' : '') +
@@ -1326,7 +1412,7 @@ var TextUtil = (function () {
       var types = (c.type === 'typed' ? '<span class="tag">Typed</span>' : c.type === 'choice' ? '<span class="tag">Choice</span>' : '') +
         (c.reverse ? '<span class="tag">Both ways</span>' : '') +
         ((c.frontMedia && (c.frontMedia.img || c.frontMedia.audio)) || (c.backMedia && (c.backMedia.img || c.backMedia.audio)) ? '<span class="tag">Media</span>' : '');
-      return '<div class="crow" data-id="' + esc(c.id) + '"><div class="f">' + (esc(c.front) || '<span class="hint">(media)</span>') + '</div><div class="b">' + esc(c.back) + '</div><div class="tags">' + types + statusTag(c) + '</div></div>';
+      return '<div class="crow" data-id="' + esc(c.id) + '"><div class="f">' + (esc(c.front) || '<span class="hint">(media)</span>') + '</div><div class="b">' + esc(c.back) + '</div><div class="tags">' + types + statusTag(c) + '<span class="row-face" title="' + FACE_NAMES[cardLevel(c)] + '">' + FACES[cardLevel(c)] + '</span></div></div>';
     }).join('') + (list.length > shown.length ? '<div class="more"><button class="btn sm" data-more-cards>Show ' + Math.min(200, list.length - shown.length) + ' more</button></div>' : '') + '</div>';
     $$('.crow', box).forEach(function (r) { r.addEventListener('click', function () { openCardEditor(cardById(r.getAttribute('data-id')), deck.id); }); });
     var more = $('[data-more-cards]', box);
@@ -1649,10 +1735,17 @@ var TextUtil = (function () {
     nextItem();
     go('study');
   }
-  function startPractice(deckIds, from) {
+  function startPractice(deckIds, from, lvl, andWorse) {
     var items = [];
-    deckIds.forEach(function (id) { cardsOf(id).forEach(function (c) { dirsOf(c).forEach(function (d) { items.push({ card: c, dir: d }); }); }); });
-    if (!items.length) { toast('Add some cards first.'); return; }
+    deckIds.forEach(function (id) {
+      cardsOf(id).forEach(function (c) {
+        dirsOf(c).forEach(function (d) {
+          var l = SRS.level(c.srs && c.srs[d]);
+          if (!lvl || l === lvl || (andWorse && l > lvl)) items.push({ card: c, dir: d });
+        });
+      });
+    });
+    if (!items.length) { toast(lvl ? 'No cards at that level right now.' : 'Add some cards first.'); return; }
     var deck = deckIds.length === 1 ? deckById(deckIds[0]) : null;
     S.study = {
       practice: true, learn: [], review: shuffle(items), fresh: [], n: 0, correct: 0, started: Date.now(), from: from,
@@ -1728,7 +1821,7 @@ var TextUtil = (function () {
       (s.practice ? '<div class="qcounts"><span style="color:var(--muted)">Practice &middot; ' + (rem.r + 1) + ' left</span></div>' : '') +
       (s.practice ? '' : '<div class="qcounts"><span class="n' + (curKey === 'n' ? ' cur' : '') + '">' + (rem.n + (curKey === 'n' ? 1 : 0)) + '</span><span class="l' + (curKey === 'l' ? ' cur' : '') + '">' + (rem.l + (curKey === 'l' ? 1 : 0)) + '</span><span class="r' + (curKey === 'r' ? ' cur' : '') + '">' + (rem.r + (curKey === 'r' ? 1 : 0)) + '</span></div>') +
       '<button class="btn ghost icon-btn" data-edit aria-label="Edit card" title="Edit card (E)">' + I.edit + '</button></div>' +
-      '<div class="stage"><div class="flip" data-flip><span class="swipe-hint l">Oh no!</span><span class="swipe-hint r">Okay</span><div class="inner">' +
+      '<div class="stage">' + faceRow(cardLevel(c), 'study-faces') + '<div class="flip" data-flip><span class="swipe-hint l">Oh no!</span><span class="swipe-hint r">Okay</span><div class="inner">' +
       '<div class="face front"><div class="face-label">' + label + '</div>' + frontBody + '</div>' +
       '<div class="face back"><div class="face-label">Answer</div><div class="face-body" data-back></div></div>' +
       '</div></div><div class="dock" data-dock></div></div></div></div>';
@@ -1792,6 +1885,7 @@ var TextUtil = (function () {
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
   var GRADE_LABELS = { again: 'Oh no!', hard: 'Hard', good: 'Okay', easy: 'Good' };
+  var GRADE_HINTS = { again: 'ASAP', hard: 'Soon', good: 'One more time', easy: 'Next time' };
   function paintDock() {
     var s = S.study, dock = $('[data-dock]');
     if (!dock) return;
@@ -1805,7 +1899,7 @@ var TextUtil = (function () {
       return;
     }
     var v = s.cur.verdict, suggest = v === 'exact' ? 'good' : v === 'close' ? 'hard' : v === 'wrong' ? 'again' : null;
-    if (s.practice) {
+    if (false) {
       dock.innerHTML = '<div class="grades two"><button class="grade again' + (suggest === 'again' ? ' suggest' : '') + '" data-g="again">Oh no!<small>see it again</small></button>' +
         '<button class="grade good' + (suggest && suggest !== 'again' ? ' suggest' : '') + '" data-g="good">Got it<small>next card</small></button></div>' +
         '<div class="keys">Practice: your schedule does not change &middot; <kbd>1</kbd> oh no <kbd>3</kbd> got it</div>';
@@ -1814,7 +1908,8 @@ var TextUtil = (function () {
     }
     var now = Date.now();
     dock.innerHTML = '<div class="grades">' + ['again', 'hard', 'good', 'easy'].map(function (g, i) {
-      return '<button class="grade ' + g + (g === suggest ? ' suggest' : '') + '" data-g="' + g + '">' + GRADE_LABELS[g] + '<small>' + SRS.preview(p, g, now) + '</small></button>';
+      var when = s.practice && !(p.s === 'new' || p.s === 'learn' || p.due <= now) ? 'practice: schedule unchanged' : 'Next: ' + SRS.preview(p, g, now);
+      return '<div class="grade-wrap"><button class="grade ' + g + (g === suggest ? ' suggest' : '') + '" data-g="' + g + '" title="' + when + '">' + GRADE_LABELS[g] + '</button><span class="grade-hint">' + GRADE_HINTS[g] + '</span></div>';
     }).join('') + '</div><div class="keys"><kbd>1</kbd>-<kbd>4</kbd> grade &middot; <kbd>Space</kbd> flip back &middot; swipe on touch</div>';
     $$('[data-g]', dock).forEach(function (b) { b.addEventListener('click', function () { grade(b.getAttribute('data-g')); }); });
   }
@@ -1826,6 +1921,12 @@ var TextUtil = (function () {
     if (s.practice) {
       s.n++;
       if (g === 'again') s.review.splice(Math.min(s.review.length, 3), 0, item); else s.correct++;
+      var cur = prog(c, item.dir), dueNow = cur.s === 'new' || cur.s === 'learn' || cur.due <= now;
+      var nextP = dueNow ? SRS.grade(cur, g, now) : Object.assign({}, cur, { g: g });
+      c.srs = c.srs || {};
+      c.srs[item.dir] = nextP;
+      queueReview(c.id, item.dir, nextP);
+      if (dueNow) bumpDaily(g !== 'again');
       return animateOut(g, dirOut);
     }
     var before = prog(c, item.dir);
@@ -1936,7 +2037,6 @@ var TextUtil = (function () {
       if ((e.key === ' ' || e.key === 'Enter') && cur.item.card.type !== 'typed' && !(cur.options)) { e.preventDefault(); reveal(); return; }
     } else {
       var g = { '1': 'again', '2': 'hard', '3': 'good', '4': 'easy' }[e.key];
-      if (g && s.practice && g !== 'again') g = 'good';
       if (g) { e.preventDefault(); grade(g); return; }
       if (e.key === ' ') { e.preventDefault(); var fl = $('[data-flip]'); if (fl) fl.classList.toggle('flipped'); return; }
       if (e.key === 'Enter') { e.preventDefault(); grade(cur.verdict === 'wrong' ? 'again' : cur.verdict === 'close' ? 'hard' : 'good'); return; }
