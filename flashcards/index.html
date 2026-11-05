@@ -475,51 +475,45 @@ img { max-width: 100%; }
 .hero-main .seg.mode button { color: rgba(255, 255, 255, .82); }
 .hero-main .seg.mode button.on { background: #fff; color: #111; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
 
-/* folders: a tile with the decks fanned like a stack of cards */
-.folder-tile { cursor: pointer; padding-top: 16px; }
-.folder-tile::before { display: none; }
-.folder-tile .stack { position: relative; height: 74px; margin: 2px 0 12px; }
-.folder-tile .stack i {
-  position: absolute; left: 0; top: 6px; width: 58%; max-width: 150px; height: 62px; border-radius: 11px;
-  background: linear-gradient(140deg, var(--c), color-mix(in srgb, var(--c) 55%, #000));
-  border: 1px solid rgba(255, 255, 255, .14);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, .28);
-  transform-origin: 20% 100%;
-  transform: translateX(calc(var(--i) * 16px)) rotate(calc(var(--i) * 6deg));
-  transition: transform .35s var(--ease);
-}
-.folder-tile .stack i::after { content: ''; position: absolute; left: 12px; right: 30%; top: 14px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .55); box-shadow: 0 11px 0 -1px rgba(255, 255, 255, .3), 0 22px 0 -1px rgba(255, 255, 255, .2); }
-.folder-tile:hover .stack i { transform: translateX(calc(var(--i) * 30px)) translateY(calc(var(--i) * -3px)) rotate(calc(var(--i) * 11deg)); }
-.folder-tile h3 { margin: 0 0 2px; }
-.fbar { display: flex; gap: 2px; height: 6px; border-radius: 99px; overflow: hidden; margin-top: auto; background: var(--surface-2); }
-.fbar b { min-width: 4px; }
-.folder-tile .meta { margin-bottom: 14px; }
-.fmore { position: absolute; right: 48px; bottom: 18px; width: 32px; height: 32px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; opacity: 0; transition: opacity .2s, background .2s; }
+/* folders: a wallet of deck cards that fans open in place */
+.decks { align-items: start; }
+.wallet-tile { --fc: var(--accent); position: relative; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 14px 14px 16px; cursor: pointer; transition: border-color .3s, box-shadow .3s, transform .25s var(--ease); }
+.wallet-tile:hover { box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--fc) 35%, var(--line)); }
+.wallet-tile.open { border-color: color-mix(in srgb, var(--fc) 55%, var(--line)); cursor: default; }
+.wallet-tile.open .whead { cursor: pointer; }
+.whead { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 12px; --c: var(--fc); }
+.whead .pick { flex: none; margin-top: 2px; }
+.wtitle { flex: 1; min-width: 0; }
+.wtitle h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.wtitle .meta { color: var(--muted); font-size: 12.5px; }
+.fmore { flex: none; width: 32px; height: 32px; margin: -4px -4px 0 0; border-radius: 10px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; }
 .fmore svg { width: 18px; height: 18px; }
-.folder-tile:hover .fmore, .fmore:focus-visible { opacity: 1; }
 .fmore:hover { background: var(--surface-2); color: var(--text); }
-@media (hover: none) { .fmore { opacity: 1; } }
-.folder-tile .fbar { margin-right: 84px; }
-.fexpand { position: absolute; right: 10px; bottom: 18px; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); display: grid; place-items: center; transition: background .2s, color .2s; }
-.fexpand svg { width: 18px; height: 18px; transition: transform .25s var(--ease); }
-.fexpand:hover { color: var(--text); }
-.fexpand.on { background: color-mix(in srgb, var(--c) 22%, var(--surface-2)); color: var(--text); }
-.fexpand.on svg { transform: rotate(180deg); }
-.folder-strip { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; margin-top: -4px; border-radius: var(--r); background: var(--surface); border: 1px dashed var(--line-strong); }
-.folder-strip.opening { animation: rise .3s var(--ease) both; }
-.fchip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); cursor: pointer; user-select: none; max-width: 100%; transition: border-color .15s, background .15s; }
-.fchip:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
-.fchip i { width: 20px; height: 20px; border-radius: 6px; flex: none; }
-.fchip span { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fchip small { color: var(--muted); font-size: 12px; }
-.fchip:has(input:checked) { background: color-mix(in srgb, var(--c) 14%, var(--surface-2)); border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
-.section-head.folder-open { flex-wrap: wrap; }
-.section-head.folder-open h2 { overflow-wrap: anywhere; }
-.decks.opening > * { animation: rise .4s var(--ease) both; }
-.decks.opening > *:nth-child(2) { animation-delay: .03s; }
-.decks.opening > *:nth-child(3) { animation-delay: .06s; }
-.decks.opening > *:nth-child(4) { animation-delay: .09s; }
-.decks.opening > *:nth-child(n+5) { animation-delay: .12s; }
+.wstack { position: relative; transition: height .55s var(--ease); }
+.wc { position: absolute; left: 0; right: 0; top: 0; height: 120px; border-radius: 16px; padding: 12px 14px; color: #fff;
+  background: linear-gradient(135deg, var(--dc), color-mix(in srgb, var(--dc) 55%, #000)); border: 1px solid rgba(255, 255, 255, .16);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, .3); display: flex; flex-direction: column;
+  transform: translateY(calc(var(--ci) * 30px)); transition: transform .55s var(--spring, cubic-bezier(.34, 1.3, .5, 1)), opacity .3s; }
+.wc.extra { opacity: 0; pointer-events: none; }
+.wallet-tile:not(.open):hover .wc { transform: translateY(calc(var(--ci) * 35px)); }
+.wallet-tile.open .wc { transform: translateY(calc(var(--i) * 132px)); opacity: 1; pointer-events: auto; cursor: pointer; }
+.wtop { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; padding-right: 0; transition: padding .3s; }
+.wtop b { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wtop span { font-size: 12px; opacity: .9; white-space: nowrap; }
+.wallet-tile.open .wtop { padding-right: 36px; }
+.wbot { margin-top: auto; padding-right: 0; transition: padding .3s; }
+.wallet-tile.open .wbot { padding-right: 46px; }
+.wbot small { display: block; margin-bottom: 6px; font-size: 12px; opacity: .85; }
+.wbar { display: flex; gap: 2px; height: 5px; border-radius: 99px; overflow: hidden; background: rgba(0, 0, 0, .25); }
+.wpick, .wgo { position: absolute; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.wallet-tile.open .wpick, .wallet-tile.open .wgo { opacity: 1; pointer-events: auto; }
+.wpick { top: 10px; right: 10px; --c: rgba(0, 0, 0, .35); }
+.wpick i { border-color: rgba(255, 255, 255, .8); background: rgba(0, 0, 0, .15); }
+.wgo { right: 10px; bottom: 10px; width: 36px; height: 36px; border-radius: 12px; border: 0; background: rgba(255, 255, 255, .95); color: #111; display: grid; place-items: center; }
+.wgo svg { width: 16px; height: 16px; }
+.wextra { margin-top: 10px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.wallet-tile.open .wextra { display: none; }
+.wallet-tile:not(.picked) .wstack { opacity: .55; }
 .pick input[data-some] + i { background: var(--c); border-color: var(--c); }
 .pick input[data-some] + i::after { content: ''; width: 10px; height: 2.5px; background: #fff; border-radius: 2px; }
 .folder-picks { display: grid; gap: 6px; max-height: 320px; overflow: auto; }
@@ -1426,9 +1420,8 @@ var TextUtil = (function () {
             '<button class="btn sm lv-go" data-level="' + l + '"' + (n ? '' : ' disabled') + '>Study these</button>' +
             (l < 4 ? '<button class="btn sm ghost lv-worse" data-level="' + l + '" data-worse' + (worse ? '' : ' disabled') + ' title="' + FACE_NAMES[l] + ' and every face to its left">+ worse &middot; ' + worse + '</button>' : '<span class="lv-worse-gap"></span>') + '</div>';
         }).join('') + '</div></section>' : '') +
-      (openFolderName() ? '<div class="section-head folder-open"><button class="btn ghost sm" data-folder-back>' + I.back + 'All decks</button><h2>' + esc(openFolderName()) + '</h2><span class="spacer"></span>' +
-        '<button class="btn sm" data-folder-study>' + I.play + '<span class="hide-sm">' + MODES[mode] + '</span></button><button class="btn sm ghost icon-btn" data-folder-more aria-label="Folder actions">' + I.more + '</button>' : '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>') +
-      (openFolderName() ? '' : '<button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Browse public decks</span></button>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') +
+      '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>' +
+      ('<button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Browse public decks</span></button>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') +
       (S.decks.length ? '<button class="btn sm ghost" data-new-folder>' + I.folder + '<span class="hide-sm">New folder</span></button>' : '')) + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
       deckGroups(allStats) +
       '</div></main>';
@@ -1451,8 +1444,7 @@ var TextUtil = (function () {
         setSelected(ids); render();
       });
     });
-    S.justOpened = false;
-    $$('.folder-tile', app).forEach(function (box) {
+    $$('.wallet-tile', app).forEach(function (box) {
       var f = box.getAttribute('data-folder');
       var ids = S.decks.filter(function (d) { return folderOf(d.id) === f; }).map(function (d) { return d.id; });
       var cb = $('[data-fpick]', box);
@@ -1462,34 +1454,30 @@ var TextUtil = (function () {
         if (!cur.length) { cb.checked = true; toast('Keep at least one deck chosen.'); return; }
         setSelected(cur); render();
       });
-      box.addEventListener('click', function () { openFolder(f); });
-      $('[data-fexpand]', box).addEventListener('click', function (e) {
-        e.stopPropagation();
-        var o = ls('fc.fopen') || {};
-        if (o[f]) delete o[f]; else { o[f] = 1; S.justExpanded = f; }
-        ls('fc.fopen', o); render();
-      });
+      box.addEventListener('click', function () { toggleWallet(box, f); });
       $('[data-fedit]', box).addEventListener('click', function (e) { e.stopPropagation(); folderMenu(f, ids, e.currentTarget); });
       box.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); folderMenu(f, ids, e.currentTarget, { x: e.clientX, y: e.clientY }); });
+      $$('.wc', box).forEach(function (card) {
+        var id = card.getAttribute('data-wdeck');
+        card.addEventListener('click', function (e) {
+          if (!box.classList.contains('open')) return;
+          e.stopPropagation(); go('deck', { deckId: id });
+        });
+        card.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); deckMenu(deckById(id), card, { x: e.clientX, y: e.clientY }); });
+        $('.wgo', card).addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (mode === 'mission' && !deckStats(id).ready) { startMission([id], 'home'); return; }
+          startMode(mode, [id], 'home');
+        });
+      });
     });
-    $$('.fchip', app).forEach(function (chip) {
-      chip.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); deckMenu(deckById(chip.getAttribute('data-chip')), chip, { x: e.clientX, y: e.clientY }); });
-    });
-    var fb = $('[data-folder-back]', app);
-    if (fb) {
-      var of = openFolderName();
-      var oids = S.decks.filter(function (d) { return folderOf(d.id) === of; }).map(function (d) { return d.id; });
-      fb.addEventListener('click', function () { S.openFolder = null; S.justOpened = true; render(); });
-      $('[data-folder-study]', app).addEventListener('click', function () { startMode(mode, oids, 'home'); });
-      $('[data-folder-more]', app).addEventListener('click', function (e) { e.stopPropagation(); folderMenu(of, oids, e.currentTarget); });
-    }
     var cat = $('[data-catalog]', app);
     if (cat) cat.addEventListener('click', openCatalog);
     var sa = $('[data-send-all]', app);
     if (sa) sa.addEventListener('click', function () { openSend(null, 'copy'); });
     var nf = $('[data-new-folder]', app);
     if (nf) nf.addEventListener('click', function () { openFolderEditor(null); });
-    $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null, openFolderName()); }); });
+    $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null); }); });
     $$('.deck[data-id]', app).forEach(function (n) {
       var id = n.getAttribute('data-id');
       n.addEventListener('click', function () { go('deck', { deckId: id }); });
@@ -1518,48 +1506,64 @@ var TextUtil = (function () {
     }
     return cells.join('');
   }
-  function openFolderName() {
-    if (S.openFolder && folderNames().indexOf(S.openFolder) < 0) S.openFolder = null;
-    return S.openFolder;
-  }
   function deckGroups(allStats) {
-    var open = openFolderName();
-    if (open) {
-      var inside = allStats.filter(function (x) { return folderOf(x.deck.id) === open; });
-      return '<div class="decks' + (S.justOpened ? ' opening' : '') + '">' + inside.map(deckTile).join('') + '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>';
-    }
     var expanded = ls('fc.fopen') || {};
     var tiles = folderNames().map(function (f) {
-      var xs = allStats.filter(function (x) { return folderOf(x.deck.id) === f; });
-      return folderTile(f, xs, !!expanded[f]) + (expanded[f] ? folderStrip(f, xs) : '');
+      return folderTile(f, allStats.filter(function (x) { return folderOf(x.deck.id) === f; }), !!expanded[f]);
     });
     var loose = allStats.filter(function (x) { return !folderOf(x.deck.id); });
-    return '<div class="decks' + (S.justOpened ? ' opening' : '') + '">' + tiles.join('') + loose.map(deckTile).join('') + '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>';
+    return '<div class="decks">' + tiles.join('') + loose.map(deckTile).join('') + '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>';
   }
-  var LEVEL_COLOR = { 1: 'easy', 2: 'good', 3: 'hard', 4: 'again' };
-  function folderStrip(f, xs) {
-    var fresh = S.justExpanded === f;
-    if (fresh) S.justExpanded = null;
-    return '<div class="folder-strip' + (fresh ? ' opening' : '') + '" data-strip="' + esc(f) + '">' + xs.map(function (x) {
-      return '<label class="pick fchip" data-chip="' + esc(x.deck.id) + '" style="--c:' + esc(x.deck.color) + '"><input type="checkbox" data-pick="' + esc(x.deck.id) + '"' + (x.on ? ' checked' : '') + '><i></i><span>' + esc(x.deck.name) + '</span><small>' + x.st.total + '</small></label>';
-    }).join('') + '</div>';
+  /* Card counts by face for some decks; 'n' = never studied (no grade at all). */
+  function levelsOf(deckIds) {
+    var lv = { n: 0, 1: 0, 2: 0, 3: 0, 4: 0, total: 0 };
+    deckIds.forEach(function (id) {
+      cardsOf(id).forEach(function (c) {
+        lv.total++;
+        var fresh = dirsOf(c).every(function (d) { var p = prog(c, d); return p.s === 'new' && !p.g; });
+        lv[fresh ? 'n' : cardLevel(c)]++;
+      });
+    });
+    return lv;
   }
+  var LV_COLOR = { n: 'var(--new)', 1: 'var(--easy)', 2: 'var(--good)', 3: 'var(--hard)', 4: 'var(--again)' };
+  function knownLabel(lv) {
+    if (!lv.total) return 'Empty';
+    if (lv.n === lv.total) return 'New';
+    return Math.round(100 * (lv[1] + lv[2]) / lv.total) + '%';
+  }
+  function lvBar(lv) {
+    return '<div class="wbar">' + ['1', '2', '3', '4', 'n'].map(function (k) { return lv[k] ? '<i style="flex:' + lv[k] + ';background:' + LV_COLOR[k] + '"></i>' : ''; }).join('') + '</div>';
+  }
+  var WC_H = 120, WC_PEEK = 30, WC_GAP = 132, WC_MAX = 4;
+  function walletH(n, open) { return open ? WC_H + (n - 1) * WC_GAP : WC_H + (Math.min(n, WC_MAX) - 1) * WC_PEEK; }
   function folderTile(f, xs, open) {
     var on = xs.filter(function (x) { return x.on; }).length;
-    var cards = xs.reduce(function (n, x) { return n + x.st.total; }, 0);
-    var lv = { 1: 0, 2: 0, 3: 0, 4: 0 };
-    xs.forEach(function (x) { cardsOf(x.deck.id).forEach(function (c) { lv[cardLevel(c)]++; }); });
-    var top = xs.slice(0, 3);
-    var sheets = top.map(function (x, i) { return '<i style="--c:' + esc(x.deck.color) + ';--i:' + i + ';z-index:' + (3 - i) + '"></i>'; }).join('');
-    var bar = cards ? '<div class="fbar" title="' + [1, 2, 3, 4].map(function (l) { return FACES[l] + ' ' + lv[l]; }).join('   ') + '">' + [1, 2, 3, 4].map(function (l) {
-      return lv[l] ? '<b style="flex:' + lv[l] + ';background:var(--' + LEVEL_COLOR[l] + ')"></b>' : '';
-    }).join('') + '</div>' : '<div class="fbar empty"></div>';
-    return '<div class="deck folder-tile' + (on ? ' picked' : '') + '" role="button" tabindex="0" data-folder="' + esc(f) + '" style="--c:' + esc(top[0] ? top[0].deck.color : DEFAULT_ACCENT) + '">' +
-      '<label class="pick" title="Choose every deck in this folder"><input type="checkbox" data-fpick' + (on === xs.length ? ' checked' : '') + (on && on < xs.length ? ' data-some' : '') + '><i></i></label>' +
-      '<div class="stack">' + sheets + '</div>' +
-      '<h3>' + esc(f) + '</h3><div class="meta">' + plural(xs.length, 'deck') + ' &middot; ' + plural(cards, 'card') + '</div>' + bar +
-      '<button class="fexpand' + (open ? ' on' : '') + '" data-fexpand aria-expanded="' + !!open + '" aria-label="Show decks here" title="' + (open ? 'Hide decks' : 'Show decks here to pick them') + '">' + I.chev + '</button>' +
-      '<button class="fmore" data-fedit aria-label="Folder actions" title="Folder actions (or right-click)">' + I.more + '</button></div>';
+    var lv = levelsOf(xs.map(function (x) { return x.deck.id; }));
+    var k = knownLabel(lv), extra = Math.max(0, xs.length - WC_MAX);
+    var cards = xs.map(function (x, i) {
+      var d = x.deck, dl = levelsOf([d.id]), kl = knownLabel(dl);
+      return '<div class="wc' + (i >= WC_MAX ? ' extra' : '') + '" data-wdeck="' + esc(d.id) + '" style="--dc:' + esc(d.color) + ';--i:' + i + ';--ci:' + Math.min(i, WC_MAX - 1) + ';z-index:' + (i + 1) + '">' +
+        '<div class="wtop"><b>' + esc(d.name) + '</b><span>' + (kl === 'New' || kl === 'Empty' ? kl : kl + ' known') + '</span></div>' +
+        '<div class="wbot"><small>' + plural(dl.total, 'card') + '</small>' + lvBar(dl) + '</div>' +
+        '<label class="pick wpick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
+        '<button class="wgo" aria-label="Study ' + esc(d.name) + '" title="Study this deck">' + I.play + '</button></div>';
+    }).join('');
+    return '<div class="wallet-tile' + (open ? ' open' : '') + (on ? ' picked' : '') + '" role="button" tabindex="0" aria-expanded="' + open + '" data-folder="' + esc(f) + '" data-n="' + xs.length + '" style="--fc:' + esc(xs[0] ? xs[0].deck.color : DEFAULT_ACCENT) + '">' +
+      '<div class="whead"><label class="pick" title="Choose every deck in this folder"><input type="checkbox" data-fpick' + (on === xs.length ? ' checked' : '') + (on && on < xs.length ? ' data-some' : '') + '><i></i></label>' +
+      '<div class="wtitle"><h3>' + esc(f) + '</h3><div class="meta">' + plural(xs.length, 'deck') + ' &middot; ' + plural(lv.total, 'card') + ' &middot; ' + (k === 'New' ? 'not started' : k === 'Empty' ? 'empty' : k + ' known') + '</div></div>' +
+      '<button class="fmore" data-fedit aria-label="Folder actions" title="Folder actions (or right-click)">' + I.more + '</button></div>' +
+      '<div class="wstack" style="height:' + walletH(xs.length, open) + 'px">' + cards + '</div>' +
+      (extra ? '<div class="wextra">+' + plural(extra, 'more deck') + '</div>' : '') + '</div>';
+  }
+  function toggleWallet(box, f, force) {
+    var o = ls('fc.fopen') || {};
+    var open = force != null ? force : !o[f];
+    if (open) o[f] = 1; else delete o[f];
+    ls('fc.fopen', o);
+    box.classList.toggle('open', open);
+    box.setAttribute('aria-expanded', open);
+    $('.wstack', box).style.height = walletH(Number(box.getAttribute('data-n')), open) + 'px';
   }
   function deckTile(x) {
     var d = x.deck, st = x.st, fs = x.fs, mode = studyMode(), free = mode !== 'mission';
@@ -1573,19 +1577,17 @@ var TextUtil = (function () {
       '<div class="counts">' + chips + deckBadges(d) + '</div>' +
       '<button class="go" aria-label="Study ' + esc(d.name) + '">' + (canGo ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
   }
-  function openFolder(f) {
-    S.openFolder = f; S.justOpened = true; render();
-    var h = $('.section-head');
-    if (h && h.getBoundingClientRect().top < 70) h.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
   function folderMenu(f, ids, anchor, pt) {
     var mode = studyMode();
     menu(anchor, [
       { label: MODES[mode] + ': this folder', icon: 'play', run: function () { startMode(mode, ids, 'home'); } },
       { label: 'Choose only this folder', icon: 'check', run: function () { setSelected(ids.slice()); render(); } },
       { label: 'Rename or change decks', icon: 'edit', run: function () { openFolderEditor(f); } },
-      S.openFolder === f ? { label: 'Back to all decks', icon: 'back', run: function () { S.openFolder = null; S.justOpened = true; render(); } }
-                         : { label: 'Open folder', icon: 'folder', run: function () { openFolder(f); } },
+      { label: (ls('fc.fopen') || {})[f] ? 'Close folder' : 'Open folder', icon: 'folder', run: function () {
+        var box = $$('.wallet-tile').filter(function (b) { return b.getAttribute('data-folder') === f; })[0];
+        if (box) toggleWallet(box, f);
+      } },
+      { label: 'New deck in this folder', icon: 'plus', run: function () { openDeckEditor(null, f); } },
       { label: 'Remove folder, keep decks', icon: 'x', run: function () { removeFolder(f); toast('Folder removed. Its decks are still here.'); } },
       { label: 'Delete folder and its decks', icon: 'trash', danger: true, run: function () { deleteFolder(f, ids); } }
     ], pt);
@@ -1656,7 +1658,6 @@ var TextUtil = (function () {
       Object.keys(f).forEach(function (id) { if (name && f[id] === name) delete f[id]; });
       if (newName) $$('.fp input', m.el).forEach(function (cb) { if (cb.checked) f[cb.value] = newName; });
       S.user.settings.folders = f;
-      if (name && S.openFolder === name) S.openFolder = newName || null;
       saveSettingsSoon();
       m.close(); render();
     }
