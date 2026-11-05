@@ -178,7 +178,7 @@ img { max-width: 100%; }
 .hero-main::after { content: ''; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, .22), transparent 65%); }
 .hero-main .eyebrow { font-size: 13px; font-weight: 600; opacity: .85; }
 .hero-main .big { font-family: var(--display); font-size: 64px; font-weight: 700; letter-spacing: -.05em; line-height: 1; margin: 8px 0 4px; }
-.hero-main .sub { opacity: .85; font-size: 14px; }
+.hero-main .sub { opacity: .85; font-size: 14px; min-height: 2.9em; line-height: 1.45; }
 .hero-main .btn { background: #fff; color: #111; border: 0; }
 .hero-main .btn.ghost-light { background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .35); }
 .hero-main .btn.ghost-light:hover { background: rgba(255, 255, 255, .24); }
@@ -474,7 +474,10 @@ img { max-width: 100%; }
 /* study mode switch in the hero */
 .hero-main .seg.mode { background: rgba(255, 255, 255, .14); margin-bottom: 10px; position: relative; z-index: 1; }
 .hero-main .seg.mode button { color: rgba(255, 255, 255, .82); }
-.hero-main .seg.mode button.on { background: #fff; color: #111; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
+.hero-main .seg.mode button { position: relative; z-index: 1; background: transparent !important; box-shadow: none !important; transition: color .25s; }
+.hero-main .seg.mode button.on { color: #111; }
+.seg-ind { position: absolute; left: 0; top: 4px; bottom: 4px; border-radius: 9px; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); transition: transform .35s var(--ease), width .35s var(--ease); z-index: 0; }
+.hero-main .seg.mode { padding: 4px; }
 
 /* folders: a wallet of deck cards that fans open in place */
 .decks { align-items: start; }
@@ -523,7 +526,7 @@ img { max-width: 100%; }
 .fp small { color: var(--muted); white-space: nowrap; }
 .fp .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .fp input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
-.mode-desc { margin: 0 0 18px; max-width: 420px; font-size: 14px; line-height: 1.45; font-weight: 500; opacity: .95; position: relative; z-index: 1; }
+.mode-desc { margin: 0 0 18px; max-width: 420px; min-height: 2.9em; font-size: 14px; line-height: 1.45; font-weight: 500; opacity: .95; position: relative; z-index: 1; }
 
 /* face badges: each face on its level colour */
 .fbadge { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-size: 19px; line-height: 1; background: color-mix(in srgb, var(--lc) 30%, var(--surface-2)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--lc) 70%, transparent); flex: none; }
@@ -614,6 +617,17 @@ img { max-width: 100%; }
   .sx-st { width: 52px; } .sx-b { width: 36px; height: 36px; font-size: 19px; } .sx-st small { font-size: 9.5px; }
   .sx-when { white-space: normal; text-align: center; font-size: 10px; padding: 2px 5px; line-height: 1.2; }
 }
+
+/* mode switch motion */
+@keyframes swapIn { from { opacity: 0; transform: translateY(6px); } }
+.hero-main.swap .mode-desc, .hero-main.swap .big, .hero-main.swap .sub, .hero-main.swap .row, .hero-main.swap .chosen { animation: swapIn .35s var(--ease) both; }
+.hero-main.swap .big { animation-delay: .04s; } .hero-main.swap .sub { animation-delay: .07s; } .hero-main.swap .row { animation-delay: .1s; }
+.levels { transition: height .4s var(--ease), opacity .3s, margin .4s var(--ease); }
+.levels.folding { opacity: 0; margin-bottom: 0; }
+.levels.opening .ftile { animation: swapIn .4s var(--ease) both; }
+.levels.opening .ftile:nth-child(2) { animation-delay: .04s; } .levels.opening .ftile:nth-child(3) { animation-delay: .08s; } .levels.opening .ftile:nth-child(4) { animation-delay: .12s; }
+@media (prefers-reduced-motion: reduce) { .seg-ind, .levels { transition: none; } .hero-main.swap *, .levels.opening .ftile { animation: none !important; } }
+@media (max-width: 560px) { .mode-desc { min-height: 4.35em; } }
 
 </style>
 </head>
@@ -1139,7 +1153,47 @@ var TextUtil = (function () {
   };
   function studyMode() { var m = S.user && S.user.settings.mode; return MODES[m] ? m : 'free'; }
   function startMode(mode, ids, from) { if (mode === 'mission') startMission(ids, from); else if (mode === 'focus') startFree(ids, from); else startFree(ids, from, 0, false, true); }
-  function setMode(m) { S.user.settings.mode = m; saveSettingsSoon(); render(); }
+  /* Switch study mode with motion: the white pill slides, hero text fades across, and the Focus tiles
+     fold away or open instead of popping. */
+  function setMode(m) {
+    var seg = $('.seg.mode'), on = seg && $('button.on', seg);
+    S.modeFrom = on && seg ? { left: on.offsetLeft, width: on.offsetWidth } : null;
+    var lv = $('.levels');
+    var go = function () { S.user.settings.mode = m; S.modeSwap = true; saveSettingsSoon(); render(); };
+    if (lv && m !== 'focus') {
+      lv.style.height = lv.offsetHeight + 'px'; lv.style.overflow = 'hidden';
+      lv.offsetHeight;
+      lv.classList.add('folding');
+      lv.style.height = '0px';
+      setTimeout(go, 260);
+    } else go();
+  }
+  function afterModeRender(app) {
+    var seg = $('.seg.mode', app);
+    if (seg) {
+      var ind = el('<span class="seg-ind"></span>');
+      seg.insertBefore(ind, seg.firstChild);
+      var on = $('button.on', seg);
+      var place = function (x, w) { ind.style.transform = 'translateX(' + x + 'px)'; ind.style.width = w + 'px'; };
+      if (S.modeFrom && S.modeSwap) {
+        ind.style.transition = 'none'; place(S.modeFrom.left, S.modeFrom.width); ind.offsetWidth; ind.style.transition = '';
+        place(on.offsetLeft, on.offsetWidth);
+      } else {
+        ind.style.transition = 'none'; place(on.offsetLeft, on.offsetWidth); ind.offsetWidth; ind.style.transition = '';
+      }
+    }
+    if (!S.modeSwap) return;
+    S.modeSwap = false; S.modeFrom = null;
+    var hm = $('.hero-main', app); if (hm) { hm.classList.remove('swap'); hm.offsetWidth; hm.classList.add('swap'); }
+    var lv = $('.levels', app);
+    if (lv) {
+      var h = lv.scrollHeight;
+      lv.style.height = '0px'; lv.style.overflow = 'hidden'; lv.classList.add('opening');
+      lv.offsetHeight;
+      lv.style.height = h + 'px';
+      setTimeout(function () { lv.style.height = ''; lv.style.overflow = ''; lv.classList.remove('opening'); }, 450);
+    }
+  }
   function folders() { var f = S.user && S.user.settings.folders; return f && typeof f === 'object' ? f : {}; }
   function folderOf(id) { return folders()[id] || ''; }
   function folderNames() {
@@ -1596,6 +1650,7 @@ var TextUtil = (function () {
       '</div></main>';
     if (quote) $('.quote b', app).textContent = quote;
     wireTop(app);
+    afterModeRender(app);
     $$('[data-mode]', app).forEach(function (b) { b.addEventListener('click', function () { if (b.getAttribute('data-mode') !== mode) setMode(b.getAttribute('data-mode')); }); });
     var gb = $('[data-go]', app);
     if (gb) gb.addEventListener('click', function () { startMode(mode, sel, 'home'); });
