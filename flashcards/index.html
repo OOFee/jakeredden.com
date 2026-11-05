@@ -900,7 +900,7 @@ var TextUtil = (function () {
     m.style.left = Math.max(12, left) + 'px';
     var top = r.bottom + 6;
     if (top + m.offsetHeight > window.innerHeight - 12) top = r.top - m.offsetHeight - 6;
-    m.style.top = top + 'px';
+    m.style.top = Math.max(12, top) + "px";
     setTimeout(function () { document.addEventListener('click', closeMenus, { once: true }); }, 0);
   }
   function closeMenus() { $$('.menu').forEach(function (m) { m.remove(); }); }
@@ -1425,7 +1425,7 @@ var TextUtil = (function () {
         ls('fc.collapsed', c); render();
       });
       $('[data-fedit]', box).addEventListener('click', function (e) { e.stopPropagation(); folderMenu(f, ids, e.currentTarget); });
-      $('.folder-head', box).addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); folderMenu(f, ids, e.currentTarget, { x: e.clientX, y: e.clientY }); });
+      box.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); folderMenu(f, ids, e.currentTarget, { x: e.clientX, y: e.clientY }); });
     });
     $('[data-catalog]', app).addEventListener('click', openCatalog);
     var sa = $('[data-send-all]', app);
@@ -1436,6 +1436,7 @@ var TextUtil = (function () {
     $$('.deck[data-id]', app).forEach(function (n) {
       var id = n.getAttribute('data-id');
       n.addEventListener('click', function () { go('deck', { deckId: id }); });
+      n.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); deckMenu(deckById(id), n, { x: e.clientX, y: e.clientY }); });
       $('.go', n).addEventListener('click', function (e) {
         e.stopPropagation();
         if (mode !== 'mission' && cardsOf(id).length) startMode(mode, [id], 'home');
@@ -1501,6 +1502,30 @@ var TextUtil = (function () {
       { label: 'Delete folder and its decks', icon: 'trash', danger: true, run: function () { deleteFolder(f, ids); } }
     ], pt);
   }
+  function deckMenu(d, anchor, pt) {
+    if (!d) return;
+    var mode = studyMode(), cur = folderOf(d.id), n = cardsOf(d.id).length;
+    var items = [];
+    if (n) items.push({ label: MODES[mode] + ': this deck', icon: 'play', run: function () { startMode(mode, [d.id], 'home'); } });
+    items.push({ label: 'Open deck', icon: 'cards', run: function () { go('deck', { deckId: d.id }); } });
+    items.push({ label: 'Choose only this deck', icon: 'check', run: function () { setSelected([d.id]); render(); } });
+    items.push({ label: 'Edit deck', icon: 'edit', run: function () { openDeckEditor(d); } });
+    folderNames().filter(function (f) { return f !== cur; }).slice(0, 8).forEach(function (f) {
+      items.push({ label: 'Move to ' + f, icon: 'folder', run: function () { setFolder(d.id, f); toast('Moved to ' + f + '.'); } });
+    });
+    items.push({ label: 'Move to a new folder', icon: 'plus', run: function () { openFolderEditor(null, [d.id]); } });
+    if (cur) items.push({ label: 'Take out of ' + cur, icon: 'x', run: function () { setFolder(d.id, ''); } });
+    items.push({ label: 'Send a copy to someone', icon: 'upload', run: function () { openSend([d.id], 'copy'); } });
+    items.push(d.mine ? { label: 'Delete deck', icon: 'trash', danger: true, run: function () { deleteDeck(d); } }
+                      : { label: 'Leave deck', icon: 'logout', danger: true, run: function () { leaveDeck(d); } });
+    menu(anchor, items, pt);
+  }
+  function setFolder(id, f) {
+    var fm = Object.assign({}, folders());
+    if (f) fm[id] = f; else delete fm[id];
+    S.user.settings.folders = fm;
+    saveSettingsSoon(); render();
+  }
   function removeFolder(f) {
     var fm = Object.assign({}, folders());
     Object.keys(fm).forEach(function (id) { if (fm[id] === f) delete fm[id]; });
@@ -1528,12 +1553,12 @@ var TextUtil = (function () {
       });
     });
   }
-  function openFolderEditor(name) {
+  function openFolderEditor(name, preset) {
     var m = modal(name ? 'Edit folder' : 'New folder',
       '<label class="field"><span>Name</span><input class="input" data-name maxlength="40" autofocus placeholder="e.g. Driving"></label>' +
       '<div class="field"><span>Decks in this folder</span><div class="folder-picks">' + S.decks.map(function (d) {
         var f = folderOf(d.id);
-        return '<label class="fp"><input type="checkbox" value="' + esc(d.id) + '"' + (name && f === name ? ' checked' : '') + '><span class="dot" style="background:' + esc(d.color) + '"></span><b>' + esc(d.name) + '</b>' + (f && f !== name ? '<small>in ' + esc(f) + '</small>' : '') + '</label>';
+        return '<label class="fp"><input type="checkbox" value="' + esc(d.id) + '"' + ((name && f === name) || (preset && preset.indexOf(d.id) >= 0) ? ' checked' : '') + '><span class="dot" style="background:' + esc(d.color) + '"></span><b>' + esc(d.name) + '</b>' + (f && f !== name ? '<small>in ' + esc(f) + '</small>' : '') + '</label>';
       }).join('') + '</div></div><div class="error" data-err></div>',
       (name ? '<button class="btn ghost" data-del>' + I.trash + 'Remove folder</button>' : '') + '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>' + (name ? 'Save' : 'Create folder') + '</button>');
     var inp = $('[data-name]', m.el);
