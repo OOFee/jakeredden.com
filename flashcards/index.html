@@ -876,7 +876,8 @@ body.is-dragging .wallet-tile:not(.drop-on) { border-style: dashed; }
 .hero-main .seg.mode button[data-mode]:not(.on) { background: color-mix(in srgb, var(--tc) 78%, #0b0c10) !important; color: rgba(255, 255, 255, .78); }
 .hero-main .seg.mode button[data-mode]:not(.on):hover { background: color-mix(in srgb, var(--tc) 90%, #0b0c10) !important; color: #fff; }
 /* drag ghost */
-.drag-ghost { position: fixed !important; left: 0; top: 0; z-index: 200; pointer-events: none; margin: 0; opacity: .95; box-shadow: 0 24px 50px rgba(0, 0, 0, .45) !important; transition: transform .08s linear; transform-origin: 50% 20%; }
+.drag-ghost { position: fixed !important; left: 0; top: 0; z-index: 200; pointer-events: none; margin: 0; opacity: .95; box-shadow: 0 24px 50px rgba(0, 0, 0, .45) !important; transition: none !important; animation: none !important; will-change: transform; transform-origin: 50% 20%; }
+body.is-dragging, body.is-dragging * { cursor: grabbing !important; user-select: none; }
 /* phones: more room under the top bar */
 @media (max-width: 600px) { .home { padding-top: 26px; } }
 /* settings */
@@ -1466,15 +1467,26 @@ var TextUtil = (function () {
   function cardLevel(c) { var now = Date.now(); return Math.max.apply(null, dirsOf(c).map(function (d) { return SRS.level(c.srs && c.srs[d], now); })); }
   function cardIsNew(c) { return dirsOf(c).every(function (d) { return SRS.isNew(c.srs && c.srs[d]); }); }
   function selectedDecks() {
-    var saved = S.user && S.user.settings.lastDecks;
+    var st = S.user && S.user.settings;
+    var own = st && st.modeDecks && st.modeDecks[studyMode()];
+    var saved = Array.isArray(own) ? own : st && st.lastDecks;
     var ids = S.decks.map(function (d) { return d.id; });
     if (!Array.isArray(saved)) return ids;
     var keep = saved.filter(function (id) { return ids.indexOf(id) >= 0; });
     return keep.length ? keep : ids;
   }
   function setSelected(ids) {
-    S.user.settings.lastDecks = ids;
+    var md = Object.assign({}, S.user.settings.modeDecks);
+    md[studyMode()] = ids;
+    S.user.settings.modeDecks = md;
     saveSettingsSoon();
+  }
+  /* A deck you just added starts chosen in every mode that keeps its own list. */
+  function addToSelections(id) {
+    var st = S.user.settings;
+    if (Array.isArray(st.lastDecks)) st.lastDecks.push(id);
+    var md = st.modeDecks || {};
+    Object.keys(md).forEach(function (k) { if (Array.isArray(md[k])) md[k].push(id); });
   }
   function saveSettingsSoon() { cacheNow(); api('saveSettings', { settings: S.user.settings }).catch(function () {}); }
   var MODES = { free: 'Free study', focus: 'Focus', mission: 'Mission' };
@@ -2264,78 +2276,110 @@ var TextUtil = (function () {
       '<div class="wstack" style="height:' + walletH(xs.length, open) + 'px">' + cards + '</div>' +
       (extra ? '<div class="wextra">+' + plural(extra, 'more deck') + '</div>' : '') + '</div>';
   }
-  /* While dragging, a copy of the deck follows the pointer and tilts the way you move it. */
+  /* While dragging, a copy of the deck follows the mouse and tilts the way you move it. Plain mouse events,
+     not native drag and drop: native drag only reports the pointer about 20 times a second and draws its own image. */
   var ghost = null;
-  function startGhost(n, e) {
+  function startGhost(n, x, y) {
     stopGhost();
     var r = n.getBoundingClientRect();
-    try { var img = new Image(); img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP' + '/' + '/' + '/yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; e.dataTransfer.setDragImage(img, 0, 0); } catch (x) {}
     var g = n.cloneNode(true);
     g.classList.add('drag-ghost'); g.classList.remove('dragging');
     g.style.width = r.width + 'px'; g.style.height = r.height + 'px';
     document.body.appendChild(g);
-    ghost = { el: g, ox: e.clientX - r.left, oy: e.clientY - r.top, lx: e.clientX, tilt: 0, x: e.clientX, y: e.clientY };
-    ghost.move = function (ev) {
-      if (!ghost || (!ev.clientX && !ev.clientY)) return;
-      var vx = ev.clientX - ghost.lx; ghost.lx = ev.clientX;
-      ghost.tilt = Math.max(-10, Math.min(10, ghost.tilt * 0.65 + vx * 0.45));
-      ghost.x = ev.clientX; ghost.y = ev.clientY;
-      g.style.transform = 'translate(' + (ghost.x - ghost.ox) + 'px,' + (ghost.y - ghost.oy) + 'px) rotate(' + ghost.tilt.toFixed(1) + 'deg) scale(1.04)';
-    };
-    ghost.settle = setInterval(function () {
+    ghost = { el: g, ox: x - r.left, oy: y - r.top, x: x, y: y, lx: x, tilt: 0, frame: 0, onScroll: null };
+    var step = function () {
       if (!ghost) return;
-      ghost.tilt *= 0.7;
-      g.style.transform = 'translate(' + (ghost.x - ghost.ox) + 'px,' + (ghost.y - ghost.oy) + 'px) rotate(' + ghost.tilt.toFixed(1) + 'deg) scale(1.04)';
-    }, 60);
-    document.addEventListener('dragover', ghost.move);
-    ghost.move(e);
+      ghost.tilt = Math.max(-10, Math.min(10, ghost.tilt * 0.82 + (ghost.x - ghost.lx) * 0.18));
+      ghost.lx = ghost.x;
+      g.style.transform = 'translate(' + (ghost.x - ghost.ox) + 'px,' + (ghost.y - ghost.oy) + 'px) rotate(' + ghost.tilt.toFixed(2) + 'deg) scale(1.04)';
+      var edge = 70, top = 70, dy = 0;
+      if (ghost.y < top) dy = -Math.ceil((top - ghost.y) / 5);
+      else if (ghost.y > window.innerHeight - edge) dy = Math.ceil((ghost.y - window.innerHeight + edge) / 5);
+      if (dy) { window.scrollBy(0, dy); if (ghost.onScroll) ghost.onScroll(); }
+      ghost.frame = requestAnimationFrame(step);
+    };
+    g.style.transform = 'translate(' + (x - ghost.ox) + 'px,' + (y - ghost.oy) + 'px) scale(1.04)';
+    ghost.frame = requestAnimationFrame(step);
   }
   function stopGhost() {
     if (!ghost) return;
-    document.removeEventListener('dragover', ghost.move);
-    clearInterval(ghost.settle);
+    cancelAnimationFrame(ghost.frame);
     ghost.el.remove(); ghost = null;
   }
   /* Drag a deck onto a folder to move it there; drop it on the open grid to take it out of its folder. */
   function wireDrag(app) {
-    var drag = null;
     $$('.decks > .deck[data-id], .wc[data-wdeck]', app).forEach(function (n) {
-      n.setAttribute('draggable', 'true');
-      n.addEventListener('dragstart', function (e) {
-        drag = n.getAttribute('data-id') || n.getAttribute('data-wdeck');
-        e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', drag); } catch (x) {}
-        startGhost(n, e);
-        setTimeout(function () { n.classList.add('dragging'); document.body.classList.add('is-dragging'); }, 0);
-        e.stopPropagation();
-      });
-      n.addEventListener('dragend', function () {
-        stopGhost();
-        n.classList.remove('dragging'); document.body.classList.remove('is-dragging');
-        $$('.drop-on', app).forEach(function (x) { x.classList.remove('drop-on'); });
-        drag = null;
+      n.addEventListener('mousedown', function (e) {
+        if (e.button !== 0 || e.target.closest('button, input, label, a, select, textarea')) return;
+        e.preventDefault();
+        pressDeck(n, n.getAttribute('data-id') || n.getAttribute('data-wdeck'), e);
       });
     });
-    $$('.wallet-tile', app).forEach(function (box) {
-      var f = box.getAttribute('data-folder');
-      box.addEventListener('dragover', function (e) { if (!drag || folderOf(drag) === f) return; e.preventDefault(); e.stopPropagation(); box.classList.add('drop-on'); });
-      box.addEventListener('dragleave', function (e) { if (!box.contains(e.relatedTarget)) box.classList.remove('drop-on'); });
-      box.addEventListener('drop', function (e) {
-        e.preventDefault(); e.stopPropagation(); box.classList.remove('drop-on');
-        if (!drag || folderOf(drag) === f) return;
-        var name = (deckById(drag) || {}).name; setFolder(drag, f); toast('Moved ' + (name ? '"' + name + '" ' : '') + 'to ' + f + '.');
-      });
-    });
-    var grid = $('.decks', app);
-    if (grid) {
-      grid.addEventListener('dragover', function (e) { if (drag && folderOf(drag) && !e.target.closest('.wallet-tile')) { e.preventDefault(); grid.classList.add('drop-on'); } });
-      grid.addEventListener('dragleave', function (e) { if (!grid.contains(e.relatedTarget)) grid.classList.remove('drop-on'); });
-      grid.addEventListener('drop', function (e) {
-        grid.classList.remove('drop-on');
-        if (!drag || !folderOf(drag) || e.target.closest('.wallet-tile')) return;
-        e.preventDefault(); var from = folderOf(drag); setFolder(drag, ''); toast('Taken out of ' + from + '.');
-      });
+  }
+  function pressDeck(n, id, down) {
+    var started = false, lastX = down.clientX, lastY = down.clientY;
+    function clearDrop() { $$('.drop-on').forEach(function (x) { x.classList.remove('drop-on'); }); }
+    function targetAt(x, y) {
+      var over = document.elementFromPoint(x, y);
+      if (!over || !over.closest('#app')) return null;
+      var tile = over.closest('.wallet-tile');
+      if (tile) return folderOf(id) === tile.getAttribute('data-folder') ? null : tile;
+      return folderOf(id) ? over.closest('.decks') : null;
     }
+    function mark() { clearDrop(); var t = targetAt(lastX, lastY); if (t) t.classList.add('drop-on'); }
+    function finish() {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      document.removeEventListener('keydown', key);
+      window.removeEventListener('blur', cancel);
+      if (!started) return;
+      stopGhost(); clearDrop();
+      n.classList.remove('dragging'); document.body.classList.remove('is-dragging');
+    }
+    function move(e) {
+      lastX = e.clientX; lastY = e.clientY;
+      if (!started) {
+        if (Math.abs(lastX - down.clientX) + Math.abs(lastY - down.clientY) < 6) return;
+        started = true;
+        startGhost(n, down.clientX, down.clientY);
+        ghost.onScroll = mark;
+        n.classList.add('dragging'); document.body.classList.add('is-dragging');
+      }
+      if (e.buttons === 0) return cancel();
+      if (ghost) { ghost.x = lastX; ghost.y = lastY; }
+      mark();
+    }
+    function up(e) {
+      lastX = e.clientX; lastY = e.clientY;
+      var was = started, t = was ? targetAt(lastX, lastY) : null;
+      finish();
+      if (!was) return;
+      swallowClick();
+      if (!t) return;
+      if (t.classList.contains('wallet-tile')) {
+        var f = t.getAttribute('data-folder'), name = (deckById(id) || {}).name;
+        setFolder(id, f); toast('Moved ' + (name ? '"' + name + '" ' : '') + 'to ' + f + '.');
+      } else {
+        var from = folderOf(id); setFolder(id, ''); toast('Taken out of ' + from + '.');
+      }
+    }
+    function swallowClick() {
+      var swallow = function (ev) { ev.stopPropagation(); ev.preventDefault(); };
+      document.addEventListener('click', swallow, true);
+      setTimeout(function () { document.removeEventListener('click', swallow, true); }, 80);
+    }
+    function cancel() {
+      var was = started;
+      finish();
+      if (!was) return;
+      var once = function () { document.removeEventListener('mouseup', once, true); swallowClick(); };
+      document.addEventListener('mouseup', once, true);
+    }
+    function key(e) { if (e.key === 'Escape') cancel(); }
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+    document.addEventListener('keydown', key);
+    window.addEventListener('blur', cancel);
   }
   function toggleWallet(box, f, force) {
     var o = ls('fc.fopen') || {};
@@ -3048,7 +3092,7 @@ var TextUtil = (function () {
       busy(add, true);
       api('copyPublic', { deckId: d.id }).then(function (r) {
         S.decks.push(r.deck); S.cards = S.cards.concat(r.cards);
-        var sel = S.user.settings.lastDecks; if (Array.isArray(sel)) sel.push(r.deck.id);
+        addToSelections(r.deck.id);
         var f = $('[data-folder]', E).value.replace(/\s+/g, ' ').trim().slice(0, 40);
         if (f) { var fm = Object.assign({}, folders()); fm[r.deck.id] = f; S.user.settings.folders = fm; }
         saveSettingsSoon();
