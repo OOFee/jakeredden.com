@@ -698,6 +698,41 @@ img { max-width: 100%; }
 }
 @media (max-width: 420px) { .section-head { flex-wrap: wrap; row-gap: 8px; } }
 
+/* share panel */
+.sh-recent { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 14px; }
+.sh-chip { border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--text); border-radius: 99px; padding: 4px 10px; font: 600 12px var(--font, inherit); font-family: inherit; cursor: pointer; }
+.sh-chip:hover { border-color: var(--accent); }
+.sh-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sh-mode { display: grid; gap: 4px; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--line-strong); background: var(--surface-2); color: var(--text); cursor: pointer; font: inherit; transition: border-color .2s, background .2s; }
+.sh-mode b { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.sh-mode b svg { width: 16px; height: 16px; }
+.sh-mode span { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.sh-mode.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
+.sh-mode:disabled { opacity: .5; cursor: default; }
+.sh-sec { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+.sh-h { font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .04em; }
+.sh-person { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.sh-person span { display: grid; } .sh-person small { color: var(--muted); font-size: 12px; }
+.sh-pub .switch { align-items: flex-start; }
+.sh-pub .switch span { display: grid; gap: 2px; } .sh-pub .switch small { color: var(--muted); font-size: 12.5px; font-weight: 500; line-height: 1.4; }
+@media (max-width: 520px) { .sh-modes { grid-template-columns: 1fr; } }
+/* discover page */
+.discover { padding: 20px 0 80px; }
+.disc-head h1 { font-family: var(--display); font-size: 32px; letter-spacing: -.035em; margin: 6px 0 4px; }
+.disc-head .hint { margin: 0 0 18px; }
+.disc-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+.disc-bar .search { flex: 1; min-width: 220px; }
+.disc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.disc-card { position: relative; text-align: left; display: flex; flex-direction: column; gap: 4px; min-height: 150px; padding: 18px 16px 14px; border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; overflow: hidden; transition: transform .25s var(--ease), box-shadow .25s, border-color .25s; }
+.disc-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--c) 40%, var(--line)); }
+.disc-top { position: absolute; left: 0; right: 0; top: 0; height: 56px; background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 40%, transparent)); opacity: .9; }
+.disc-card b { position: relative; margin-top: 46px; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+.disc-meta { color: var(--muted); font-size: 13px; }
+.disc-foot { margin-top: auto; padding-top: 12px; display: flex; align-items: center; justify-content: space-between; }
+.disc-open { display: inline-flex; align-items: center; gap: 2px; font-size: 12.5px; font-weight: 650; color: var(--muted); }
+.disc-open svg { width: 14px; height: 14px; }
+.disc-card:hover .disc-open { color: var(--text); }
+
 </style>
 </head>
 <body>
@@ -1008,6 +1043,7 @@ var TextUtil = (function () {
     logout: svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>'),
     moon: svg('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>'),
     sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+    share: svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>'),
     folder: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
     chev: svg('<path d="m6 9 6 6 6-6"/>'),
     cards: svg('<rect x="2" y="6" width="15" height="14" rx="2"/><path d="M7 2h13a2 2 0 0 1 2 2v13"/>')
@@ -1529,6 +1565,7 @@ var TextUtil = (function () {
     if (S.view === 'home') return renderHome(app);
     if (S.view === 'deck') return renderDeck(app, deck);
     if (S.view === 'study') return renderStudy(app);
+    if (S.view === 'discover') return renderDiscover(app);
   }
 
   function topbar(extra) {
@@ -1714,7 +1751,7 @@ var TextUtil = (function () {
             (l < 4 ? '<button class="ft-only" data-level="' + l + '"' + (n ? '' : ' disabled') + '>Only ' + FACES[l] + ' &middot; ' + n + '</button>' : '<span class="ft-only-gap"></span>') + '</div>';
         }).join('') + '</div></section>' : '') +
       '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>' +
-      ('<button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Browse public decks</span></button>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') +
+      ('<button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Discover</span></button>' +
       (S.decks.length ? '<button class="btn sm ghost" data-new-folder>' + I.folder + '<span class="hide-sm">New folder</span></button>' : '')) + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
       deckGroups(allStats) +
       '</div></main>';
@@ -1770,9 +1807,7 @@ var TextUtil = (function () {
       });
     });
     var cat = $('[data-catalog]', app);
-    if (cat) cat.addEventListener('click', openCatalog);
-    var sa = $('[data-send-all]', app);
-    if (sa) sa.addEventListener('click', function () { openSend(null, 'copy'); });
+    if (cat) cat.addEventListener('click', function () { go('discover'); });
     var nf = $('[data-new-folder]', app);
     if (nf) nf.addEventListener('click', function () { openFolderEditor(null); });
     $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null); }); });
@@ -1949,6 +1984,7 @@ var TextUtil = (function () {
         var box = $$('.wallet-tile').filter(function (b) { return b.getAttribute('data-folder') === f; })[0];
         if (box) toggleWallet(box, f);
       } },
+      { label: 'Share folder...', icon: 'share', run: function () { openShare(ids, 'Share the "' + f + '" folder'); } },
       { label: 'New deck in this folder', icon: 'plus', run: function () { openDeckEditor(null, f); } },
       { label: 'Reset progress for this folder', icon: 'reset', run: function () { resetDecks(ids, 'the "' + f + '" folder'); } },
       { label: 'Remove folder, keep decks', icon: 'x', run: function () { removeFolder(f); toast('Folder removed. Its decks are still here.'); } },
@@ -1968,7 +2004,7 @@ var TextUtil = (function () {
     });
     items.push({ label: 'Move to a new folder', icon: 'plus', run: function () { openFolderEditor(null, [d.id]); } });
     if (cur) items.push({ label: 'Take out of ' + cur, icon: 'x', run: function () { setFolder(d.id, ''); } });
-    items.push({ label: 'Send a copy to someone', icon: 'upload', run: function () { openSend([d.id], 'copy'); } });
+    items.push({ label: 'Share...', icon: 'share', run: function () { openShare([d.id]); } });
     items.push(d.mine ? { label: 'Delete deck', icon: 'trash', danger: true, run: function () { deleteDeck(d); } }
                       : { label: 'Leave deck', icon: 'logout', danger: true, run: function () { leaveDeck(d); } });
     menu(anchor, items, pt);
@@ -2065,6 +2101,7 @@ var TextUtil = (function () {
       '<button class="btn' + (studyMode() === 'mission' ? ' primary' : '') + '" data-mission ' + (st.total ? '' : 'disabled') + ' title="' + (st.ready ? 'What is due today' : 'Nothing due today') + '">' + I.flame + 'Mission' + (st.ready ? ' (' + st.ready + ')' : '') + '</button>' +
       '<button class="btn" data-add>' + I.plus + 'Add card</button>' +
       '<button class="btn" data-import>' + I.upload + '<span class="hide-sm">Import</span></button>' +
+      '<button class="btn" data-share>' + I.share + '<span class="hide-sm">Share</span></button>' +
       '<button class="btn icon-btn" data-more aria-label="More">' + I.more + '</button></div></div>' +
       '<div class="toolbar"><label class="search">' + I.search + '<input class="input" placeholder="Search cards" data-search></label></div>' +
       '<div data-list></div></div></main>';
@@ -2076,15 +2113,14 @@ var TextUtil = (function () {
     $('[data-mission]', app).addEventListener('click', function () { startMission([deck.id], 'deck'); });
     $('[data-add]', app).addEventListener('click', function () { openCardEditor(null, deck.id); });
     $('[data-import]', app).addEventListener('click', function () { openImport(deck.id); });
+    $('[data-share]', app).addEventListener('click', function () { openShare([deck.id]); });
     $('[data-more]', app).addEventListener('click', function (e) {
       e.stopPropagation();
       var items = [
         { label: 'Edit deck', icon: 'edit', run: function () { openDeckEditor(deck); } },
-        { label: 'Send a copy to someone', icon: 'upload', run: function () { openSend([deck.id], 'copy'); } }
+        { label: 'Share...', icon: 'share', run: function () { openShare([deck.id]); } }
       ];
       if (deck.mine) {
-        items.push({ label: 'People who can edit', icon: 'cards', run: function () { openPeople(deck); } });
-        items.push({ label: deck.public ? 'Make private' : 'Make public', icon: 'search', run: function () { togglePublic(deck); } });
       }
       items.push({ label: 'Change all cards to…', icon: 'cards', run: function () { openDeckType(deck); } });
       items.push({ label: deck.mine ? 'Reset progress' : 'Reset my progress', icon: 'reset', run: function () { resetDeck(deck); } });
@@ -2392,81 +2428,146 @@ var TextUtil = (function () {
       (d.public && d.mine ? '<span class="chip pub">Public</span>' : '');
   }
 
-  function openSend(deckIds, startMode) {
-    var mode = startMode || 'copy';
-    var picked = deckIds ? deckIds.slice() : S.decks.map(function (d) { return d.id; });
-    var m = modal('Share decks',
-      '<div class="seg" data-mode style="width:100%;margin-bottom:12px"><button data-m="copy" style="flex:1">Send a copy</button><button data-m="collab" style="flex:1">Add as collaborator</button></div>' +
-      '<p class="hint" data-mode-hint style="margin:0 0 14px"></p>' +
-      '<label class="field"><span>Their email (they need a Flash Cards account)</span><input class="input" type="email" data-email list="fc-users" autocomplete="off" autofocus placeholder="name@example.com"><datalist id="fc-users"></datalist></label>' +
-      '<div class="field"><span>Decks</span><div class="preview-list" data-decks style="max-height:220px"></div></div>' +
-      '<div class="error" data-err></div>',
-      '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-go>Send</button>');
-    var E = m.el;
+  /* One share panel for a deck or a folder: email once, then Send a copy or Invite to edit;
+     who can edit (with remove) and the Public switch for a single deck you own. */
+  function rememberPerson(email) {
+    email = String(email || '').trim().toLowerCase();
+    if (!email) return;
+    var r = (S.user.settings.recent || []).filter(function (e) { return e !== email; });
+    r.unshift(email);
+    S.user.settings.recent = r.slice(0, 8);
+    saveSettingsSoon();
+  }
+  function openShare(deckIds, title) {
+    var decks = deckIds.map(deckById).filter(Boolean);
+    if (!decks.length) return;
+    var single = decks.length === 1 ? decks[0] : null;
+    var own = decks.filter(function (d) { return d.mine; });
+    var mode = 'copy';
+    var cards = decks.reduce(function (k, d) { return k + cardsOf(d.id).length; }, 0);
+    var recent = (S.user.settings.recent || []);
+    var m = modal(title || ('Share "' + (single ? single.name : decks.length + ' decks') + '"'),
+      '<p class="hint" style="margin:-4px 0 14px">' + plural(decks.length, 'deck') + ' &middot; ' + plural(cards, 'card') + '</p>' +
+      '<label class="field"><span>Who? (they need a Flash Cards account)</span><input class="input" type="email" data-email autocomplete="off" autofocus placeholder="name@example.com" list="fc-users"><datalist id="fc-users"></datalist></label>' +
+      (recent.length ? '<div class="sh-recent">' + recent.map(function (e) { return '<button class="sh-chip" data-pick-email="' + esc(e) + '">' + esc(e) + '</button>'; }).join('') + '</div>' : '') +
+      '<div class="sh-modes"><button class="sh-mode on" data-m="copy"><b>' + I.upload + 'Send a copy</b><span>They get their own copy with fresh progress. Your deck is not changed.</span></button>' +
+      '<button class="sh-mode" data-m="collab"' + (own.length ? '' : ' disabled') + '><b>' + I.edit + 'Invite to edit</b><span>' + (own.length ? 'You edit ' + (single ? 'this deck' : 'these decks') + ' together. Everyone keeps their own progress.' : 'Only the owner can invite people to edit.') + '</span></button></div>' +
+      '<div class="row" style="justify-content:flex-end;margin-top:12px"><span class="error" data-err style="flex:1"></span><button class="btn primary" data-go>Send copy</button></div>' +
+      (single && single.mine ? '<div class="sh-sec"><div class="sh-h">People who can edit</div><div data-people><span class="hint">Loading...</span></div></div>' +
+        '<div class="sh-sec sh-pub"><label class="switch"><input type="checkbox" data-public' + (single.public ? ' checked' : '') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your first name is shown.</small></span></label></div>' : '') +
+      (!single && own.length ? '<p class="hint" style="margin:14px 0 0">To make decks public or remove people, use Share on a single deck.</p>' : ''),
+      '', { wide: false });
+    var E = m.el, email = $('[data-email]', E);
     function paint() {
       $$('[data-m]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-m') === mode); });
-      $('[data-mode-hint]', E).textContent = mode === 'copy'
-        ? 'They get their own copy of the cards, with fresh progress. Changes are not shared.'
-        : 'They see your deck in their list and can add, edit and delete cards. Everyone keeps their own progress. Only you can delete the deck or change who has access.';
-      $('[data-go]', E).textContent = mode === 'copy' ? 'Send copy' : 'Add collaborator';
-      var list = S.decks.filter(function (d) { return mode === 'copy' || d.mine; });
-      $('[data-decks]', E).innerHTML = list.map(function (d) {
-        return '<div style="grid-template-columns:auto 1fr auto;align-items:center"><input type="checkbox" data-d="' + esc(d.id) + '"' + (picked.indexOf(d.id) >= 0 ? ' checked' : '') + '><span>' + esc(d.name) + (d.mine ? '' : ' <span class="hint">(shared with you)</span>') + '</span><span class="hint">' + plural(cardsOf(d.id).length, 'card') + '</span></div>';
-      }).join('') || '<div><span class="hint">You have no decks of your own to share yet.</span></div>';
+      $('[data-go]', E).textContent = mode === 'copy' ? 'Send copy' : 'Invite';
     }
-    $$('[data-m]', E).forEach(function (b) { b.addEventListener('click', function () { mode = b.getAttribute('data-m'); paint(); }); });
-    paint();
+    $$('[data-m]', E).forEach(function (b) { b.addEventListener('click', function () { if (!b.disabled) { mode = b.getAttribute('data-m'); paint(); } }); });
+    $$('[data-pick-email]', E).forEach(function (b) { b.addEventListener('click', function () { email.value = b.getAttribute('data-pick-email'); email.focus(); }); });
     if (S.user.owner) api('listUsers').then(function (list) {
-      $('#fc-users', E).innerHTML = list.map(function (u) { return '<option value="' + esc(u.email) + '">' + esc(u.name) + '</option>'; }).join('');
+      var dl = $('#fc-users', E); if (dl) dl.innerHTML = list.map(function (u) { return '<option value="' + esc(u.email) + '">' + esc(u.name) + '</option>'; }).join('');
     }, function () {});
+    function loadPeople() {
+      var box = $('[data-people]', E);
+      if (!box) return;
+      api('deckMembers', { deckId: single.id }).then(function (list) {
+        single.members = list.length; cacheNow();
+        box.innerHTML = list.length ? list.map(function (p) {
+          return '<div class="sh-person"><span><b></b><small></small></span><button class="btn sm ghost danger" data-rm="' + esc(p.email) + '">Remove</button></div>';
+        }).join('') : '<span class="hint">Just you.</span>';
+        $$('.sh-person', box).forEach(function (row, i) { $('b', row).textContent = list[i].name || list[i].email; $('small', row).textContent = list[i].email; });
+        $$('[data-rm]', box).forEach(function (b) {
+          b.addEventListener('click', function () {
+            busy(b, true);
+            api('removeMember', { deckId: single.id, email: b.getAttribute('data-rm') }).then(function () { loadPeople(); render(); }, function (e) { busy(b, false); $('[data-err]', E).textContent = e.message; });
+          });
+        });
+      }, function (e) { box.textContent = e.message; });
+    }
+    loadPeople();
+    var pub = $('[data-public]', E);
+    if (pub) pub.addEventListener('change', function () {
+      var to = pub.checked;
+      api('setPublic', { deckId: single.id, public: to }).then(function (d) { single.public = d.public; cacheNow(); render(); toast(to ? 'Public: anyone can find it in Discover.' : 'Private again.'); }, function (e) { pub.checked = !to; $('[data-err]', E).textContent = e.message; });
+    });
     $('[data-go]', E).addEventListener('click', function () {
-      var btn = this, ids = $$('[data-d]:checked', E).map(function (x) { return x.getAttribute('data-d'); });
-      if (!ids.length) { $('[data-err]', E).textContent = 'Pick at least one deck.'; return; }
+      var btn = this, who = email.value.trim(), err = $('[data-err]', E);
+      err.textContent = '';
+      if (!who) { err.textContent = 'Type their email first.'; email.focus(); return; }
+      var ids = (mode === 'copy' ? decks : own).map(function (d) { return d.id; });
       busy(btn, true);
-      var email = $('[data-email]', E).value;
-      var call = mode === 'copy' ? api('sendDecks', { email: email, deckIds: ids }) : api('inviteCollaborator', { email: email, deckIds: ids });
+      var call = mode === 'copy' ? api('sendDecks', { email: who, deckIds: ids }) : api('inviteCollaborator', { email: who, deckIds: ids });
       call.then(function (r) {
-        m.close();
+        busy(btn, false); rememberPerson(who);
         if (mode === 'copy') toast('Sent ' + plural(r.decks, 'deck') + ' (' + plural(r.cards, 'card') + ') to ' + r.to + '.');
         else {
           toast(r.added ? r.to + ' can now edit ' + plural(r.added, 'deck') + '.' : r.to + ' already had access.');
-          ids.forEach(function (id) { var d = deckById(id); if (d && r.added) d.members = (d.members || 0) + 1; });
-          cacheNow(); render();
+          if (r.added) ids.forEach(function (id) { var d = deckById(id); if (d) d.members = (d.members || 0) + 1; });
+          cacheNow(); render(); loadPeople();
         }
-      }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
+        email.value = '';
+      }, function (e) { busy(btn, false); err.textContent = e.message; });
     });
   }
 
-  function openPeople(deck) {
-    var m = modal('People on "' + deck.name + '"', '<div data-people><div class="spinner"></div></div>' +
-      '<div class="row" style="margin-top:14px"><button class="btn sm" data-invite>' + I.plus + 'Add a collaborator</button></div><div class="error" data-err></div>', '');
-    var E = m.el;
-    function load() {
-      api('deckMembers', { deckId: deck.id }).then(function (list) {
-        deck.members = list.length; cacheNow();
-        $('[data-people]', E).innerHTML = list.length ? '<div class="preview-list">' + list.map(function (p) {
-          return '<div style="grid-template-columns:1fr auto;align-items:center"><span><b>' + esc(p.name || p.email) + '</b> <span class="hint">' + esc(p.email) + '</span></span><button class="btn sm ghost danger" data-rm="' + esc(p.email) + '">Remove</button></div>';
-        }).join('') + '</div>' : '<p class="hint" style="margin:0">Nobody else can edit this deck yet.</p>';
-        $$('[data-rm]', E).forEach(function (b) {
-          b.addEventListener('click', function () {
-            busy(b, true);
-            api('removeMember', { deckId: deck.id, email: b.getAttribute('data-rm') }).then(function () { load(); render(); }, function (e) { busy(b, false); $('[data-err]', E).textContent = e.message; });
-          });
-        });
-      }, function (e) { $('[data-err]', E).textContent = e.message; });
+  /* ================= discover (public decks) ================= */
+  function renderDiscover(app) {
+    var st = S.disc || (S.disc = { q: '', sort: 'popular', list: null });
+    app.innerHTML = topbar() + '<main class="wrap discover"><div class="appear">' +
+      '<button class="btn ghost sm" data-back style="margin-left:-10px">' + I.back + 'Home</button>' +
+      '<div class="disc-head"><div><h1>Discover</h1><p class="hint">Decks other people have made public. Add any of them to your own decks.</p></div></div>' +
+      '<div class="disc-bar"><label class="search">' + I.search + '<input class="input" placeholder="Search by name or maker" data-q></label>' +
+      '<div class="seg" data-sort><button data-s="popular">Popular</button><button data-s="new">Newest</button><button data-s="big">Biggest</button></div></div>' +
+      '<div data-list class="disc-grid"><div class="spinner"></div></div></div></main>';
+    wireTop(app);
+    $('[data-back]', app).addEventListener('click', function () { go('home'); });
+    var q = $('[data-q]', app), timer = null;
+    q.value = st.q;
+    function paintSort() { $$('[data-s]', app).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-s') === st.sort); }); }
+    $$('[data-s]', app).forEach(function (b) { b.addEventListener('click', function () { st.sort = b.getAttribute('data-s'); paintSort(); load(); }); });
+    paintSort();
+    q.addEventListener('input', function () { st.q = q.value; clearTimeout(timer); timer = setTimeout(load, 300); });
+    function paint(list) {
+      var box = $('[data-list]', app);
+      if (!box) return;
+      if (!list.length) { box.innerHTML = '<div class="empty" style="grid-column:1/-1">' + (st.q ? 'No public decks match "' + esc(st.q) + '".' : 'No public decks yet. Make one of yours public from its Share button.') + '</div>'; return; }
+      box.innerHTML = list.map(function (d, i) {
+        return '<button class="disc-card" data-i="' + i + '" style="--c:' + esc(d.color) + '"><span class="disc-top"></span><b></b>' +
+          '<span class="disc-meta">' + plural(d.cards, 'card') + (d.by ? ' &middot; by ' + esc(d.by) : '') + '</span>' +
+          '<span class="disc-foot">' + (d.mine ? '<span class="chip pub">Yours</span>' : d.copies ? '<span class="chip">' + plural(d.copies, 'copy', 'copies') + '</span>' : '<span class="chip">New</span>') + '<span class="disc-open">Preview ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</span></span></button>';
+      }).join('');
+      $$('.disc-card b', box).forEach(function (b, i) { b.textContent = list[i].name; });
+      $$('.disc-card', box).forEach(function (c) { c.addEventListener('click', function () { previewPublic(list[Number(c.getAttribute('data-i'))]); }); });
     }
+    function load() {
+      api('catalog', { q: st.q, sort: st.sort }).then(function (list) { st.list = list; paint(list); }, function (e) { var box = $('[data-list]', app); if (box) box.innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc(e.message) + '</div>'; });
+    }
+    if (st.list) paint(st.list);
     load();
-    $('[data-invite]', E).addEventListener('click', function () { m.close(); openSend([deck.id], 'collab'); });
   }
-
-  function togglePublic(deck) {
-    var to = !deck.public;
-    confirmBox(to ? 'Make this deck public?' : 'Make this deck private?',
-      to ? 'Anyone with a Flash Cards account can find "' + deck.name + '" in Browse public decks and copy it. They cannot change yours. Your first name is shown, never your email.'
-         : '"' + deck.name + '" will be removed from the public catalog. Copies people already made stay theirs.',
-      to ? 'Make public' : 'Make private').then(function (ok) {
-      if (!ok) return;
-      api('setPublic', { deckId: deck.id, public: to }).then(function (d) { deck.public = d.public; cacheNow(); render(); toast(to ? 'Deck is public.' : 'Deck is private.'); }, fail);
+  function previewPublic(d) {
+    var m = modal(d.name, '<p class="hint" style="margin:-4px 0 12px">' + plural(d.cards, 'card') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.copies ? ' &middot; copied ' + plural(d.copies, 'time') : '') + '</p>' +
+      '<div data-prev class="preview-list" style="max-height:320px"><div class="spinner"></div></div>' +
+      (d.mine ? '' : '<label class="field" style="margin-top:14px"><span>Put it in a folder (optional)</span><input class="input" data-folder list="fc-folders2" placeholder="None"><datalist id="fc-folders2">' + folderNames().map(function (f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist></label>') +
+      '<div class="error" data-err></div>',
+      '<span class="spacer"></span><button class="btn" data-close>Close</button>' + (d.mine ? '' : '<button class="btn primary" data-add>' + I.plus + 'Add to my decks</button>'), { wide: true });
+    var E = m.el;
+    api('catalogPreview', { deckId: d.id }).then(function (cards) {
+      $('[data-prev]', E).innerHTML = cards.map(function () { return '<div><span></span><span style="color:var(--muted)"></span></div>'; }).join('') + (d.cards > cards.length ? '<div><span class="hint">and ' + plural(d.cards - cards.length, 'more card') + '</span></div>' : '');
+      $$('[data-prev] > div', E).forEach(function (row, i) { if (!cards[i]) return; var sp = $$('span', row); sp[0].textContent = cards[i].front; sp[1].textContent = cards[i].back; });
+    }, function (e) { $('[data-prev]', E).textContent = e.message; });
+    var add = $('[data-add]', E);
+    if (add) add.addEventListener('click', function () {
+      busy(add, true);
+      api('copyPublic', { deckId: d.id }).then(function (r) {
+        S.decks.push(r.deck); S.cards = S.cards.concat(r.cards);
+        var sel = S.user.settings.lastDecks; if (Array.isArray(sel)) sel.push(r.deck.id);
+        var f = $('[data-folder]', E).value.replace(/\s+/g, ' ').trim().slice(0, 40);
+        if (f) { var fm = Object.assign({}, folders()); fm[r.deck.id] = f; S.user.settings.folders = fm; }
+        saveSettingsSoon();
+        d.copies = (d.copies || 0) + 1;
+        m.close(); toast('"' + r.deck.name + '" added to your decks' + (f ? ' in ' + f : '') + '.');
+      }, function (e) { busy(add, false); $('[data-err]', E).textContent = e.message; });
     });
   }
 
@@ -2479,45 +2580,6 @@ var TextUtil = (function () {
         cacheNow(); go('home'); toast('You left the deck.');
       }, fail);
     });
-  }
-
-  function openCatalog() {
-    var m = modal('Public decks',
-      '<label class="search" style="display:block;margin-bottom:12px">' + I.search + '<input class="input" placeholder="Search public decks" data-q autofocus></label>' +
-      '<div data-list><div class="spinner"></div></div><div class="error" data-err></div>', '', { wide: true });
-    var E = m.el, timer = null;
-    function load() {
-      api('catalog', { q: $('[data-q]', E).value }).then(function (list) {
-        $('[data-list]', E).innerHTML = list.length ? '<div class="catalog">' + list.map(function (d) {
-          return '<div class="cat-item" style="--c:' + esc(d.color) + '"><span class="dot"></span><div class="cat-main"><b></b><span class="hint">' + plural(d.cards, 'card') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.mine ? ' &middot; yours' : '') + '</span><div class="cat-preview" hidden></div></div>' +
-            '<button class="btn sm ghost" data-prev="' + esc(d.id) + '">Preview</button>' + (d.mine ? '' : '<button class="btn sm primary" data-copy="' + esc(d.id) + '">' + I.plus + 'Copy</button>') + '</div>';
-        }).join('') + '</div>' : '<p class="hint" style="margin:0">No public decks' + ($('[data-q]', E).value ? ' match that search' : ' yet') + '.</p>';
-        $$('.cat-item b', E).forEach(function (b, i) { b.textContent = list[i].name; });
-        $$('[data-prev]', E).forEach(function (b) {
-          b.addEventListener('click', function () {
-            var box = $('.cat-preview', b.parentNode);
-            if (!box.hidden) { box.hidden = true; return; }
-            box.hidden = false; box.innerHTML = '<div class="spinner"></div>';
-            api('catalogPreview', { deckId: b.getAttribute('data-prev') }).then(function (cards) {
-              box.innerHTML = '<div class="preview-list">' + cards.map(function (c) { return '<div><span>' + esc(c.front) + '</span><span style="color:var(--muted)">' + esc(c.back) + '</span></div>'; }).join('') + '</div>';
-            }, function (e) { box.textContent = e.message; });
-          });
-        });
-        $$('[data-copy]', E).forEach(function (b) {
-          b.addEventListener('click', function () {
-            busy(b, true);
-            api('copyPublic', { deckId: b.getAttribute('data-copy') }).then(function (r) {
-              S.decks.push(r.deck); S.cards = S.cards.concat(r.cards);
-              var sel = S.user.settings.lastDecks; if (Array.isArray(sel)) sel.push(r.deck.id);
-              cacheNow(); busy(b, false); b.disabled = true; b.textContent = 'Copied';
-              toast('"' + r.deck.name + '" added to your decks.'); render();
-            }, function (e) { busy(b, false); $('[data-err]', E).textContent = e.message; });
-          });
-        });
-      }, function (e) { $('[data-err]', E).textContent = e.message; });
-    }
-    $('[data-q]', E).addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(load, 350); });
-    load();
   }
 
   /* ================= settings ================= */
