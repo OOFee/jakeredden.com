@@ -896,6 +896,19 @@ body.is-dragging .wallet-tile:not(.drop-on) { border-style: dashed; }
 .set-sec.danger .set-row small { color: var(--muted); }
 .set-panel { padding: 4px 2px 6px; }
 
+/* minimalist: every coloured surface dulled to soft greys */
+.set-min { margin-top: 4px; align-items: flex-start; }
+.set-min span { display: grid; gap: 2px; } .set-min small { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+html.minimal { --accent: #7c818c; --bg-glow: transparent; }
+html.minimal .hero-main, html.minimal .ftile, html.minimal .deck.solid, html.minimal .wc, html.minimal .disc-top,
+html.minimal .fbadge, html.minimal .sx-b, html.minimal .fr-av, html.minimal .chip, html.minimal .mark, html.minimal .flame,
+html.minimal .heat-grid, html.minimal .ring, html.minimal .grade, html.minimal .tf-btn, html.minimal .sbar-track, html.minimal .pick i,
+html.minimal .btn.primary, html.minimal .dots, html.minimal .fbar, html.minimal .wbar, html.minimal .deck .dot { filter: saturate(.12); }
+html.minimal .hero-main { filter: saturate(.12) brightness(.82); }
+html.minimal .ftile, html.minimal .deck.solid, html.minimal .wc { filter: saturate(.12) brightness(.85); }
+html.minimal .flip, html.minimal .study { --accent: #7c818c; }
+html { transition: none; }
+
 </style>
 </head>
 <body>
@@ -1247,7 +1260,8 @@ var TextUtil = (function () {
   function today() { return dateKey(Date.now()); }
   function firstName() { return (S.user && S.user.name || '').split(' ')[0]; }
 
-  function setAccent(c) { document.documentElement.style.setProperty('--accent', c || DEFAULT_ACCENT); document.documentElement.style.setProperty('--bg-glow', hexA(c || DEFAULT_ACCENT, 0.18)); }
+  function setAccent(c) {
+    if (S.user && S.user.settings.minimal) c = '#7c818c'; document.documentElement.style.setProperty('--accent', c || DEFAULT_ACCENT); document.documentElement.style.setProperty('--bg-glow', hexA(c || DEFAULT_ACCENT, 0.18)); }
   function hexA(hex, a) {
     var n = parseInt(String(hex).slice(1), 16);
     return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
@@ -1256,6 +1270,7 @@ var TextUtil = (function () {
     var t = (S.user && S.user.settings.theme) || ls('fc.theme') || 'dark';
     var dark = t === 'dark' || (t === 'system' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.documentElement.classList.toggle('minimal', !!(S.user && S.user.settings.minimal));
   }
   function isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
   function toggleTheme() {
@@ -1769,6 +1784,7 @@ var TextUtil = (function () {
   function render() {
     closeMenus();
     applyFaces();
+    document.documentElement.classList.toggle('minimal', !!(S.user && S.user.settings.minimal));
     var app = $('#app');
     var deck = S.deckId && deckById(S.deckId);
     if (S.view === 'deck' && !deck) S.view = 'home';
@@ -3074,7 +3090,8 @@ var TextUtil = (function () {
       '<div class="set-sec"><div class="set-h">Studying</div>' +
         '<div class="grid2"><label class="field"><span>Daily goal</span><input class="input" type="number" min="1" max="2000" data-goal></label>' +
         '<label class="field"><span>New cards a day (Mission)</span><input class="input" type="number" min="0" max="500" data-new></label></div>' +
-        '<div class="field"><span>Theme</span><div class="seg set-theme" data-theme><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div></div>' +
+        '<div class="field"><span>Theme</span><div class="seg set-theme" data-theme><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>' +
+        '<label class="switch set-min"><input type="checkbox" data-minimal' + (s.minimal ? ' checked' : '') + '><i></i><span><b>Minimalist</b><small>Tone all the colours down to calm greys</small></span></label></div>' +
       '<div class="set-sec"><div class="set-h">Account</div><div class="set-rows">' +
         '<button class="set-row" data-open="pw">' + I.edit + '<span>' + (u.hasPassword ? 'Change password' : 'Set a password') + '<small>' + (u.hasPassword ? 'Update the password you sign in with' : 'You sign in with Google. A password lets you sign in without it.') + '</small></span>' + chev + '</button>' +
         '<div class="set-panel" data-panel="pw" hidden><div class="grid2">' + (u.hasPassword ? '<input class="input" type="password" placeholder="Current password" data-old autocomplete="current-password">' : '') +
@@ -3093,6 +3110,8 @@ var TextUtil = (function () {
     function paintTheme() { $$('[data-v]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === theme); }); }
     $$('[data-v]', E).forEach(function (b) { b.addEventListener('click', function () { theme = b.getAttribute('data-v'); paintTheme(); }); });
     paintTheme();
+    $('[data-minimal]', E).addEventListener('change', function () { document.documentElement.classList.toggle('minimal', this.checked); });
+    m.onClose = function () { applyTheme(); };
     $$('[data-open]', E).forEach(function (b) {
       b.addEventListener('click', function () {
         var pnl = $('[data-panel="' + b.getAttribute('data-open') + '"]', E), open = pnl.hidden;
@@ -3102,7 +3121,7 @@ var TextUtil = (function () {
     });
     $('[data-save]', E).addEventListener('click', function () {
       var btn = this; busy(btn, true);
-      api('saveSettings', { name: $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme }) }).then(function (r) {
+      api('saveSettings', { name: $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme, minimal: $('[data-minimal]', E).checked }) }).then(function (r) {
         S.user = r; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
         m.close(); render(); toast('Settings saved.');
       }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
