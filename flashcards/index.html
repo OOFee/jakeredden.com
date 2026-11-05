@@ -998,10 +998,28 @@ html.study-on .swipe-hint.neutral { color: var(--text); }
 .tf-ans b { display: inline; width: auto; height: auto; font-size: inherit; font-weight: 800; border-radius: 0; background: none; color: inherit; }
 .pts-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .pts-next { opacity: .55; }
+.pts .dots.bar { display: block; width: 130px; height: 8px; border-radius: 99px; overflow: hidden; background: var(--gl-track, var(--surface-3)); }
+.pts .dots.bar i { display: block; height: 100%; border-radius: inherit; box-shadow: none; transition: width .25s var(--ease); }
+.flip.fx-done .face-body { opacity: .22; transition: opacity .2s; }
 .pts-end { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #fff; }
 .pts-end svg { width: 17px; height: 17px; stroke-width: 3; }
 .pts-end.bad { background: #cf2f3f; }
 .pts-end.good { background: #0e8a4a; }
+.pts-end.good.earned { animation: fxEarned .5s var(--ease); }
+@keyframes fxEarned { 40% { transform: scale(1.35); box-shadow: 0 0 18px #1fb866; } }
+/* card finished */
+.fx-ring.gold { --fx: #f5b83d; }
+.fx-ring.gold b { animation-duration: .8s; }
+.fx-ring.gold::before { animation-delay: .45s; }
+.flip.fx-done { animation: fxPop .5s var(--ease) !important; }
+@keyframes fxPop { 35% { transform: scale(1.035); } }
+.fx-stamp { position: absolute; left: 50%; top: 50%; z-index: 6; display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px 12px 18px; border-radius: 99px; background: #f5b83d; color: #1a1305; font-family: var(--display); font-size: 22px; font-weight: 700; white-space: nowrap; box-shadow: 0 16px 40px -10px rgba(0, 0, 0, .6); transform: translate(-50%, -50%); animation: fxStamp .4s cubic-bezier(.2, 1.5, .4, 1) both; pointer-events: none; }
+.fx-stamp svg { width: 22px; height: 22px; stroke-width: 3; flex: none; }
+@keyframes fxStamp { from { transform: translate(-50%, -50%) scale(.5) rotate(-6deg); opacity: 0; } }
+.fx-burst { position: absolute; left: 50%; top: 50%; z-index: 5; width: 0; height: 0; pointer-events: none; }
+.fx-burst i { position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; opacity: 0; animation: fxSpark .7s var(--d) cubic-bezier(.15, .7, .3, 1) both; }
+@keyframes fxSpark { 0% { transform: translate(0, 0) scale(var(--s)); opacity: 1; } 75% { opacity: 1; } 100% { transform: translate(var(--x), var(--y)) scale(.1); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .fx-burst { display: none; } .flip.fx-done, .fx-stamp, .pts-end.good.earned { animation: none !important; } }
 @media (min-width: 761px) { html.study-on .choices { grid-template-columns: 1fr 1fr; max-width: none; } }
 @media (prefers-reduced-motion: reduce) { html.study-on .bg-blobs i { animation: none; } }
 
@@ -1543,7 +1561,8 @@ var TextUtil = (function () {
   function fbadge(l, cls) { return '<span class="fbadge lv' + l + (cls ? ' ' + cls : '') + '" title="' + FACE_NAMES[l] + '">' + esc(FACES[l]) + '</span>'; }
   function safeImg(v) { return /^https:[^\s"'()<>\\]+$/i.test(String(v || '')) && String(v).indexOf(':' + '/' + '/') === 5; }
   function coverStyle(d) { return safeImg(d.image) ? ';--img:url(&quot;' + esc(d.image) + '&quot;)' : ''; }
-  function deckGoal(deckId) { var d = deckById(deckId); var n = d && Number(d.streak); return n >= 1 && n <= 10 ? n : 5; }
+  function cleanGoal(v) { var n = Math.floor(Number(v)); return n >= 1 && n <= 999 ? n : n > 999 ? 999 : 5; }
+  function deckGoal(deckId) { var d = deckById(deckId); return cleanGoal(d && d.streak); }
   function tfAnswer(card) {
     var ch = String(card.back || '').trim().charAt(0);
     if ('Oo\u25cb\u3007\u2713Tt'.indexOf(ch) >= 0) return true;
@@ -1692,12 +1711,15 @@ var TextUtil = (function () {
   function pointsRow(card, dir, s) {
     var pr = prog(card, dir), now = Date.now(), dots = '';
     function row(left, n, goal, right, label, counted) {
-      for (var i = 0; i < goal; i++) dots += '<i class="' + (i < n ? 'on' : '') + '"></i>';
-      return '<div class="pts"><div class="pts-row">' + left + '<span class="dots">' + dots + '</span>' + right + '</div><span class="pts-lbl"' + (counted ? ' data-of="' + goal + '" data-tail="' + counted + '"' : '') + '>' + label + '</span></div>';
+      var big = goal > 12;
+      if (big) dots = '<i class="on" style="width:' + (100 * n / goal) + '%"></i>';
+      else for (var i = 0; i < goal; i++) dots += '<i class="' + (i < n ? 'on' : '') + '"></i>';
+      return '<div class="pts"><div class="pts-row">' + left + '<span class="dots' + (big ? ' bar' : '') + '" data-n="' + n + '" data-goal="' + goal + '">' + dots + '</span>' + right + '</div><span class="pts-lbl"' + (counted ? ' data-of="' + goal + '" data-tail="' + counted + '"' : '') + '>' + label + '</span></div>';
     }
     if (s.free && !s.simple) {
       var l = SRS.level(pr, now), g = deckGoal(card.deckId);
-      return row(fbadge(l), Math.min(g, SRS.pointsToday(pr, now)), g, l > 1 ? fbadge(l - 1, 'pts-next') : '', FACE_NAMES[l]);
+      var pts = Math.min(g, SRS.pointsToday(pr, now));
+      return row(fbadge(l), pts, g, l > 1 ? fbadge(l - 1, 'pts-next') : '', g > 12 ? pts + ' of ' + g + ' right in a row' : FACE_NAMES[l], g > 12 ? 'right in a row' : '');
     }
     var bad = '<span class="pts-end bad">' + I.x + '</span>', good = '<span class="pts-end good">' + I.check + '</span>';
     if (s.simple) {
@@ -1709,10 +1731,14 @@ var TextUtil = (function () {
   }
   /* Show the answer's effect on the dots straight away. */
   function paintDots(right) {
-    var dots = $$('.pts .dots i');
-    if (!dots.length) return;
-    var n = right ? Math.min(dots.length, dots.filter(function (d) { return d.classList.contains('on'); }).length + 1) : 0;
-    dots.forEach(function (d, i) { d.classList.toggle('on', i < n); });
+    var box = $('.pts .dots');
+    if (!box) return;
+    var goal = Number(box.getAttribute('data-goal')), n = right ? Math.min(goal, Number(box.getAttribute('data-n')) + 1) : 0;
+    box.setAttribute('data-n', n);
+    if (box.classList.contains('bar')) box.firstChild.style.width = (100 * n / goal) + '%';
+    else $$('i', box).forEach(function (d, i) { d.classList.toggle('on', i < n); });
+    var end = $('.pts-end.good');
+    if (end) end.classList.toggle('earned', n === goal);
     var lbl = $('.pts-lbl[data-of]');
     if (lbl) lbl.textContent = n + ' of ' + lbl.getAttribute('data-of') + ' ' + lbl.getAttribute('data-tail');
   }
@@ -1900,7 +1926,7 @@ var TextUtil = (function () {
     if (!deck) throw new Error('Deck not found.');
     return deck;
   }
-  function guestStreak(v) { var n = Math.floor(Number(v)); return n >= 1 && n <= 10 ? n : 5; }
+  function guestStreak(v) { return cleanGoal(v); }
   var GUEST_ERRORS = {
     uploadMedia: 'Make an account to add pictures and audio.', friends: 'Make an account to add friends.', friendRequest: 'Make an account to add friends.',
     catalog: 'Make an account to browse public decks.', catalogPreview: 'Make an account to browse public decks.', copyPublic: 'Make an account to copy public decks.',
@@ -2772,8 +2798,7 @@ var TextUtil = (function () {
         var f = folderOf(d.id);
         return '<label class="fp"><input type="checkbox" value="' + esc(d.id) + '"' + ((name && f === name) || (preset && preset.indexOf(d.id) >= 0) ? ' checked' : '') + '><span class="dot" style="background:' + esc(d.color) + '"></span><b>' + esc(d.name) + '</b>' + (f && f !== name ? '<small>in ' + esc(f) + '</small>' : '') + '</label>';
       }).join('') + '</div></div>' +
-      '<label class="field"><span>Right in a row to move a card up (sets every deck in this folder)</span><select class="select" data-streak><option value="">Keep each deck as it is</option>' +
-      [2, 3, 4, 5, 6, 7, 8, 10].map(function (n) { return '<option value="' + n + '">' + n + (n === 5 ? ' (default)' : '') + '</option>'; }).join('') + '</select></label>' +
+      '<label class="field"><span>Right in a row to move a card up (sets every deck in this folder)</span><input class="input" type="number" inputmode="numeric" min="1" max="999" step="1" placeholder="Keep each deck as it is" data-streak></label>' +
       '<div class="error" data-err></div>',
       (name ? '<button class="btn ghost" data-del>' + I.trash + 'Remove folder</button>' : '') + '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>' + (name ? 'Save' : 'Create folder') + '</button>');
     var inp = $('[data-name]', m.el);
@@ -2783,7 +2808,7 @@ var TextUtil = (function () {
       if (Object.keys(gs).length === 1) $('[data-streak]', m.el).value = Object.keys(gs)[0];
     }
     function applyStreak() {
-      var v = Number($('[data-streak]', m.el).value);
+      var goalText = $('[data-streak]', m.el).value.trim(), v = goalText ? cleanGoal(goalText) : 0;
       if (!v) return;
       var ids = $$('.fp input', m.el).filter(function (cb) { return cb.checked; }).map(function (cb) { return cb.value; });
       ids.map(deckById).filter(function (d) { return d && deckGoal(d.id) !== v; }).forEach(function (d) {
@@ -2954,7 +2979,7 @@ var TextUtil = (function () {
     var color = deck ? deck.color : COLORS[S.decks.length % COLORS.length];
     var m = modal(deck ? 'Edit deck' : 'New deck',
       '<label class="field"><span>Name</span><input class="input" data-name maxlength="80" autofocus placeholder="e.g. Japanese verbs"></label>' +
-      '<label class="field"><span>Right in a row to finish a card for the day</span><select class="select" data-streak>' + [2, 3, 4, 5, 6, 7, 8, 10].map(function (n) { return '<option value="' + n + '">' + n + (n === 5 ? ' (default)' : '') + '</option>'; }).join('') + '</select></label>' +
+      '<label class="field"><span>Right in a row to finish a card for the day</span><input class="input" type="number" inputmode="numeric" min="1" max="999" step="1" data-streak></label>' +
       '<label class="field"><span>Folder</span><input class="input" data-folder maxlength="40" list="fc-folders" placeholder="None"><datalist id="fc-folders">' + folderNames().map(function (f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist></label>' +
       '<div class="field"><span>Colour</span><div class="swatches">' + COLORS.map(function (c) { return '<button class="swatch" data-c="' + c + '" style="background:' + c + '" aria-label="' + c + '"></button>'; }).join('') +
       '<label class="swatch" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);cursor:pointer" title="Custom"><input type="color" data-custom style="opacity:0;width:100%;height:100%;cursor:pointer"></label></div></div>' +
@@ -2978,7 +3003,7 @@ var TextUtil = (function () {
     function save() {
       var btn = $('[data-save]', m.el);
       busy(btn, true);
-      api('saveDeck', { id: deck && deck.id, name: name.value, color: color, streak: Number($('[data-streak]', m.el).value), image: imgIn.value.trim() }).then(function (d) {
+      api('saveDeck', { id: deck && deck.id, name: name.value, color: color, streak: cleanGoal($('[data-streak]', m.el).value), image: imgIn.value.trim() }).then(function (d) {
         if (deck) { Object.assign(deck, d); } else { S.decks.push(d); }
         var fname = $('[data-folder]', m.el).value.replace(/\s+/g, ' ').trim().slice(0, 40);
         if (fname !== folderOf(d.id)) {
@@ -3826,12 +3851,13 @@ var TextUtil = (function () {
       if (right !== false) s.correct++;
       item.run = right === false ? 0 : (item.run || 0) + 1;
       if (right === false) item.missed = true;
-      if (item.run >= deckGoal(c.deckId)) { s.done++; if (!item.missed) s.firstTry++; }
+      var finished = item.run >= deckGoal(c.deckId);
+      if (finished) { s.done++; if (!item.missed) s.firstTry++; }
       else {
         var lo2 = Math.min(s.review.length, 3);
         s.review.splice(lo2 + Math.floor(Math.random() * (s.review.length - lo2 + 1)), 0, item);
       }
-      return animateOut(right === false ? 'again' : 'good', dirOut);
+      return animateOut(right === false ? 'again' : 'good', dirOut, finished ? 'Done' : '');
     }
     if (s.free) {
       var r = SRS.answer(prog(c, item.dir), right, now, deckGoal(c.deckId));
@@ -3846,7 +3872,7 @@ var TextUtil = (function () {
         var lo = Math.min(s.review.length, 3);
         s.review.splice(lo + Math.floor(Math.random() * (s.review.length - lo + 1)), 0, item);
       } else { s.doneToday++; s.flash = 'Up to ' + (FACES[5 - r.to] ? FACES[5 - r.to] + ' ' : '') + FACE_NAMES[5 - r.to] + ', back ' + gapLabel(Math.round((r.back - SRS.dayStart(now, 0)) / SRS.DAY)); }
-      return animateOut(right === false ? 'again' : right === null ? 'hard' : 'good', dirOut);
+      return animateOut(right === false ? 'again' : right === null ? 'hard' : 'good', dirOut, r.done ? 'Done for today' : '');
     }
     var mg = right === false ? 'again' : right === null ? 'hard' : 'good';
     var after = SRS.grade(prog(c, item.dir), mg, now);
@@ -3855,11 +3881,43 @@ var TextUtil = (function () {
     bumpDaily(!!right);
     s.n++; if (right) s.correct++;
     if (after.s === 'learn') s.learn.push(item);
-    animateOut(mg, dirOut);
+    animateOut(mg, dirOut, right === true && after.s === 'review' ? 'Done for today' : '', 340);
   }
-  function animateOut(g, dirOut) {
+  /* The card is finished: gold border, a small pop, sparks and a stamp, before it leaves. */
+  function celebrate(flip, label) {
+    flip.style.transition = ''; flip.style.transform = '';
+    $$('.swipe-hint', flip).forEach(function (h) { h.style.opacity = 0; });
+    var old = $('.fx-ring', flip); if (old) old.remove();
+    flip.appendChild(el('<i class="fx-ring gold" aria-hidden="true"><b></b></i>'));
+    flip.classList.add('fx-done');
+    var stamp = el('<div class="fx-stamp" role="status">' + I.check + '<span></span></div>');
+    $('span', stamp).textContent = label;
+    flip.appendChild(stamp);
+    var burst = el('<div class="fx-burst" aria-hidden="true"></div>'), colours = ['#f5b83d', '#ffe08a', '#1fb866', '#ffffff'];
+    for (var i = 0; i < 18; i++) {
+      var a = (i / 18) * Math.PI * 2 + Math.random() * 0.3, far = 110 + Math.random() * 90;
+      burst.appendChild(el('<i style="--x:' + Math.round(Math.cos(a) * far) + 'px;--y:' + Math.round(Math.sin(a) * far) + 'px;--s:' + (0.6 + Math.random() * 0.8).toFixed(2) + ';--d:' + Math.round(Math.random() * 90) + 'ms;background:' + colours[i % colours.length] + '"></i>'));
+    }
+    flip.appendChild(burst);
+  }
+  function animateOut(g, dirOut, finished, hold) {
     var s = S.study;
     var flip = $('[data-flip]');
+    if (flip && finished) {
+      celebrate(flip, finished);
+      setTimeout(function () {
+        flip.style.transition = 'transform .24s var(--ease), opacity .24s';
+        flip.style.transform = 'translateY(-26px) scale(.97)';
+        flip.style.opacity = '0';
+      }, hold || 640);
+      setTimeout(function () {
+        s.grading = false;
+        nextItem();
+        if (S.view === 'study') render();
+        if (s.flash) { toast(s.flash); s.flash = null; }
+      }, (hold || 640) + 220);
+      return;
+    }
     var dx = dirOut != null ? dirOut : g === 'again' ? -1 : g === 'hard' ? 0 : 1;
     if (flip) {
       flip.style.transition = 'transform .32s var(--ease), opacity .32s';
