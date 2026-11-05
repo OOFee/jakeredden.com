@@ -632,7 +632,6 @@ img { max-width: 100%; }
 /* info buttons in the hero and their pop-ups */
 .hero-i { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: 4px; vertical-align: -3px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .7); background: none; color: #fff; font: italic 700 11px Georgia, serif; cursor: pointer; padding: 0; opacity: .85; }
 .hero-i:hover { opacity: 1; background: rgba(255, 255, 255, .15); }
-.sx-pop.sx-in-modal { position: relative; top: auto; left: auto; width: 100%; box-shadow: none; transform: none; opacity: 1; pointer-events: auto; }
 .mi-lead { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
 .mi-chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding: 0 4px; border-bottom: 1px solid var(--line); }
 .mi-bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
@@ -1661,7 +1660,7 @@ var TextUtil = (function () {
       '<section class="hero">' +
       '<div class="hero-main"><div>' +
       '<div class="seg mode" role="tablist" aria-label="Study mode">' + Object.keys(MODES).map(function (k) { return '<button role="tab" data-mode="' + k + '" class="' + (mode === k ? 'on' : '') + '" aria-selected="' + (mode === k) + '" title="' + MODE_DESC[k] + '">' + MODES[k] + '</button>'; }).join('') + '</div>' +
-      '<p class="mode-desc">' + MODE_DESC[mode].replace(/ (\S+)$/, ' <span class="nw">$1 <button class="hero-i" data-mode-info aria-label="How this works">i</button></span>') + '</p>' +
+      '<p class="mode-desc">' + (mode !== 'mission' ? MODE_DESC[mode] : MODE_DESC[mode].replace(/ (\S+)$/, ' <span class="nw">$1 <button class="hero-i" data-mode-info aria-label="How Mission works">i</button></span>')) + '</p>' +
       '<div class="eyebrow">' + hello + '</div>' +
       '<div class="big">' + big + '</div>' +
       '<div class="sub">' + sub + '</div></div>' +
@@ -1694,7 +1693,7 @@ var TextUtil = (function () {
     wireTop(app);
     afterModeRender(app);
     var mi = $('[data-mode-info]', app);
-    if (mi) mi.addEventListener('click', function (e) { e.stopPropagation(); if (mode === 'mission') missionInfo(); else stageInfoModal(sel); });
+    if (mi) mi.addEventListener('click', function (e) { e.stopPropagation(); missionInfo(); });
     $$('[data-mode]', app).forEach(function (b) { b.addEventListener('click', function () { if (b.getAttribute('data-mode') !== mode) setMode(b.getAttribute('data-mode')); }); });
     var gb = $('[data-go]', app);
     if (gb) gb.addEventListener('click', function () { startMode(mode, sel, 'home'); });
@@ -1788,11 +1787,6 @@ var TextUtil = (function () {
       '<p class="sx-cap">Get it right ' + n + ' times in a row...</p>' +
       '<div class="sx-rules"><span><b>' + n + ' in a row</b> moves a card up a stage</span><span><b>Each stage</b> waits longer: tomorrow, 3 days, a week, 2 weeks+</span><span><b>Wrong</b> drops it back one stage</span>' +
       '<span class="sx-note"><b>Note:</b> you can give any deck or folder its own number instead of 5 (Edit deck, or the folder menu).</span></div></div>';
-  }
-  function stageInfoModal(ids) {
-    var m = modal('How stages work', '<div class="sx-inline">' + stageExplainer(ids).replace('class="sx-pop"', 'class="sx-pop show sx-in-modal"') + '</div>', '<span class="spacer"></span><button class="btn primary" data-close>Got it</button>');
-    m.onClose = sxStop;
-    setTimeout(function () { var pop = $('.sx-pop', m.el); if (pop) sxRun(pop); }, 60);
   }
   function missionInfo() {
     var gaps = [['10 min', 10], ['1 day', 22], ['3 days', 38], ['8 days', 62], ['20 days', 90], ['50 days', 120]];
