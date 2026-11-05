@@ -468,17 +468,38 @@ img { max-width: 100%; }
 .hero-main .seg.mode button { color: rgba(255, 255, 255, .82); }
 .hero-main .seg.mode button.on { background: #fff; color: #111; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
 
-/* folders */
-.folder { margin: 0 0 24px; }
-.folder-head { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; --c: var(--accent); }
-.folder-head .pick { cursor: pointer; flex: none; }
-.folder-toggle { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: 0; padding: 6px 4px; color: var(--text); text-align: left; cursor: pointer; font: inherit; }
-.folder-toggle svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
-.folder-toggle h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.folder-toggle .meta { color: var(--muted); font-size: 13px; white-space: nowrap; }
-.folder-toggle svg:last-child { margin-left: auto; transition: transform .2s var(--ease); }
-.folder.shut .folder-toggle svg:last-child { transform: rotate(-90deg); }
-.folder-loose { font-size: 13px; font-weight: 600; color: var(--muted); margin: 4px 0 12px; }
+/* folders: a tile with the decks fanned like a stack of cards */
+.folder-tile { cursor: pointer; padding-top: 16px; }
+.folder-tile::before { display: none; }
+.folder-tile .stack { position: relative; height: 74px; margin: 2px 0 12px; }
+.folder-tile .stack i {
+  position: absolute; left: 0; top: 6px; width: 58%; max-width: 150px; height: 62px; border-radius: 11px;
+  background: linear-gradient(140deg, var(--c), color-mix(in srgb, var(--c) 55%, #000));
+  border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .28);
+  transform-origin: 20% 100%;
+  transform: translateX(calc(var(--i) * 16px)) rotate(calc(var(--i) * 6deg));
+  transition: transform .35s var(--ease);
+}
+.folder-tile .stack i::after { content: ''; position: absolute; left: 12px; right: 30%; top: 14px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .55); box-shadow: 0 11px 0 -1px rgba(255, 255, 255, .3), 0 22px 0 -1px rgba(255, 255, 255, .2); }
+.folder-tile:hover .stack i { transform: translateX(calc(var(--i) * 30px)) translateY(calc(var(--i) * -3px)) rotate(calc(var(--i) * 11deg)); }
+.folder-tile h3 { margin: 0 0 2px; }
+.fbar { display: flex; gap: 2px; height: 6px; border-radius: 99px; overflow: hidden; margin-top: auto; background: var(--surface-2); }
+.fbar b { min-width: 4px; }
+.folder-tile .meta { margin-bottom: 14px; }
+.fmore { position: absolute; right: 10px; bottom: 18px; width: 32px; height: 32px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; opacity: 0; transition: opacity .2s, background .2s; }
+.fmore svg { width: 18px; height: 18px; }
+.folder-tile:hover .fmore, .fmore:focus-visible { opacity: 1; }
+.fmore:hover { background: var(--surface-2); color: var(--text); }
+@media (hover: none) { .fmore { opacity: 1; } }
+.folder-tile .fbar { margin-right: 40px; }
+.section-head.folder-open { flex-wrap: wrap; }
+.section-head.folder-open h2 { overflow-wrap: anywhere; }
+.decks.opening > * { animation: rise .4s var(--ease) both; }
+.decks.opening > *:nth-child(2) { animation-delay: .03s; }
+.decks.opening > *:nth-child(3) { animation-delay: .06s; }
+.decks.opening > *:nth-child(4) { animation-delay: .09s; }
+.decks.opening > *:nth-child(n+5) { animation-delay: .12s; }
 .pick input[data-some] + i { background: var(--c); border-color: var(--c); }
 .pick input[data-some] + i::after { content: ''; width: 10px; height: 2.5px; background: #fff; border-radius: 2px; }
 .folder-picks { display: grid; gap: 6px; max-height: 320px; overflow: auto; }
@@ -487,7 +508,6 @@ img { max-width: 100%; }
 .fp small { color: var(--muted); white-space: nowrap; }
 .fp .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .fp input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
-@media (max-width: 520px) { .folder-toggle .meta { display: none; } }
 .mode-desc { margin: 0 0 18px; max-width: 420px; font-size: 14px; line-height: 1.45; font-weight: 500; opacity: .95; position: relative; z-index: 1; }
 
 </style>
@@ -1339,7 +1359,8 @@ var TextUtil = (function () {
     var C = 2 * Math.PI * 18;
     var hour = new Date().getHours();
     var hello = (hour < 5 ? 'Late night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening') + (firstName() ? ', ' + esc(firstName()) : '');
-    var quote = S.quotes.length ? S.quotes[Math.floor(Math.random() * S.quotes.length)] : '';
+    if (S.quoteIdx == null) S.quoteIdx = Math.floor(Math.random() * 1000);
+    var quote = S.quotes.length ? S.quotes[S.quoteIdx % S.quotes.length] : '';
     var st = streak();
     var empty = !S.cards.length ? (S.decks.length ? 'Add some cards to start studying.' : 'Make your first deck to get started.') : '';
 
@@ -1384,8 +1405,10 @@ var TextUtil = (function () {
           var n = andWorse ? [1, 2, 3, 4].filter(function (k) { return k >= l; }).reduce(function (s2, k) { return s2 + levelCounts[k]; }, 0) : levelCounts[l];
           return '<button class="level" data-level="' + l + '"' + (n ? '' : ' disabled') + '><span class="lv-face">' + FACES[l] + '</span><b>' + n + '</b><small>' + FACE_NAMES[l] + (andWorse && l < 4 ? ' and worse' : '') + '</small></button>';
         }).join('') + '</div><p class="hint" style="margin:8px 2px 0">Tap a face to focus on those cards from your chosen decks.</p></section>' : '') +
-      '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span><button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Browse public decks</span></button>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') +
-      (S.decks.length ? '<button class="btn sm ghost" data-new-folder>' + I.folder + '<span class="hide-sm">New folder</span></button>' : '') + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
+      (openFolderName() ? '<div class="section-head folder-open"><button class="btn ghost sm" data-folder-back>' + I.back + 'All decks</button><h2>' + esc(openFolderName()) + '</h2><span class="spacer"></span>' +
+        '<button class="btn sm" data-folder-study>' + I.play + '<span class="hide-sm">' + MODES[mode] + '</span></button><button class="btn sm ghost icon-btn" data-folder-more aria-label="Folder actions">' + I.more + '</button>' : '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>') +
+      (openFolderName() ? '' : '<button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Browse public decks</span></button>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') +
+      (S.decks.length ? '<button class="btn sm ghost" data-new-folder>' + I.folder + '<span class="hide-sm">New folder</span></button>' : '')) + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
       deckGroups(allStats) +
       '</div></main>';
     if (quote) $('.quote b', app).textContent = quote;
@@ -1409,7 +1432,8 @@ var TextUtil = (function () {
         setSelected(ids); render();
       });
     });
-    $$('.folder', app).forEach(function (box) {
+    S.justOpened = false;
+    $$('.folder-tile', app).forEach(function (box) {
       var f = box.getAttribute('data-folder');
       var ids = S.decks.filter(function (d) { return folderOf(d.id) === f; }).map(function (d) { return d.id; });
       var cb = $('[data-fpick]', box);
@@ -1419,20 +1443,25 @@ var TextUtil = (function () {
         if (!cur.length) { cb.checked = true; toast('Keep at least one deck chosen.'); return; }
         setSelected(cur); render();
       });
-      $('[data-ftoggle]', box).addEventListener('click', function () {
-        var c = ls('fc.collapsed') || {};
-        if (c[f]) delete c[f]; else c[f] = 1;
-        ls('fc.collapsed', c); render();
-      });
+      box.addEventListener('click', function () { openFolder(f); });
       $('[data-fedit]', box).addEventListener('click', function (e) { e.stopPropagation(); folderMenu(f, ids, e.currentTarget); });
       box.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); folderMenu(f, ids, e.currentTarget, { x: e.clientX, y: e.clientY }); });
     });
-    $('[data-catalog]', app).addEventListener('click', openCatalog);
+    var fb = $('[data-folder-back]', app);
+    if (fb) {
+      var of = openFolderName();
+      var oids = S.decks.filter(function (d) { return folderOf(d.id) === of; }).map(function (d) { return d.id; });
+      fb.addEventListener('click', function () { S.openFolder = null; S.justOpened = true; render(); });
+      $('[data-folder-study]', app).addEventListener('click', function () { startMode(mode, oids, 'home'); });
+      $('[data-folder-more]', app).addEventListener('click', function (e) { e.stopPropagation(); folderMenu(of, oids, e.currentTarget); });
+    }
+    var cat = $('[data-catalog]', app);
+    if (cat) cat.addEventListener('click', openCatalog);
     var sa = $('[data-send-all]', app);
     if (sa) sa.addEventListener('click', function () { openSend(null, 'copy'); });
     var nf = $('[data-new-folder]', app);
     if (nf) nf.addEventListener('click', function () { openFolderEditor(null); });
-    $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null); }); });
+    $$('[data-new-deck]', app).forEach(function (b) { b.addEventListener('click', function () { openDeckEditor(null, openFolderName()); }); });
     $$('.deck[data-id]', app).forEach(function (n) {
       var id = n.getAttribute('data-id');
       n.addEventListener('click', function () { go('deck', { deckId: id }); });
@@ -1461,23 +1490,38 @@ var TextUtil = (function () {
     }
     return cells.join('');
   }
+  function openFolderName() {
+    if (S.openFolder && folderNames().indexOf(S.openFolder) < 0) S.openFolder = null;
+    return S.openFolder;
+  }
   function deckGroups(allStats) {
-    var names = folderNames(), collapsed = ls('fc.collapsed') || {};
+    var open = openFolderName();
+    if (open) {
+      var inside = allStats.filter(function (x) { return folderOf(x.deck.id) === open; });
+      return '<div class="decks' + (S.justOpened ? ' opening' : '') + '">' + inside.map(deckTile).join('') + '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>';
+    }
+    var tiles = folderNames().map(function (f) {
+      return folderTile(f, allStats.filter(function (x) { return folderOf(x.deck.id) === f; }));
+    });
     var loose = allStats.filter(function (x) { return !folderOf(x.deck.id); });
-    var html = names.map(function (f) {
-      var xs = allStats.filter(function (x) { return folderOf(x.deck.id) === f; });
-      var on = xs.filter(function (x) { return x.on; }).length;
-      var cards = xs.reduce(function (n, x) { return n + x.st.total; }, 0);
-      var shut = !!collapsed[f];
-      return '<section class="folder' + (shut ? ' shut' : '') + '" data-folder="' + esc(f) + '">' +
-        '<div class="folder-head"><label class="pick" title="Choose every deck in this folder"><input type="checkbox" data-fpick' + (on === xs.length ? ' checked' : '') + (on && on < xs.length ? ' data-some' : '') + '><i></i></label>' +
-        '<button class="folder-toggle" data-ftoggle aria-expanded="' + !shut + '">' + I.folder + '<h3>' + esc(f) + '</h3><span class="meta">' + plural(xs.length, 'deck') + ' &middot; ' + plural(cards, 'card') + '</span>' + I.chev + '</button>' +
-        '<button class="btn ghost icon-btn sm" data-fedit aria-label="Folder actions" title="Folder actions (or right-click)">' + I.more + '</button></div>' +
-        (shut ? '' : '<div class="decks">' + xs.map(deckTile).join('') + '</div>') + '</section>';
-    }).join('');
-    var looseHtml = '<div class="decks">' + loose.map(deckTile).join('') + '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>';
-    if (names.length && loose.length) looseHtml = '<div class="folder-loose">Not in a folder</div>' + looseHtml;
-    return html + looseHtml;
+    return '<div class="decks' + (S.justOpened ? ' opening' : '') + '">' + tiles.join('') + loose.map(deckTile).join('') + '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>';
+  }
+  var LEVEL_COLOR = { 1: 'easy', 2: 'good', 3: 'hard', 4: 'again' };
+  function folderTile(f, xs) {
+    var on = xs.filter(function (x) { return x.on; }).length;
+    var cards = xs.reduce(function (n, x) { return n + x.st.total; }, 0);
+    var lv = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    xs.forEach(function (x) { cardsOf(x.deck.id).forEach(function (c) { lv[cardLevel(c)]++; }); });
+    var top = xs.slice(0, 3);
+    var sheets = top.map(function (x, i) { return '<i style="--c:' + esc(x.deck.color) + ';--i:' + i + ';z-index:' + (3 - i) + '"></i>'; }).join('');
+    var bar = cards ? '<div class="fbar" title="' + [1, 2, 3, 4].map(function (l) { return FACES[l] + ' ' + lv[l]; }).join('   ') + '">' + [1, 2, 3, 4].map(function (l) {
+      return lv[l] ? '<b style="flex:' + lv[l] + ';background:var(--' + LEVEL_COLOR[l] + ')"></b>' : '';
+    }).join('') + '</div>' : '<div class="fbar empty"></div>';
+    return '<div class="deck folder-tile' + (on === xs.length ? ' picked' : '') + '" role="button" tabindex="0" data-folder="' + esc(f) + '" style="--c:' + esc(top[0] ? top[0].deck.color : DEFAULT_ACCENT) + '">' +
+      '<label class="pick" title="Choose every deck in this folder"><input type="checkbox" data-fpick' + (on === xs.length ? ' checked' : '') + (on && on < xs.length ? ' data-some' : '') + '><i></i></label>' +
+      '<div class="stack">' + sheets + '</div>' +
+      '<h3>' + esc(f) + '</h3><div class="meta">' + plural(xs.length, 'deck') + ' &middot; ' + plural(cards, 'card') + '</div>' + bar +
+      '<button class="fmore" data-fedit aria-label="Folder actions" title="Folder actions (or right-click)">' + I.more + '</button></div>';
   }
   function deckTile(x) {
     var d = x.deck, st = x.st, fs = x.fs, mode = studyMode(), free = mode !== 'mission';
@@ -1491,13 +1535,19 @@ var TextUtil = (function () {
       '<div class="counts">' + chips + deckBadges(d) + '</div>' +
       '<button class="go" aria-label="Study ' + esc(d.name) + '">' + (canGo ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
   }
+  function openFolder(f) {
+    S.openFolder = f; S.justOpened = true; render();
+    var h = $('.section-head');
+    if (h && h.getBoundingClientRect().top < 70) h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   function folderMenu(f, ids, anchor, pt) {
-    var mode = studyMode(), shut = !!(ls('fc.collapsed') || {})[f];
+    var mode = studyMode();
     menu(anchor, [
       { label: MODES[mode] + ': this folder', icon: 'play', run: function () { startMode(mode, ids, 'home'); } },
       { label: 'Choose only this folder', icon: 'check', run: function () { setSelected(ids.slice()); render(); } },
       { label: 'Rename or change decks', icon: 'edit', run: function () { openFolderEditor(f); } },
-      { label: shut ? 'Expand' : 'Collapse', icon: 'folder', run: function () { var c = ls('fc.collapsed') || {}; if (c[f]) delete c[f]; else c[f] = 1; ls('fc.collapsed', c); render(); } },
+      S.openFolder === f ? { label: 'Back to all decks', icon: 'back', run: function () { S.openFolder = null; S.justOpened = true; render(); } }
+                         : { label: 'Open folder', icon: 'folder', run: function () { openFolder(f); } },
       { label: 'Remove folder, keep decks', icon: 'x', run: function () { removeFolder(f); toast('Folder removed. Its decks are still here.'); } },
       { label: 'Delete folder and its decks', icon: 'trash', danger: true, run: function () { deleteFolder(f, ids); } }
     ], pt);
@@ -1568,6 +1618,7 @@ var TextUtil = (function () {
       Object.keys(f).forEach(function (id) { if (name && f[id] === name) delete f[id]; });
       if (newName) $$('.fp input', m.el).forEach(function (cb) { if (cb.checked) f[cb.value] = newName; });
       S.user.settings.folders = f;
+      if (name && S.openFolder === name) S.openFolder = newName || null;
       saveSettingsSoon();
       m.close(); render();
     }
@@ -1682,7 +1733,7 @@ var TextUtil = (function () {
   }
 
   /* ================= deck editor ================= */
-  function openDeckEditor(deck) {
+  function openDeckEditor(deck, presetFolder) {
     var color = deck ? deck.color : COLORS[S.decks.length % COLORS.length];
     var m = modal(deck ? 'Edit deck' : 'New deck',
       '<label class="field"><span>Name</span><input class="input" data-name maxlength="80" autofocus placeholder="e.g. Japanese verbs"></label>' +
@@ -1693,7 +1744,7 @@ var TextUtil = (function () {
       '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>' + (deck ? 'Save' : 'Create deck') + '</button>');
     var name = $('[data-name]', m.el);
     name.value = deck ? deck.name : '';
-    $('[data-folder]', m.el).value = deck ? folderOf(deck.id) : '';
+    $('[data-folder]', m.el).value = deck ? folderOf(deck.id) : (presetFolder || '');
     function paint() { $$('.swatch[data-c]', m.el).forEach(function (s) { s.classList.toggle('on', s.getAttribute('data-c') === color); }); }
     $$('.swatch[data-c]', m.el).forEach(function (s) { s.addEventListener('click', function () { color = s.getAttribute('data-c'); paint(); }); });
     $('[data-custom]', m.el).value = color;
@@ -2407,7 +2458,7 @@ var TextUtil = (function () {
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     var t = e.target;
-    if (t && t.classList && t.classList.contains('deck') && t.hasAttribute('data-id')) { e.preventDefault(); t.click(); }
+    if (t && t.classList && t.classList.contains('deck') && (t.hasAttribute('data-id') || t.hasAttribute('data-folder'))) { e.preventDefault(); t.click(); }
   });
 
   window.addEventListener('beforeunload', function () { savePending(); cacheNow(); });
