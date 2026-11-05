@@ -464,7 +464,7 @@ img { max-width: 100%; }
 }
 
 /* study mode switch in the hero */
-.hero-main .seg.mode { background: rgba(255, 255, 255, .14); margin-bottom: 16px; position: relative; z-index: 1; }
+.hero-main .seg.mode { background: rgba(255, 255, 255, .14); margin-bottom: 10px; position: relative; z-index: 1; }
 .hero-main .seg.mode button { color: rgba(255, 255, 255, .82); }
 .hero-main .seg.mode button.on { background: #fff; color: #111; box-shadow: 0 2px 8px rgba(0, 0, 0, .15); }
 
@@ -488,6 +488,7 @@ img { max-width: 100%; }
 .fp .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .fp input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
 @media (max-width: 520px) { .folder-toggle .meta { display: none; } }
+.mode-desc { margin: 0 0 18px; max-width: 420px; font-size: 14px; line-height: 1.45; font-weight: 500; opacity: .95; position: relative; z-index: 1; }
 
 </style>
 </head>
@@ -933,6 +934,11 @@ var TextUtil = (function () {
   }
   function saveSettingsSoon() { cacheNow(); api('saveSettings', { settings: S.user.settings }).catch(function () {}); }
   var MODES = { free: 'Free study', focus: 'Focus', mission: 'Mission' };
+  var MODE_DESC = {
+    free: 'Every card in the decks you pick, shuffled. Nothing is skipped.',
+    focus: 'Work on the cards you find hardest. Pick a face below. Cards you marked Good this week are left out.',
+    mission: 'Your daily plan. The app picks the cards due today, plus a few new ones, so you remember them long term.'
+  };
   function studyMode() { var m = S.user && S.user.settings.mode; return MODES[m] ? m : 'free'; }
   function startMode(mode, ids, from) { if (mode === 'mission') startMission(ids, from); else if (mode === 'focus') startFree(ids, from); else startFree(ids, from, 0, false, true); }
   function setMode(m) { S.user.settings.mode = m; saveSettingsSoon(); render(); }
@@ -1358,12 +1364,13 @@ var TextUtil = (function () {
     app.innerHTML = topbar() + '<main class="wrap home"><div class="appear">' +
       '<section class="hero">' +
       '<div class="hero-main"><div>' +
-      '<div class="seg mode" role="tablist" aria-label="Study mode">' + Object.keys(MODES).map(function (k) { return '<button role="tab" data-mode="' + k + '" class="' + (mode === k ? 'on' : '') + '" aria-selected="' + (mode === k) + '">' + MODES[k] + '</button>'; }).join('') + '</div>' +
+      '<div class="seg mode" role="tablist" aria-label="Study mode">' + Object.keys(MODES).map(function (k) { return '<button role="tab" data-mode="' + k + '" class="' + (mode === k ? 'on' : '') + '" aria-selected="' + (mode === k) + '" title="' + MODE_DESC[k] + '">' + MODES[k] + '</button>'; }).join('') + '</div>' +
+      '<p class="mode-desc">' + MODE_DESC[mode] + '</p>' +
       '<div class="eyebrow">' + hello + '</div>' +
       '<div class="big">' + big + '</div>' +
       '<div class="sub">' + sub + '</div></div>' +
       '<div class="row" style="margin-top:20px">' + buttons + '</div>' +
-      '<div class="chosen">' + ({ free: 'Free study: every card in your chosen decks', focus: 'Focus: by how well you know them, resting cards skipped', mission: 'Mission: the app picks what is due today' })[mode] + ' &middot; ' + (allOn ? 'all ' + plural(S.decks.length, 'deck') : sel.length + ' of ' + plural(S.decks.length, 'deck') + ' chosen') + '</div></div>' +
+      '<div class="chosen">' + (allOn ? 'All ' + plural(S.decks.length, 'deck') + ' chosen' : sel.length + ' of ' + plural(S.decks.length, 'deck') + ' chosen') + ' &middot; tick decks or folders below</div></div>' +
       '<div class="hero-side"><div class="stats">' +
       '<div class="stat"><svg class="ring" viewBox="0 0 46 46"><circle class="bg" cx="23" cy="23" r="18"/><circle class="fg" cx="23" cy="23" r="18" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct)) + '"/></svg>' +
       '<div><div class="num">' + done + '<span style="font-size:15px;color:var(--faint);font-weight:600">/' + goal + '</span></div><div class="lbl">Today\'s goal</div></div></div>' +
