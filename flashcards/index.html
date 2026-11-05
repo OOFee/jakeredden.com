@@ -629,6 +629,48 @@ img { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { .seg-ind, .levels { transition: none; } .hero-main.swap *, .levels.opening .ftile { animation: none !important; } }
 @media (max-width: 560px) { .mode-desc { min-height: 4.35em; } }
 
+/* info buttons in the hero and their pop-ups */
+.hero-i { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: 4px; vertical-align: -3px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .7); background: none; color: #fff; font: italic 700 11px Georgia, serif; cursor: pointer; padding: 0; opacity: .85; }
+.hero-i:hover { opacity: 1; background: rgba(255, 255, 255, .15); }
+.sx-pop.sx-in-modal { position: relative; top: auto; left: auto; width: 100%; box-shadow: none; transform: none; opacity: 1; pointer-events: auto; }
+.mi-lead { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
+.mi-chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding: 0 4px; border-bottom: 1px solid var(--line); }
+.mi-bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; }
+.mi-bar i { width: 100%; max-width: 46px; height: 0; border-radius: 8px 8px 3px 3px; background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 50%, #000)); transition: height .6s var(--ease); transition-delay: calc(var(--i) * .25s); }
+.mi-chart.go .mi-bar i { height: var(--h); }
+.mi-bar span { font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; opacity: 0; transition: opacity .3s; transition-delay: calc(var(--i) * .25s + .3s); }
+.mi-chart.go .mi-bar span { opacity: 1; }
+.mi-cap { margin: 8px 0 14px; font-size: 12px; color: var(--faint); text-align: center; }
+.mi-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.mi-rules b { color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .mi-bar i, .mi-bar span { transition: none; } }
+
+/* mode tabs: a strip of tabs along the top edge of the hero */
+.hero-main .seg.mode { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; margin: -28px -28px 20px; padding: 0; border-radius: 0; background: rgba(0, 0, 0, .16); box-shadow: inset 0 -1px 0 rgba(255, 255, 255, .12); }
+.hero-main .seg.mode button { height: 50px; border-radius: 0; font-size: 14px; font-weight: 650; color: rgba(255, 255, 255, .72); }
+.hero-main .seg.mode button:hover { color: #fff; }
+.hero-main .seg.mode button.on { color: #fff; }
+.hero-main .seg.mode .seg-ind { top: 0; bottom: 0; border-radius: 0; background: rgba(255, 255, 255, .14); box-shadow: inset 0 -3px 0 #fff; }
+.hero-main .seg.mode button:first-of-type { border-top-left-radius: var(--r-lg); }
+@media (max-width: 560px) { .hero-main .seg.mode { margin: -22px -22px 18px; } .hero-main .seg.mode button { height: 46px; font-size: 13.5px; } }
+/* phones: four compact Focus tiles in one row */
+@media (max-width: 560px) {
+  .ftiles { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .ftile { min-height: 0; padding: 10px 6px 8px; border-radius: 16px; align-items: center; text-align: center; }
+  .ftile:hover { transform: none; }
+  .ft-face { display: none; }
+  .ft-name { flex-direction: column; gap: 2px; font-size: 10.5px; font-weight: 700; line-height: 1.15; min-height: 46px; justify-content: flex-start; }
+  .ft-name span { font-size: 22px; }
+  .ft-num { font-size: 26px; margin: 4px 0 8px; }
+  .ft-num small { display: none; }
+  .ft-go { width: 100%; justify-content: center; padding: 6px; border-radius: 11px; }
+  .ft-go span { display: none; }
+  .ft-play { width: 28px; height: 28px; }
+  .ft-only { font-size: 10.5px; padding: 2px 4px; margin-top: 4px; white-space: nowrap; }
+  .ft-only-gap { height: 22px; }
+}
+.nw { white-space: nowrap; }
+
 </style>
 </head>
 <body>
@@ -1619,7 +1661,7 @@ var TextUtil = (function () {
       '<section class="hero">' +
       '<div class="hero-main"><div>' +
       '<div class="seg mode" role="tablist" aria-label="Study mode">' + Object.keys(MODES).map(function (k) { return '<button role="tab" data-mode="' + k + '" class="' + (mode === k ? 'on' : '') + '" aria-selected="' + (mode === k) + '" title="' + MODE_DESC[k] + '">' + MODES[k] + '</button>'; }).join('') + '</div>' +
-      '<p class="mode-desc">' + MODE_DESC[mode] + '</p>' +
+      '<p class="mode-desc">' + MODE_DESC[mode].replace(/ (\S+)$/, ' <span class="nw">$1 <button class="hero-i" data-mode-info aria-label="How this works">i</button></span>') + '</p>' +
       '<div class="eyebrow">' + hello + '</div>' +
       '<div class="big">' + big + '</div>' +
       '<div class="sub">' + sub + '</div></div>' +
@@ -1651,6 +1693,8 @@ var TextUtil = (function () {
     if (quote) $('.quote b', app).textContent = quote;
     wireTop(app);
     afterModeRender(app);
+    var mi = $('[data-mode-info]', app);
+    if (mi) mi.addEventListener('click', function (e) { e.stopPropagation(); if (mode === 'mission') missionInfo(); else stageInfoModal(sel); });
     $$('[data-mode]', app).forEach(function (b) { b.addEventListener('click', function () { if (b.getAttribute('data-mode') !== mode) setMode(b.getAttribute('data-mode')); }); });
     var gb = $('[data-go]', app);
     if (gb) gb.addEventListener('click', function () { startMode(mode, sel, 'home'); });
@@ -1744,6 +1788,27 @@ var TextUtil = (function () {
       '<p class="sx-cap">Get it right ' + n + ' times in a row...</p>' +
       '<div class="sx-rules"><span><b>' + n + ' in a row</b> moves a card up a stage</span><span><b>Each stage</b> waits longer: tomorrow, 3 days, a week, 2 weeks+</span><span><b>Wrong</b> drops it back one stage</span>' +
       '<span class="sx-note"><b>Note:</b> you can give any deck or folder its own number instead of 5 (Edit deck, or the folder menu).</span></div></div>';
+  }
+  function stageInfoModal(ids) {
+    var m = modal('How stages work', '<div class="sx-inline">' + stageExplainer(ids).replace('class="sx-pop"', 'class="sx-pop show sx-in-modal"') + '</div>', '<span class="spacer"></span><button class="btn primary" data-close>Got it</button>');
+    m.onClose = sxStop;
+    setTimeout(function () { var pop = $('.sx-pop', m.el); if (pop) sxRun(pop); }, 60);
+  }
+  function missionInfo() {
+    var gaps = [['10 min', 10], ['1 day', 22], ['3 days', 38], ['8 days', 62], ['20 days', 90], ['50 days', 120]];
+    var m = modal('How Mission works',
+      '<p class="mi-lead">Mission spaces cards out, so you see each one just before you would forget it. Every right answer makes the next gap longer.</p>' +
+      '<div class="mi-chart">' + gaps.map(function (g, i) { return '<div class="mi-bar" style="--h:' + g[1] + 'px;--i:' + i + '"><i></i><span>' + g[0] + '</span></div>'; }).join('') + '</div>' +
+      '<p class="mi-cap">One card answered right each time it comes up</p>' +
+      '<ul class="mi-rules">' +
+      '<li><b>Each day</b> you get the cards that are due, plus up to ' + newLimit() + ' new ones (change this in Settings).</li>' +
+      '<li><b>A new card</b>: right once and it comes back in 10 minutes; right again and it comes back tomorrow.</li>' +
+      '<li><b>After that</b>, each right answer makes the gap about 2.5 times longer: 1 day, 3, 8, 20, 50 days and so on.</li>' +
+      '<li><b>Wrong</b> brings it back in 10 minutes to relearn. Its gap is halved and it grows a little slower after that.</li>' +
+      '<li><b>Mission keeps its own schedule.</b> It does not change the stages you use in Free study and Focus.</li></ul>',
+      '<span class="spacer"></span><button class="btn primary" data-close>Got it</button>');
+    var chart = $('.mi-chart', m.el);
+    setTimeout(function () { chart.classList.add('go'); }, 80);
   }
   var sxTimers = [];
   function sxStop() { sxTimers.forEach(clearTimeout); sxTimers = []; }
