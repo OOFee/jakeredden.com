@@ -3841,11 +3841,15 @@ var TextUtil = (function () {
     if (x.am.audio) playAudio(x.am.audio);
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
-  /* Two buttons. A = wrong, B = right. True/false cards answered right offer Guessed / Knew it instead. */
+  /* Two buttons. A = wrong, B = right. Cards the app can mark itself never ask: multiple choice and true/false
+     just move on (answered right outside Free study, they offer Guessed / Knew it). An exact typed answer just moves on;
+     other typed answers keep both buttons, because the app can misjudge a typo or another valid wording. */
   function dockChoices(s) {
     var c = s.cur.item.card, kind = cardKind(c, s), v = s.cur.verdict;
-    if (s.simple && kind === 'tf') return [{ g: v === 'wrong' ? 'wrong' : 'right', label: 'Next', cls: v === 'wrong' ? 'again' : 'good' }];
-    if (kind === 'tf') {
+    var marked = (kind === 'tf' || kind === 'choice') && !!v;
+    if (s.simple && marked) return [{ g: v === 'wrong' ? 'wrong' : 'right', label: 'Next', cls: v === 'wrong' ? 'again' : 'good' }];
+    if (kind === 'typed' && v === 'exact') return [{ g: 'right', label: 'Next', cls: 'good' }];
+    if (marked) {
       if (v === 'wrong') return [{ g: 'wrong', label: 'Next', cls: 'again', key: 'Enter' }];
       return [{ g: 'guess', label: 'Guessed', cls: 'hard' }, { g: 'right', label: 'Knew it', cls: 'good' }];
     }
@@ -4130,7 +4134,7 @@ var TextUtil = (function () {
     } else {
       var ch = dockChoices(s);
       var idx = e.key === '1' || e.key === 'ArrowLeft' ? 0 : e.key === '2' || e.key === 'ArrowRight' ? 1 : -1;
-      if (idx >= 0 && ch.length === 2) { e.preventDefault(); grade(ch[idx].g); return; }
+      if (idx >= 0) { e.preventDefault(); grade(ch[ch.length === 2 ? idx : 0].g); return; }
       if (e.key === ' ') { e.preventDefault(); var fl = $('[data-flip]'); if (fl) fl.classList.toggle('flipped'); return; }
       if (e.key === 'Enter') {
         e.preventDefault();
