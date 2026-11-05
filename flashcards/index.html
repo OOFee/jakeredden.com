@@ -678,6 +678,13 @@ img { max-width: 100%; }
 .sbar-skip:hover { color: var(--text); background: var(--surface-2); }
 .sbar-track { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
 .sbar-track i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #22d3ee)); transition: width .4s var(--ease); }
+/* medium screens (hero stacked): heat chart on the left, the two counters stacked on its right */
+@media (min-width: 601px) and (max-width: 860px) {
+  .hero-side { grid-template-columns: minmax(0, 1fr) minmax(190px, 240px); grid-template-rows: auto; grid-template-areas: "heat stats"; align-items: stretch; }
+  .hero-side .stats { grid-area: stats; grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  .hero-side .heat { grid-area: heat; }
+  .heat-grid i { max-height: 26px; }
+}
 
 </style>
 </head>
