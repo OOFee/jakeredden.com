@@ -815,6 +815,8 @@ img { max-width: 100%; }
 .heat-cog svg { width: 15px; height: 15px; }
 .heat-cog:hover { background: var(--surface-2); color: var(--text); }
 .home-cog { align-self: start; justify-self: end; }
+.hero.solo { grid-template-columns: minmax(0, 1fr); }
+.hero.solo .home-cog { margin-left: auto; align-self: center; }
 .hero-side.no-heat { grid-template-rows: auto auto; }
 .hc-list { display: grid; gap: 10px; }
 /* explainer above everything; faces editor */
@@ -1956,6 +1958,7 @@ var TextUtil = (function () {
     var quote = S.quotes.length ? S.quotes[S.quoteIdx % S.quotes.length] : '';
     var st = streak();
     var hide = {}; (S.user.settings.hide || []).forEach(function (h) { hide[h] = 1; });
+    var solo = hide.goal && hide.streak && hide.heat;
     var empty = !S.cards.length ? (S.decks.length ? 'Add some cards to start studying.' : 'Make your first deck to get started.') : '';
 
     var big, sub, buttons;
@@ -1979,22 +1982,22 @@ var TextUtil = (function () {
     }
 
     app.innerHTML = topbar() + '<main class="wrap home"><div class="appear">' +
-      '<section class="hero">' +
+      '<section class="hero' + (solo ? ' solo' : '') + '">' +
       '<div class="hero-main m-' + mode + '"><div>' +
       '<div class="seg mode" role="tablist" aria-label="Study mode">' + Object.keys(MODES).map(function (k) { return '<button role="tab" data-mode="' + k + '" class="' + (mode === k ? 'on' : '') + '" aria-selected="' + (mode === k) + '" title="' + MODE_DESC[k] + '">' + MODES[k] + '</button>'; }).join('') + '</div>' +
       '<p class="mode-desc">' + (mode !== 'mission' ? MODE_DESC[mode] : MODE_DESC[mode].replace(/ (\S+)$/, ' <span class="nw">$1 <button class="hero-i" data-mode-info aria-label="How Mission works">i</button></span>')) + '</p>' +
       '<div class="eyebrow">' + hello + '</div>' +
       '<div class="big">' + big + '</div>' +
       '<div class="sub">' + sub + '</div></div>' +
-      '<div class="row" style="margin-top:20px">' + buttons + '</div>' +
+      '<div class="row" style="margin-top:20px">' + buttons + (solo ? '<button class="btn sm ghost-light home-cog" data-home-cog>' + I.gear + 'Home cards</button>' : '') + '</div>' +
       '</div>' +
-      '<div class="hero-side' + (hide.goal && hide.streak ? ' no-stats' : '') + (hide.heat ? ' no-heat' : '') + '">' + (hide.goal && hide.streak ? '' : '<div class="stats">') +
+      (solo ? '' : '<div class="hero-side' + (hide.goal && hide.streak ? ' no-stats' : '') + (hide.heat ? ' no-heat' : '') + '">' + (hide.goal && hide.streak ? '' : '<div class="stats">') +
       (hide.goal ? '' : '<div class="stat"><svg class="ring" viewBox="0 0 46 46"><circle class="bg" cx="23" cy="23" r="18"/><circle class="fg" cx="23" cy="23" r="18" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct)) + '"/></svg>' +
       '<div><div class="num">' + done + '<span style="font-size:15px;color:var(--faint);font-weight:600">/' + goal + '</span></div><div class="lbl">Today\'s goal</div></div></div>') +
       (hide.streak ? '' : '<div class="stat"><div class="flame">' + I.flame + '</div><div><div class="num">' + st + '</div><div class="lbl">Day streak</div></div></div>') +
       (hide.goal && hide.streak ? '' : '</div>') +
       (hide.heat ? '<button class="btn sm ghost home-cog" data-home-cog>' + I.gear + 'Home cards</button>'
-        : '<div class="heat"><div class="heat-head"><span>Last 17 weeks</span><span class="heat-r">' + plural(totalReviews(), 'review') + '<button class="heat-cog" data-home-cog aria-label="Edit goal and cards" title="Goal and cards">' + I.gear + '</button></span></div><div class="heat-grid">' + heatCells(goal) + '</div></div>') + '</div>' +
+        : '<div class="heat"><div class="heat-head"><span>Last 17 weeks</span><span class="heat-r">' + plural(totalReviews(), 'review') + '<button class="heat-cog" data-home-cog aria-label="Edit goal and cards" title="Goal and cards">' + I.gear + '</button></span></div><div class="heat-grid">' + heatCells(goal) + '</div></div>') + '</div>') +
       '</section>' +
 
       (S.cards.length && mode === 'focus' ? '<section class="levels"><div class="levels-head"><h2>Pick by how well you know them</h2>' +
