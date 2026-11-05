@@ -630,7 +630,7 @@ img { max-width: 100%; }
 @media (max-width: 560px) { .mode-desc { min-height: 4.35em; } }
 
 /* info buttons in the hero and their pop-ups */
-.hero-i { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: 4px; vertical-align: -3px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .7); background: none; color: #fff; font: italic 700 11px Georgia, serif; cursor: pointer; padding: 0; opacity: .85; }
+.hero-i { display: inline-grid; place-items: center; width: 18px; height: 18px; margin: -4px 0 -4px 4px; vertical-align: -3px; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, .7); background: none; color: #fff; font: italic 700 11px Georgia, serif; cursor: pointer; padding: 0; opacity: .85; }
 .hero-i:hover { opacity: 1; background: rgba(255, 255, 255, .15); }
 .mi-lead { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
 .mi-chart { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding: 0 4px; border-bottom: 1px solid var(--line); }
@@ -1487,7 +1487,30 @@ var TextUtil = (function () {
   function startMode(mode, ids, from) { if (mode === 'mission') startMission(ids, from); else if (mode === 'focus') startFree(ids, from); else startFree(ids, from, 0, false, true); }
   /* Switch study mode with motion: the white pill slides, hero text fades across, and the Focus tiles
      fold away or open instead of popping. */
+  /* Leaving Focus shortens the page. Keep its height while scrolled down so the browser doesn't pull the page up;
+     the spare room is given back as the user scrolls up. */
+  var pageHold = null, pageMin = 0;
+  function releasePage() {
+    if (!pageHold) return;
+    window.removeEventListener('scroll', pageHold);
+    pageHold = null;
+    $('#app').style.minHeight = '';
+  }
+  function holdPage() {
+    if (window.scrollY <= 0) return releasePage();
+    var app = $('#app'), top = app.getBoundingClientRect().top + window.scrollY;
+    pageMin = app.offsetHeight;
+    app.style.minHeight = pageMin + 'px';
+    if (pageHold) window.removeEventListener('scroll', pageHold);
+    pageHold = function () {
+      if (window.scrollY <= 0) return releasePage();
+      pageMin = Math.min(pageMin, window.scrollY + window.innerHeight - top);
+      app.style.minHeight = pageMin + 'px';
+    };
+    window.addEventListener('scroll', pageHold, { passive: true });
+  }
   function setMode(m) {
+    holdPage();
     var seg = $('.seg.mode'), on = seg && $('button.on', seg);
     S.modeFrom = on && seg ? { left: on.offsetLeft, width: on.offsetWidth } : null;
     var lv = $('.levels');
@@ -1787,6 +1810,7 @@ var TextUtil = (function () {
   function render() {
     closeMenus();
     applyFaces();
+    if (S.view !== 'home') releasePage();
     document.documentElement.classList.toggle('minimal', !!(S.user && S.user.settings.minimal));
     var app = $('#app');
     var deck = S.deckId && deckById(S.deckId);
