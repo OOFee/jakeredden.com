@@ -733,6 +733,47 @@ img { max-width: 100%; }
 .disc-open svg { width: 14px; height: 14px; }
 .disc-card:hover .disc-open { color: var(--text); }
 
+/* friends */
+.friends { padding: 20px 0 80px; }
+.fr-add { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.fr-add .input { flex: 1; min-width: 220px; }
+.fr-sec { margin-top: 26px; }
+.fr-sec h2 { font-family: var(--display); font-size: 20px; letter-spacing: -.03em; margin: 0 0 12px; }
+.fr-av { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 30%, var(--surface-2)); font-weight: 750; text-transform: uppercase; flex: none; }
+.fr-av.big { width: 44px; height: 44px; font-size: 18px; }
+.fr-req { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); margin-bottom: 8px; flex-wrap: wrap; }
+.fr-board { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--surface); }
+.fr-rank { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.fr-rank:first-child { border-top: 0; }
+.fr-rank.me { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.fr-pos { width: 22px; font-weight: 800; color: var(--muted); }
+.fr-rank:first-child .fr-pos { color: #f0b429; }
+.fr-streak { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; color: var(--hard); font-size: 13px; }
+.fr-streak svg { width: 14px; height: 14px; }
+.fr-streak.big { font-size: 22px; } .fr-streak.big svg { width: 20px; height: 20px; }
+.fr-wk { font-weight: 650; font-size: 13px; min-width: 90px; text-align: right; }
+.fr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.fr-card { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); padding: 16px; display: grid; gap: 14px; }
+.fr-top { display: flex; align-items: center; gap: 12px; }
+.fr-top div { display: grid; } .fr-top small { color: var(--muted); font-size: 12.5px; }
+.fr-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.fr-stats > div { display: grid; align-content: end; gap: 4px; padding: 10px; border-radius: 12px; background: var(--surface-2); }
+.fr-stats small { color: var(--muted); font-size: 11.5px; }
+.fr-bars { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
+.fr-bars i { flex: 1; border-radius: 3px 3px 1px 1px; background: color-mix(in srgb, var(--accent) 60%, transparent); }
+.fr-bars i.today { background: var(--accent); } .fr-bars i.zero { background: var(--surface-3); }
+.fr-goal { grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; }
+.fr-goal small { grid-column: 1 / -1; }
+.fr-goal span { font-size: 12px; color: var(--muted); } .fr-goal span b { font-size: 17px; color: var(--text); }
+.fr-ring { width: 32px; height: 32px; transform: rotate(-90deg); }
+.fr-ring circle { fill: none; stroke-width: 4; } .fr-ring .bg { stroke: var(--surface-3); } .fr-ring .fg { stroke: var(--good); stroke-linecap: round; }
+.fr-shared { display: grid; gap: 6px; } .fr-shared > small { color: var(--muted); font-size: 12px; font-weight: 650; }
+.fr-deck { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.fr-deck:hover { border-color: var(--line-strong); background: var(--surface-2); }
+.fr-deck b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.fr-dir { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+@media (max-width: 420px) { .fr-stats { grid-template-columns: 1fr 1fr; } .fr-goal { grid-column: 1 / -1; } }
+
 </style>
 </head>
 <body>
@@ -1044,6 +1085,7 @@ var TextUtil = (function () {
     moon: svg('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>'),
     sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
     share: svg('<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>'),
+    people: svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.2a5 5 0 0 1 6 4.8"/>'),
     folder: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
     chev: svg('<path d="m6 9 6 6 6-6"/>'),
     cards: svg('<rect x="2" y="6" width="15" height="14" rx="2"/><path d="M7 2h13a2 2 0 0 1 2 2v13"/>')
@@ -1566,17 +1608,20 @@ var TextUtil = (function () {
     if (S.view === 'deck') return renderDeck(app, deck);
     if (S.view === 'study') return renderStudy(app);
     if (S.view === 'discover') return renderDiscover(app);
+    if (S.view === 'friends') return renderFriends(app);
   }
 
   function topbar(extra) {
     return '<header class="topbar"><div class="wrap"><button class="brand" data-home><span class="mark"></span>Flash Cards</button>' +
       '<span class="spacer"></span><span class="sync hide-sm"><i></i><span>Saved</span></span>' + (extra || '') +
+      '<button class="btn ghost icon-btn" data-friends aria-label="Friends" title="Friends">' + I.people + '</button>' +
       '<button class="btn ghost icon-btn" data-theme-toggle aria-label="Switch light or dark" title="Light / dark">' + (isDark() ? I.sun : I.moon) + '</button>' +
       '<button class="btn ghost icon-btn" data-settings aria-label="Settings">' + I.gear + '</button></div></header>';
   }
   function wireTop(root) {
     $('[data-home]', root).addEventListener('click', function () { go('home'); });
     $('[data-settings]', root).addEventListener('click', openSettings);
+    var fr = $('[data-friends]', root); if (fr) fr.addEventListener('click', function () { go('friends'); });
     $('[data-theme-toggle]', root).addEventListener('click', toggleTheme);
     setSync();
   }
@@ -2510,6 +2555,101 @@ var TextUtil = (function () {
     });
   }
 
+  /* ================= friends ================= */
+  function weekBars(week) {
+    var max = Math.max.apply(null, week.concat([1]));
+    return '<span class="fr-bars">' + week.map(function (n, i) { return '<i style="height:' + Math.max(3, Math.round(26 * n / max)) + 'px" class="' + (i === 6 ? 'today' : '') + (n ? '' : ' zero') + '" title="' + n + '"></i>'; }).join('') + '</span>';
+  }
+  function goalRing(today, goal) {
+    var C = 2 * Math.PI * 15, pct = Math.min(1, today / (goal || 50));
+    return '<svg class="fr-ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" class="bg"/><circle cx="18" cy="18" r="15" class="fg" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct)) + '"/></svg>';
+  }
+  function renderFriends(app) {
+    var st = S.fr || (S.fr = { data: null });
+    app.innerHTML = topbar() + '<main class="wrap friends"><div class="appear">' +
+      '<button class="btn ghost sm" data-back style="margin-left:-10px">' + I.back + 'Home</button>' +
+      '<div class="disc-head"><h1>Friends</h1><p class="hint">See how your friends are doing and what you share. They only see your study numbers, never your cards or email.</p></div>' +
+      '<div class="fr-add"><input class="input" type="email" placeholder="Add a friend by email" data-email autocomplete="off"><button class="btn primary" data-add>' + I.plus + 'Add friend</button></div>' +
+      '<div class="error" data-err></div><div data-body><div class="spinner"></div></div></div></main>';
+    wireTop(app);
+    $('[data-back]', app).addEventListener('click', function () { go('home'); });
+    var email = $('[data-email]', app), err = $('[data-err]', app);
+    function add(addr) {
+      err.textContent = '';
+      if (!addr) { err.textContent = 'Type their email first.'; email.focus(); return; }
+      api('friendRequest', { email: addr }).then(function (r) {
+        email.value = '';
+        toast(r.status === 'ok' ? 'You and ' + r.name + ' are now friends.' : 'Request sent to ' + r.name + '. They need to accept it.');
+        load();
+      }, function (e) { err.textContent = e.message; });
+    }
+    $('[data-add]', app).addEventListener('click', function () { add(email.value.trim()); });
+    email.addEventListener('keydown', function (e) { if (e.key === 'Enter') add(email.value.trim()); });
+    function paint(d) {
+      var box = $('[data-body]', app);
+      if (!box) return;
+      var board = [{ name: 'You', me: true, week: d.me.weekTotal, streak: d.me.streak }].concat(d.friends.map(function (f) { return { name: f.name, week: f.stats.weekTotal, streak: f.stats.streak }; }))
+        .sort(function (a, b) { return b.week - a.week || b.streak - a.streak; });
+      var html = '';
+      if (d.incoming.length) html += '<section class="fr-sec"><h2>Requests</h2>' + d.incoming.map(function (r) {
+        return '<div class="fr-req"><span class="fr-av">' + esc((r.name || '?').charAt(0)) + '</span><b>' + esc(r.name) + '</b><span class="spacer"></span><button class="btn sm ghost" data-no="' + esc(r.id) + '">Decline</button><button class="btn sm primary" data-yes="' + esc(r.id) + '">Accept</button></div>';
+      }).join('') + '</section>';
+      if (d.friends.length) html += '<section class="fr-sec"><h2>This week</h2><div class="fr-board">' + board.map(function (r, i) {
+        return '<div class="fr-rank' + (r.me ? ' me' : '') + '"><span class="fr-pos">' + (i + 1) + '</span><b>' + esc(r.name) + '</b><span class="spacer"></span><span class="fr-streak">' + I.flame + r.streak + '</span><span class="fr-wk">' + plural(r.week, 'review') + '</span></div>';
+      }).join('') + '</div></section>';
+      html += '<section class="fr-sec"><h2>' + (d.friends.length ? 'Your friends' : 'No friends yet') + '</h2>' + (d.friends.length ? '<div class="fr-grid">' + d.friends.map(function (f, i) {
+        var x = f.stats;
+        return '<div class="fr-card"><div class="fr-top"><span class="fr-av big">' + esc(f.name.charAt(0)) + '</span><div><b>' + esc(f.full || f.name) + '</b><small>' + plural(x.cards, 'card') + ' &middot; ' + x.known + ' at ' + FACES[1] + '</small></div><span class="spacer"></span><button class="btn ghost icon-btn sm" data-fmenu="' + i + '" aria-label="Friend options">' + I.more + '</button></div>' +
+          '<div class="fr-stats"><div><span class="fr-streak big">' + I.flame + x.streak + '</span><small>day streak</small></div>' +
+          '<div>' + weekBars(x.week) + '<small>' + plural(x.weekTotal, 'review') + ' this week</small></div>' +
+          '<div class="fr-goal">' + goalRing(x.today, x.goal) + '<span><b>' + x.today + '</b>/' + x.goal + '</span><small>today</small></div></div>' +
+          '<div class="fr-shared"><small>Shared between you</small>' + (f.shared.length ? f.shared.map(function (sh, j) {
+            var tag = sh.kind === 'edit' ? 'can edit' : sh.kind === 'copy' ? 'copy' : 'public';
+            return '<button class="fr-deck" data-open="' + i + ':' + j + '"><span class="fr-dir">' + (sh.dir === 'out' ? 'You &rarr;' : '&larr; ' + esc(f.name)) + '</span><b></b><span class="chip">' + tag + '</span></button>';
+          }).join('') : '<span class="hint">Nothing yet. Use Share on a deck to send them one.</span>') + '</div></div>';
+      }).join('') + '</div>' : '<p class="hint">Add someone by email above. They will get a request to accept.</p>') + '</section>';
+      if (d.outgoing.length) html += '<section class="fr-sec"><h2>Waiting for them</h2>' + d.outgoing.map(function (r) {
+        return '<div class="fr-req"><span class="fr-av">' + esc((r.name || '?').charAt(0)) + '</span><b>' + esc(r.name) + '</b><span class="hint">request sent</span><span class="spacer"></span><button class="btn sm ghost" data-cancel="' + esc(r.id) + '">Cancel</button></div>';
+      }).join('') + '</section>';
+      if (d.suggestions.length) html += '<section class="fr-sec"><h2>People you share with</h2><div class="sh-recent">' + d.suggestions.map(function (sg) {
+        return '<button class="sh-chip" data-sugg="' + esc(sg.email) + '">' + I.plus.replace('<svg', '<svg width="12" height="12"') + ' ' + esc(sg.name || sg.email) + '</button>';
+      }).join('') + '</div></section>';
+      box.innerHTML = html;
+      $$('.fr-deck b', box).forEach(function (b) {
+        var ij = b.parentNode.getAttribute('data-open').split(':');
+        b.textContent = d.friends[ij[0]].shared[ij[1]].name;
+      });
+      $$('[data-yes]', box).forEach(function (b) { b.addEventListener('click', function () { api('friendRespond', { id: b.getAttribute('data-yes'), accept: true }).then(load, fail); }); });
+      $$('[data-no]', box).forEach(function (b) { b.addEventListener('click', function () { api('friendRespond', { id: b.getAttribute('data-no'), accept: false }).then(load, fail); }); });
+      $$('[data-cancel]', box).forEach(function (b) { b.addEventListener('click', function () { api('friendRemove', { id: b.getAttribute('data-cancel') }).then(load, fail); }); });
+      $$('[data-sugg]', box).forEach(function (b) { b.addEventListener('click', function () { add(b.getAttribute('data-sugg')); }); });
+      $$('[data-fmenu]', box).forEach(function (b) {
+        b.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var f = d.friends[Number(b.getAttribute('data-fmenu'))];
+          menu(b, [{ label: 'Remove friend', icon: 'trash', danger: true, run: function () {
+            confirmBox('Remove ' + f.name + '?', 'You will stop seeing each other\'s numbers. Shared decks stay as they are.', 'Remove', true).then(function (ok) {
+              if (ok) api('friendRemove', { id: f.id }).then(function () { toast('Removed.'); load(); }, fail);
+            });
+          } }]);
+        });
+      });
+      $$('[data-open]', box).forEach(function (b) {
+        b.addEventListener('click', function () {
+          var ij = b.getAttribute('data-open').split(':'), f = d.friends[ij[0]], sh = f.shared[ij[1]];
+          if (deckById(sh.id)) { go('deck', { deckId: sh.id }); return; }
+          if (sh.kind === 'public') { previewPublic({ id: sh.id, name: sh.name, by: f.name, cards: 0, mine: false }); return; }
+          toast(sh.dir === 'out' ? 'That copy is in ' + f.name + '\'s decks.' : 'That copy is no longer in your decks.');
+        });
+      });
+    }
+    function load() {
+      api('friends', { today: today() }).then(function (d) { st.data = d; paint(d); }, function (e) { var box = $('[data-body]', app); if (box) box.innerHTML = '<div class="empty">' + esc(e.message) + '</div>'; });
+    }
+    if (st.data) paint(st.data);
+    load();
+  }
+
   /* ================= discover (public decks) ================= */
   function renderDiscover(app) {
     var st = S.disc || (S.disc = { q: '', sort: 'popular', list: null });
@@ -2546,14 +2686,14 @@ var TextUtil = (function () {
     load();
   }
   function previewPublic(d) {
-    var m = modal(d.name, '<p class="hint" style="margin:-4px 0 12px">' + plural(d.cards, 'card') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.copies ? ' &middot; copied ' + plural(d.copies, 'time') : '') + '</p>' +
+    var m = modal(d.name, '<p class="hint" style="margin:-4px 0 12px">' + (d.cards ? plural(d.cards, 'card') : 'Public deck') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.copies ? ' &middot; copied ' + plural(d.copies, 'time') : '') + '</p>' +
       '<div data-prev class="preview-list" style="max-height:320px"><div class="spinner"></div></div>' +
       (d.mine ? '' : '<label class="field" style="margin-top:14px"><span>Put it in a folder (optional)</span><input class="input" data-folder list="fc-folders2" placeholder="None"><datalist id="fc-folders2">' + folderNames().map(function (f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist></label>') +
       '<div class="error" data-err></div>',
       '<span class="spacer"></span><button class="btn" data-close>Close</button>' + (d.mine ? '' : '<button class="btn primary" data-add>' + I.plus + 'Add to my decks</button>'), { wide: true });
     var E = m.el;
     api('catalogPreview', { deckId: d.id }).then(function (cards) {
-      $('[data-prev]', E).innerHTML = cards.map(function () { return '<div><span></span><span style="color:var(--muted)"></span></div>'; }).join('') + (d.cards > cards.length ? '<div><span class="hint">and ' + plural(d.cards - cards.length, 'more card') + '</span></div>' : '');
+      $('[data-prev]', E).innerHTML = cards.map(function () { return '<div><span></span><span style="color:var(--muted)"></span></div>'; }).join('') + (d.cards && d.cards > cards.length ? '<div><span class="hint">and ' + plural(d.cards - cards.length, 'more card') + '</span></div>' : '');
       $$('[data-prev] > div', E).forEach(function (row, i) { if (!cards[i]) return; var sp = $$('span', row); sp[0].textContent = cards[i].front; sp[1].textContent = cards[i].back; });
     }, function (e) { $('[data-prev]', E).textContent = e.message; });
     var add = $('[data-add]', E);
