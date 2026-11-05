@@ -550,6 +550,9 @@ img { max-width: 100%; }
 .tf-ans.t b { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good); }
 .tf-ans.f b { background: color-mix(in srgb, var(--again) 22%, transparent); color: var(--again); }
 .tf-ex { margin: 14px auto 0; max-width: 560px; font-size: 16px; line-height: 1.5; color: var(--text); opacity: .9; white-space: pre-wrap; }
+.levels-explain { margin: -4px 0 14px; color: var(--muted); font-size: 13.5px; line-height: 1.5; max-width: 720px; }
+.levels-explain b { color: var(--text); font-weight: 650; }
+.level .lv-rule { font-size: 11.5px; color: var(--faint); text-align: center; margin: -2px 0 4px; }
 
 </style>
 </head>
@@ -1020,6 +1023,12 @@ var TextUtil = (function () {
 
   var FACES = { 1: '🤩', 2: '😐', 3: '😓', 4: '🥶' };
   var FACE_NAMES = { 1: 'Know it', 2: 'Nearly there', 3: 'Learning', 4: 'Not yet' };
+  function goalTxt(ids) {
+    var g = {}; ids.forEach(function (id) { g[deckGoal(id)] = 1; });
+    var k = Object.keys(g);
+    return k.length === 1 ? k[0] + ' times' : 'enough times';
+  }
+  var LEVEL_RULE = { 4: 'No good days this week', 3: '1 or 2 good days', 2: '3 or 4 good days', 1: '5 good days: resting' };
   function fbadge(l, cls) { return '<span class="fbadge lv' + l + (cls ? ' ' + cls : '') + '" title="' + FACE_NAMES[l] + '">' + FACES[l] + '</span>'; }
   function deckGoal(deckId) { var d = deckById(deckId); var n = d && Number(d.streak); return n >= 1 && n <= 10 ? n : 5; }
   function tfAnswer(card) {
@@ -1502,10 +1511,11 @@ var TextUtil = (function () {
       '</section>' +
       (quote ? '<p class="quote"><b></b></p>' : '') +
       (S.cards.length && mode === 'focus' ? '<section class="levels"><div class="levels-head"><h2>Pick by how well you know them</h2></div>' +
+        '<p class="levels-explain">A card has a <b>good day</b> when you get it right ' + goalTxt(sel) + ' in a row (change this per deck in Edit deck). Good days this week move it up from blue to green. 5 good days in a week and it rests for a week.</p>' +
         '<div class="level-row">' + [4, 3, 2, 1].map(function (l) {
           var n = levelCounts[l];
           var worse = [1, 2, 3, 4].filter(function (k) { return k >= l; }).reduce(function (s2, k) { return s2 + levelCounts[k]; }, 0);
-          return '<div class="level lv' + l + '">' + fbadge(l, 'big') + '<small>' + FACE_NAMES[l] + '</small><b>' + plural(n, 'card') + '</b>' +
+          return '<div class="level lv' + l + '">' + fbadge(l, 'big') + '<small>' + FACE_NAMES[l] + '</small><span class="lv-rule">' + LEVEL_RULE[l] + '</span><b>' + plural(n, 'card') + '</b>' +
             '<button class="btn sm lv-go" data-level="' + l + '"' + (n ? '' : ' disabled') + '>Study these</button>' +
             (l < 4 ? '<button class="btn sm ghost lv-worse" data-level="' + l + '" data-worse' + (worse ? '' : ' disabled') + ' title="' + FACE_NAMES[l] + ' and every face to its left">+ worse &middot; ' + worse + '</button>' : '<span class="lv-worse-gap"></span>') + '</div>';
         }).join('') + '</div></section>' : '') +
