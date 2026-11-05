@@ -1950,6 +1950,7 @@ var TextUtil = (function () {
         if (box) toggleWallet(box, f);
       } },
       { label: 'New deck in this folder', icon: 'plus', run: function () { openDeckEditor(null, f); } },
+      { label: 'Reset progress for this folder', icon: 'reset', run: function () { resetDecks(ids, 'the "' + f + '" folder'); } },
       { label: 'Remove folder, keep decks', icon: 'x', run: function () { removeFolder(f); toast('Folder removed. Its decks are still here.'); } },
       { label: 'Delete folder and its decks', icon: 'trash', danger: true, run: function () { deleteFolder(f, ids); } }
     ], pt);
@@ -2150,16 +2151,33 @@ var TextUtil = (function () {
       }, function (e) { busy(btn, false); $('[data-err]', m.el).textContent = e.message; });
     });
   }
-  function resetDeck(deck) {
-    confirmBox('Reset progress?', 'Every card in "' + deck.name + '" goes back to new. Your cards stay.', 'Reset').then(function (ok) {
+  /* Reset progress, with a typed RESET so it can't happen by accident. */
+  function typedConfirm(title, text, okLabel) {
+    return new Promise(function (resolve) {
+      var m = modal(title, '<p style="margin:0 0 14px;color:var(--muted)"></p><label class="field"><span>Type <b>RESET</b> to confirm</span><input class="input" data-word autocomplete="off" autocapitalize="characters" spellcheck="false" autofocus placeholder="RESET"></label>',
+        '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" style="background:var(--again)" data-ok disabled>' + esc(okLabel) + '</button>');
+      $('p', m.el).textContent = text;
+      var inp = $('[data-word]', m.el), ok = $('[data-ok]', m.el), done = false;
+      inp.addEventListener('input', function () { ok.disabled = inp.value.trim().toUpperCase() !== 'RESET'; });
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !ok.disabled) ok.click(); });
+      m.onClose = function () { if (!done) resolve(false); };
+      ok.addEventListener('click', function () { done = true; m.close(); resolve(true); });
+    });
+  }
+  function resetDecks(ids, what) {
+    ids = ids.filter(function (id) { return deckById(id); });
+    var n = ids.reduce(function (k, id) { return k + cardsOf(id).length; }, 0);
+    if (!n) { toast('No cards to reset.'); return; }
+    typedConfirm('Reset progress?', 'All ' + plural(n, 'card') + ' in ' + what + ' go back to the start (stage 1, never studied). Your cards stay. This cannot be undone.', 'Reset ' + plural(n, 'card')).then(function (ok) {
       if (!ok) return;
-      api('resetDeckProgress', { id: deck.id }).then(function () {
-        cardsOf(deck.id).forEach(function (c) { c.srs = {}; });
-        S.pending = S.pending.filter(function (p) { var c = cardById(p.id); return c && c.deckId !== deck.id; });
+      api('resetProgress', { deckIds: ids }).then(function () {
+        ids.forEach(function (id) { cardsOf(id).forEach(function (c) { c.srs = {}; }); });
+        S.pending = S.pending.filter(function (p) { var c = cardById(p.id); return c && ids.indexOf(c.deckId) < 0; });
         savePending(); cacheNow(); render(); toast('Progress reset.');
       }, fail);
     });
   }
+  function resetDeck(deck) { resetDecks([deck.id], '"' + deck.name + '"'); }
   function deleteDeck(deck) {
     var n = cardsOf(deck.id).length;
     confirmBox('Delete deck?', '"' + deck.name + '" and its ' + plural(n, 'card') + ' will be deleted. This cannot be undone.', 'Delete', true).then(function (ok) {
@@ -2517,7 +2535,7 @@ var TextUtil = (function () {
       (u.hasPassword ? '<input class="input" type="password" placeholder="Current password" data-old autocomplete="current-password">' : '<input class="input" placeholder="Type your email to delete account" data-old autocomplete="off">') +
       '<input class="input" type="password" placeholder="New password (8+ characters)" data-pw autocomplete="new-password"></div></div>' +
       '<div class="row"><button class="btn sm" data-change>' + (u.hasPassword ? 'Change password' : 'Set password') + '</button><span class="spacer"></span><button class="btn sm" data-out>' + I.logout + 'Sign out</button>' +
-      (u.owner ? '' : '<button class="btn sm danger" data-delacct>' + I.trash + 'Delete account</button>') + '</div></div>', '');
+      '<button class="btn sm danger" data-resetall>' + I.reset + 'Reset all progress</button>' + (u.owner ? '' : '<button class="btn sm danger" data-delacct>' + I.trash + 'Delete account</button>') + '</div></div>', '');
     var E = m.el;
     $('[data-name]', E).value = u.name; $('[data-email]', E).value = u.email;
     $('[data-new]', E).value = s.newPerDay; $('[data-goal]', E).value = s.goal;
@@ -2546,6 +2564,7 @@ var TextUtil = (function () {
     $('[data-out]', E).addEventListener('click', function () {
       flush().then(function () { return api('logout'); }).catch(function () {}).then(signedOut);
     });
+    $('[data-resetall]', E).addEventListener('click', function () { m.close(); resetDecks(S.decks.map(function (d) { return d.id; }), 'all your decks'); });
     var del = $('[data-delacct]', E);
     if (del) del.addEventListener('click', function () {
       var pw = $('[data-old]', E).value;
