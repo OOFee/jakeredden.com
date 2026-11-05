@@ -919,11 +919,18 @@ html.study-on { --gl-bg: #06070d; --gl-card-a: rgba(255, 255, 255, .11); --gl-ca
 html.study-on[data-theme=light] { --gl-bg: #eef0f8; --gl-card-a: rgba(255, 255, 255, .72); --gl-card-b: rgba(255, 255, 255, .42); --gl-edge: rgba(255, 255, 255, .8); --gl-shine: #fff; --gl-shadow: 0 30px 70px -30px rgba(20, 20, 60, .35); --gl-btn: rgba(255, 255, 255, .55); --gl-btn-edge: rgba(255, 255, 255, .85); --gl-track: rgba(20, 20, 60, .12); }
 html.study-on body { background: var(--gl-bg); }
 html.study-on body::before { display: none; }
-html.study-on .bg-blobs { display: block; position: fixed; inset: -25%; z-index: 0; pointer-events: none; overflow: hidden; }
-html.study-on .bg-blobs i { position: absolute; width: 72%; aspect-ratio: 1; border-radius: 50%; opacity: .36; will-change: transform; animation: glassDrift 22s ease-in-out infinite alternate; background: radial-gradient(closest-side, var(--gl-c), transparent); }
-html.study-on .bg-blobs i:nth-child(1) { --gl-c: color-mix(in srgb, var(--accent) 72%, #808080); left: 0; top: 6%; }
-html.study-on .bg-blobs i:nth-child(2) { --gl-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, #19d3e8) 72%, #808080); right: -2%; top: -4%; animation-duration: 28s; animation-delay: -8s; }
-html.study-on .bg-blobs i:nth-child(3) { --gl-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, #ff5ca8) 72%, #808080); left: 20%; bottom: -6%; animation-duration: 34s; animation-delay: -14s; }
+html.study-on .bg-blobs { display: block; position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+html.study-on .bg-blobs i { --gl-size: 147vmin; position: absolute; width: var(--gl-size); height: var(--gl-size); margin: calc(var(--gl-size) / -2) 0 0 calc(var(--gl-size) / -2); opacity: .36; will-change: transform; animation: glassDrift 22s ease-in-out infinite alternate; background: radial-gradient(closest-side, var(--gl-c) 0%, color-mix(in srgb, var(--gl-c) 78%, transparent) 28%, color-mix(in srgb, var(--gl-c) 42%, transparent) 55%, color-mix(in srgb, var(--gl-c) 12%, transparent) 80%, transparent 100%); }
+html.study-on .bg-blobs i:nth-child(1) { --gl-c: color-mix(in srgb, var(--accent) 72%, #808080); left: 27vw; top: 18vh; }
+html.study-on .bg-blobs i:nth-child(2) { --gl-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, #19d3e8) 72%, #808080); left: 75vw; top: 3vh; animation-duration: 28s; animation-delay: -8s; }
+html.study-on .bg-blobs i:nth-child(3) { --gl-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, #ff5ca8) 72%, #808080); left: 58vw; top: 100vh; animation-duration: 34s; animation-delay: -14s; }
+@media (max-width: 600px) { html.study-on .bg-blobs i { opacity: .2; } }
+@media (min-width: 601px) {
+  html.study-on .bg-blobs i { --gl-size: 92vmax; opacity: .58; }
+  html.study-on .bg-blobs i:nth-child(1) { top: 57vh; }
+  html.study-on .bg-blobs i:nth-child(2) { top: 42vh; }
+  html.study-on .bg-blobs i:nth-child(3) { left: 57vw; top: 61vh; }
+}
 @keyframes glassDrift { to { transform: translate(14%, -12%) scale(1.2); } }
 html.minimal.study-on .bg-blobs { display: none; }
 html.study-on .study { position: relative; z-index: 1; }
@@ -957,6 +964,16 @@ html.study-on .choice.wrong, html.study-on .tf-btn.wrong { background: color-mix
 html.study-on .answer-in .input { border-radius: 99px; }
 html.study-on .done-stats > * { background: var(--gl-btn); border-color: var(--gl-btn-edge); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gl-shine) 60%, transparent); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
 html.study-on .answer-in .input::placeholder { color: var(--text); opacity: .55; }
+html.study-on .swipe-hint { background: var(--gl-bg); }
+html.study-on .swipe-hint.neutral { color: var(--text); }
+/* Each label sits on the edge that trails behind the moving card, so it stays on screen. */
+.swipe-hint.l { left: auto; right: 22px; transform: rotate(10deg); }
+.swipe-hint.r { right: auto; left: 22px; transform: rotate(-10deg); }
+.brand { white-space: nowrap; }
+@media (max-width: 600px) { .topbar .sync { display: none; } }
+.pts { flex-direction: column; gap: 4px; }
+.pts-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.pts-next { opacity: .55; }
 @media (min-width: 761px) { html.study-on .choices { grid-template-columns: 1fr 1fr; max-width: none; } }
 @media (prefers-reduced-motion: reduce) { html.study-on .bg-blobs i { animation: none; } }
 
@@ -1348,9 +1365,14 @@ var TextUtil = (function () {
   var GS = window.google && window.google.script;
   function api(method, args) {
     return new Promise(function (resolve, reject) {
+      if (S.token === GUEST && method !== 'config') {
+        try { resolve(guestCall(method, args)); } catch (x) { reject(x); }
+        return;
+      }
+      var sendToken = S.token === GUEST ? null : S.token;
       if (!GS || !GS.run) {
         if (!window.FC_API) { reject(new Error('Not connected.')); return; }
-        fetch(window.FC_API, { method: 'POST', body: JSON.stringify({ token: S.token, method: method, args: args || {} }) })
+        fetch(window.FC_API, { method: 'POST', body: JSON.stringify({ token: sendToken, method: method, args: args || {} }) })
           .then(function (res) { if (!res.ok) throw new Error('bad status'); return res.json(); })
           .then(function (r) {
             if (r && r.ok) { resolve(r.data); return; }
@@ -1369,7 +1391,7 @@ var TextUtil = (function () {
           reject(e);
         })
         .withFailureHandler(function () { reject(new Error('Could not reach the server. Check your connection.')); })
-        .api(S.token, method, args || {});
+        .api(sendToken, method, args || {});
     });
   }
 
@@ -1636,12 +1658,13 @@ var TextUtil = (function () {
     });
     return st;
   }
+  /* This card's stage, then dots for the right answers in a row needed to reach the next face. */
   function pointsRow(card, dir, s) {
     var pr = prog(card, dir), now = Date.now(), l = SRS.level(pr, now);
-    if (!s.free || s.simple) return '<div class="pts">' + fbadge(l) + '<span class="pts-lbl">' + FACE_NAMES[l] + '</span></div>';
-    var goal = deckGoal(card.deckId), n = SRS.pointsToday(pr, now), dots = '';
+    var goal = deckGoal(card.deckId), n = Math.min(goal, SRS.pointsToday(pr, now)), dots = '';
     for (var i = 0; i < goal; i++) dots += '<i class="' + (i < n ? 'on' : '') + '"></i>';
-    return '<div class="pts">' + fbadge(l) + '<span class="pts-lbl">' + FACE_NAMES[l] + '</span><span class="dots" title="' + n + ' of ' + goal + ' right in a row">' + dots + '</span><span class="pts-lbl">' + n + '/' + goal + '</span></div>';
+    var next = l > 1 ? fbadge(l - 1, 'pts-next') : '';
+    return '<div class="pts"><div class="pts-row">' + fbadge(l) + '<span class="dots" title="' + n + ' of ' + goal + ' right in a row">' + dots + '</span>' + next + '</div><span class="pts-lbl">' + FACE_NAMES[l] + '</span></div>';
   }
 
   function deckStats(deckId, now) {
@@ -1741,7 +1764,7 @@ var TextUtil = (function () {
     if (!n) return;
     var waiting = S.pending.length > 0;
     n.className = 'sync' + (S.syncing || waiting ? ' busy' : '') + (S.syncState === 'off' ? ' off' : '');
-    $('span', n).textContent = S.syncState === 'off' ? 'Offline, will retry' : S.syncing || waiting ? 'Saving' : 'Saved';
+    $('span', n).textContent = isGuest() ? 'On this device only' : S.syncState === 'off' ? 'Offline, will retry' : S.syncing || waiting ? 'Saving' : 'Saved';
   }
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
 
@@ -1809,12 +1832,176 @@ var TextUtil = (function () {
     });
   }
 
+  /* ================= using the app without an account =================
+     Everything lives in this browser's localStorage under fc.guest; nothing goes to the server until the person makes an account. */
+  var GUEST = 'guest';
+  function isGuest() { return S.token === GUEST; }
+  function guestNew() {
+    return { user: { id: GUEST, email: '', name: '', needsName: false, owner: false, hasPassword: false, settings: { newPerDay: 20, goal: 50, theme: ls('fc.theme') || 'dark', lastDecks: null, modeDecks: {}, mode: 'free', folders: {}, recent: [], faces: null, hide: [], minimal: false } }, decks: [], cards: [], daily: [], quotes: [] };
+  }
+  function guestId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 12); }
+  function guestText(v, max, label) {
+    v = String(v == null ? '' : v);
+    if (v.length > max) throw new Error(label + ' is too long.');
+    return v;
+  }
+  function guestDeck(d, id) {
+    var deck = d.decks.filter(function (x) { return x.id === id; })[0];
+    if (!deck) throw new Error('Deck not found.');
+    return deck;
+  }
+  function guestStreak(v) { var n = Math.floor(Number(v)); return n >= 1 && n <= 10 ? n : 5; }
+  var GUEST_ERRORS = {
+    uploadMedia: 'Make an account to add pictures and audio.', friends: 'Make an account to add friends.', friendRequest: 'Make an account to add friends.',
+    catalog: 'Make an account to browse public decks.', catalogPreview: 'Make an account to browse public decks.', copyPublic: 'Make an account to copy public decks.',
+    sendDecks: 'Make an account to share decks.', inviteCollaborator: 'Make an account to share decks.', setPublic: 'Make an account to share decks.', deckMembers: 'Make an account to share decks.'
+  };
+  var GUEST_API = {
+    bootstrap: function (d) { return d; },
+    logout: function () { return { ok: true }; },
+    saveDeck: function (d, a) {
+      var name = guestText(a.name, 80, 'Deck name').trim();
+      if (!name) throw new Error('Give the deck a name.');
+      var image = String(a.image == null ? '' : a.image).trim();
+      if (image && !safeImg(image)) throw new Error('The image link must start with https and have no spaces.');
+      var color = /^#[0-9a-fA-F]{6}$/.test(String(a.color)) ? String(a.color).toLowerCase() : '#6d5efc';
+      if (a.id) {
+        var deck = guestDeck(d, a.id);
+        deck.name = name; deck.color = color;
+        if (a.streak != null) deck.streak = guestStreak(a.streak);
+        if (a.image != null) deck.image = image;
+        return deck;
+      }
+      var fresh = { id: guestId(), name: name, color: color, order: d.decks.length, created: Date.now(), public: false, mine: true, streak: guestStreak(a.streak), image: image, members: 0 };
+      d.decks.push(fresh);
+      return fresh;
+    },
+    deleteDeck: function (d, a) {
+      guestDeck(d, a.id);
+      d.decks = d.decks.filter(function (x) { return x.id !== a.id; });
+      d.cards = d.cards.filter(function (c) { return c.deckId !== a.id; });
+      return { ok: true };
+    },
+    saveCard: function (d, a) {
+      var type = ['basic', 'typed', 'choice', 'tf'].indexOf(a.type) >= 0 ? a.type : 'basic';
+      var front = guestText(a.front, 5000, 'Front'), back = guestText(a.back, 5000, 'Back');
+      if (!front.trim()) throw new Error('The front of the card is empty.');
+      guestDeck(d, a.deckId);
+      if (a.id) {
+        var c = d.cards.filter(function (x) { return x.id === a.id; })[0];
+        if (!c) throw new Error('Card not found.');
+        c.type = type; c.reverse = !!a.reverse; c.front = front; c.back = back; c.deckId = a.deckId; c.updated = Date.now();
+        if (!c.reverse) delete c.srs.r;
+        return c;
+      }
+      var card = { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: front, back: back, frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
+      d.cards.push(card);
+      return card;
+    },
+    deleteCards: function (d, a) {
+      var before = d.cards.length, ids = a.ids || [];
+      d.cards = d.cards.filter(function (c) { return ids.indexOf(c.id) < 0; });
+      return { deleted: before - d.cards.length };
+    },
+    importCards: function (d, a) {
+      guestDeck(d, a.deckId);
+      var type = ['basic', 'typed', 'choice', 'tf'].indexOf(a.type) >= 0 ? a.type : 'basic';
+      var cards = (a.pairs || []).filter(function (p) { return Array.isArray(p) && String(p[0] || '').trim(); }).map(function (p) {
+        return { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: guestText(p[0], 5000, 'Front'), back: guestText(p[1], 5000, 'Back'), frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
+      });
+      d.cards = d.cards.concat(cards);
+      return { cards: cards };
+    },
+    setDeckType: function (d, a) {
+      var n = 0;
+      d.cards.forEach(function (c) { if (c.deckId === a.deckId && c.type !== a.type) { c.type = a.type; n++; } });
+      return { changed: n };
+    },
+    resetProgress: function (d, a) {
+      var n = 0, ids = a.deckIds || [];
+      d.cards.forEach(function (c) { if (ids.indexOf(c.deckId) >= 0) { c.srs = {}; n++; } });
+      return { cards: n };
+    },
+    review: function (d, a) {
+      (a.items || []).forEach(function (it) {
+        var c = d.cards.filter(function (x) { return x.id === it.id; })[0];
+        if (c && (it.dir === 'f' || it.dir === 'r')) { c.srs = c.srs || {}; c.srs[it.dir] = it.srs; }
+      });
+      if (a.day && a.day.date) {
+        var rec = d.daily.filter(function (x) { return x.date === a.day.date; })[0];
+        if (!rec) { rec = { date: a.day.date, reviews: 0, correct: 0 }; d.daily.push(rec); }
+        rec.reviews += Number(a.day.reviews) || 0; rec.correct += Number(a.day.correct) || 0;
+      }
+      return { saved: (a.items || []).length };
+    },
+    saveSettings: function (d, a) {
+      var st = Object.assign({}, d.user.settings, a.settings || {});
+      st.newPerDay = Math.max(0, Math.min(500, Math.floor(Number(st.newPerDay)) || 0));
+      st.goal = Math.max(1, Math.min(2000, Math.floor(Number(st.goal)) || 50));
+      d.user.settings = st;
+      return d.user;
+    }
+  };
+  function guestCall(method, args) {
+    var raw = ls('fc.guest'), d = raw && raw.user ? raw : guestNew();
+    if (!Object.prototype.hasOwnProperty.call(GUEST_API, method)) throw new Error(GUEST_ERRORS[method] || 'Make an account to use this.');
+    var out = JSON.stringify(GUEST_API[method](d, args || {}));
+    try { localStorage.setItem('fc.guest', JSON.stringify(d)); }
+    catch (e) { throw new Error('This browser could not save that. Make an account to keep your cards safe.'); }
+    return JSON.parse(out);
+  }
+  function startGuest() {
+    S.token = GUEST; ls('fc.token', GUEST); S.view = 'boot'; render();
+    load().then(guestWarning);
+  }
+  function guestWarning() {
+    if (!isGuest() || !S.user) return;
+    var m = modal('No account yet',
+      '<p style="margin:0">Without an account, when the browser or app is reset or lost, all your cards will go POOOF and will be lost. Make an account to keep them safe.</p>',
+      '<span class="spacer"></span><button class="btn" data-close>Not now</button><button class="btn primary" data-make>Make an account</button>');
+    $('[data-make]', m.el).addEventListener('click', function () { m.close(); guestToAccount(); });
+  }
+  /* Leave guest mode for the sign-in page. Cards stay in fc.guest and move across once signed in. */
+  function guestToAccount() {
+    clearTimeout(S.flushTimer);
+    try {
+      if (S.pending.length) guestCall('review', { items: S.pending });
+      Object.keys(S.pendingDay).forEach(function (date) { guestCall('review', { items: [], day: { date: date, reviews: S.pendingDay[date].reviews, correct: S.pendingDay[date].correct } }); });
+    } catch (e) { toast(e.message, true); }
+    openModals.slice().forEach(function (m) { m.close(); });
+    S.token = null; S.user = null; S.decks = []; S.cards = []; S.pending = []; S.pendingDay = {}; S.syncing = false;
+    ls('fc.token', null); ls('fc.pending', null);
+    S.noAutoGoogle = true; S.authMode = 'up';
+    go('auth');
+  }
+  /* After signing in: move any cards made without an account. They are only removed from this browser once the server has them. */
+  function migrateGuest() {
+    if (isGuest() || S.migrating || !S.token) return;
+    var g = ls('fc.guest');
+    if (!g) return;
+    if (!g.decks || !g.decks.length) { ls('fc.guest', null); return; }
+    var folders = (g.user && g.user.settings && g.user.settings.folders) || {};
+    var decks = g.decks.map(function (d) {
+      return { name: d.name, color: d.color, streak: d.streak, image: d.image, folder: folders[d.id] || '', cards: g.cards.filter(function (c) { return c.deckId === d.id; }).map(function (c) { return { type: c.type, reverse: c.reverse, front: c.front, back: c.back, srs: c.srs }; }) };
+    });
+    S.migrating = true;
+    api('importGuest', { decks: decks, daily: g.daily || [] }).then(function (r) {
+      ls('fc.guest', null); S.migrating = false;
+      toast(plural(r.cards, 'card') + ' moved into your account. They are safe now.');
+      return load();
+    }, function (e) {
+      S.migrating = false;
+      toast('Your cards could not be moved yet: ' + e.message + ' They are still on this device, and it will try again next time.', true);
+    });
+  }
+
   /* ================= boot ================= */
   function boot() {
     applyTheme();
     S.token = ls('fc.token');
     api('config').then(function (c) { S.config = c; addGoogleToAuth(); }, function () {});
     if (!S.token) { go('auth'); return; }
+    if (isGuest()) { render(); load().then(guestWarning); return; }
     var cached = ls('fc.cache');
     if (cached && cached.user) { setData(cached); go('home'); }
     else render();
@@ -1823,9 +2010,10 @@ var TextUtil = (function () {
   function load() {
     return api('bootstrap').then(function (d) {
       setData(d);
-      ls('fc.cache', d);
+      if (!isGuest()) ls('fc.cache', d);
       if (S.view === 'boot' || S.view === 'auth') go('home'); else if (S.view !== 'study') render();
       flush();
+      migrateGuest();
     }, function (e) {
       if (e.auth) return;
       if (S.view === 'boot') { go('auth'); }
@@ -1845,7 +2033,7 @@ var TextUtil = (function () {
     ls('fc.theme', S.user.settings.theme);
     applyTheme();
   }
-  function cacheNow() { if (S.user) ls('fc.cache', { user: S.user, decks: S.decks, cards: S.cards, daily: S.daily, quotes: S.quotes }); }
+  function cacheNow() { if (S.user && !isGuest()) ls('fc.cache', { user: S.user, decks: S.decks, cards: S.cards, daily: S.daily, quotes: S.quotes }); }
   function signedIn(token) { S.token = token; ls('fc.token', token); S.view = 'boot'; render(); load(); }
   function signedOut() {
     S.noAutoGoogle = true;
@@ -1895,7 +2083,7 @@ var TextUtil = (function () {
 
   function topbar(extra) {
     return '<header class="topbar"><div class="wrap"><button class="brand" data-home><span class="mark"></span>Flash Cards</button>' +
-      '<span class="tb-quote" aria-live="off"><span></span></span><span class="spacer"></span><span class="sync hide-sm"><i></i><span>Saved</span></span>' + (extra || '') +
+      '<span class="tb-quote" aria-live="off"><span></span></span><span class="spacer"></span><span class="sync hide-sm"><i></i><span>' + (isGuest() ? 'On this device only' : 'Saved') + '</span></span>' + (extra || '') +
       '<button class="btn ghost icon-btn" data-friends aria-label="Friends" title="Friends">' + I.people + '</button>' +
       '<button class="btn ghost icon-btn" data-theme-toggle aria-label="Switch light or dark" title="Light / dark">' + (isDark() ? I.sun : I.moon) + '</button>' +
       '<button class="btn ghost icon-btn" data-settings aria-label="Settings">' + I.gear + '</button></div></header>';
@@ -1990,7 +2178,8 @@ var TextUtil = (function () {
       '<button class="btn primary lg" style="width:100%" type="submit">' + (mode === 'up' ? 'Create account' : mode === 'reset' ? 'Send code' : 'Sign in') + '</button>' +
       '<div class="row" style="justify-content:center;margin-top:16px">' +
       (mode === 'in' ? '<button type="button" class="linkish" data-m="reset">Forgot password?</button>' : mode === 'reset' ? '<button type="button" class="linkish" data-m="in">Back to sign in</button>' : '<span class="hint">Use at least 8 characters for your password.</span>') +
-      '</div></form></div></div>';
+      '</div>' + (mode === 'reset' ? '' : '<div class="row" style="justify-content:center;margin-top:12px"><button type="button" class="linkish" data-guest>' + (ls('fc.guest') ? 'Keep using it without an account' : 'Use it without an account') + '</button></div>') + '</form></div></div>';
+    var gb0 = $('[data-guest]', app); if (gb0) gb0.addEventListener('click', startGuest);
     var form = $('form', app), err = $('[data-err]', app), step2 = false;
     var gslot = $('[data-gbtn]', app);
     if (gslot) mountGoogle(gslot, function (msg) { err.textContent = msg; });
@@ -2928,6 +3117,7 @@ var TextUtil = (function () {
     saveSettingsSoon();
   }
   function openShare(deckIds, title) {
+    if (isGuest()) { toast('Make an account to share decks.'); return; }
     var decks = deckIds.map(deckById).filter(Boolean);
     if (!decks.length) return;
     var single = decks.length === 1 ? decks[0] : null;
@@ -3208,29 +3398,32 @@ var TextUtil = (function () {
   function openSettings() {
     var u = S.user, s = u.settings, theme = s.theme;
     var chev = I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6');
+    var guest = isGuest();
     var m = modal('Settings',
-      '<div class="set-sec"><div class="set-h">Profile</div>' +
+      (guest ? '<div class="set-sec"><div class="set-h">Account</div><p class="hint" style="margin:0 0 12px">You have no account, so your cards are only saved on this device. If the browser or app is reset or lost, they are gone.</p><button class="btn primary" data-make>Make an account</button></div>'
+      : '<div class="set-sec"><div class="set-h">Profile</div>' +
         '<label class="field"><span>Username</span><input class="input" data-name maxlength="24"></label>' +
-        '<div class="set-email">Signed in as <b data-email></b></div></div>' +
+        '<div class="set-email">Signed in as <b data-email></b></div></div>') +
       '<div class="set-sec"><div class="set-h">Studying</div>' +
         '<div class="grid2"><label class="field"><span>Daily goal</span><input class="input" type="number" min="1" max="2000" data-goal></label>' +
         '<label class="field"><span>New cards a day (Mission)</span><input class="input" type="number" min="0" max="500" data-new></label></div>' +
         '<div class="field"><span>Theme</span><div class="seg set-theme" data-theme><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>' +
         '<label class="switch set-min"><input type="checkbox" data-minimal' + (s.minimal ? ' checked' : '') + '><i></i><span><b>Minimalist</b><small>Tone all the colours down to calm greys</small></span></label></div>' +
-      '<div class="set-sec"><div class="set-h">Account</div><div class="set-rows">' +
+      (guest ? '' : '<div class="set-sec"><div class="set-h">Account</div><div class="set-rows">' +
         '<button class="set-row" data-open="pw">' + I.edit + '<span>' + (u.hasPassword ? 'Change password' : 'Set a password') + '<small>' + (u.hasPassword ? 'Update the password you sign in with' : 'You sign in with Google. A password lets you sign in without it.') + '</small></span>' + chev + '</button>' +
         '<div class="set-panel" data-panel="pw" hidden><div class="grid2">' + (u.hasPassword ? '<input class="input" type="password" placeholder="Current password" data-old autocomplete="current-password">' : '') +
           '<input class="input" type="password" placeholder="New password (8+ characters)" data-pw autocomplete="new-password"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn sm primary" data-change>Save password</button></div></div>' +
         '<button class="set-row" data-out>' + I.logout + '<span>Sign out<small>You can sign back in any time</small></span>' + chev + '</button>' +
-      '</div></div>' +
+      '</div></div>') +
       '<div class="set-sec danger"><div class="set-h">Danger zone</div><div class="set-rows">' +
         '<button class="set-row" data-resetall>' + I.reset + '<span>Reset all progress<small>Every card goes back to the start. Your cards stay.</small></span>' + chev + '</button>' +
-        (u.owner ? '' : '<button class="set-row" data-open="del">' + I.trash + '<span>Delete account<small>Removes your decks, cards and progress for good</small></span>' + chev + '</button>' +
+        (u.owner || guest ? '' : '<button class="set-row" data-open="del">' + I.trash + '<span>Delete account<small>Removes your decks, cards and progress for good</small></span>' + chev + '</button>' +
           '<div class="set-panel" data-panel="del" hidden><input class="input" ' + (u.hasPassword ? 'type="password" placeholder="Your password"' : 'placeholder="Type your email to confirm"') + ' data-delpw autocomplete="off"><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn sm danger" data-delacct>Delete my account</button></div></div>') +
       '</div></div><div class="error" data-err></div>',
       '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>Save</button>');
     var E = m.el;
-    $('[data-name]', E).value = u.name; $('[data-email]', E).textContent = u.email;
+    if (guest) $('[data-make]', E).addEventListener('click', function () { m.close(); guestToAccount(); });
+    else { $('[data-name]', E).value = u.name; $('[data-email]', E).textContent = u.email; }
     $('[data-new]', E).value = s.newPerDay; $('[data-goal]', E).value = s.goal;
     function paintTheme() { $$('[data-v]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === theme); }); }
     $$('[data-v]', E).forEach(function (b) { b.addEventListener('click', function () { theme = b.getAttribute('data-v'); paintTheme(); }); });
@@ -3246,19 +3439,19 @@ var TextUtil = (function () {
     });
     $('[data-save]', E).addEventListener('click', function () {
       var btn = this; busy(btn, true);
-      api('saveSettings', { name: $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme, minimal: $('[data-minimal]', E).checked }) }).then(function (r) {
+      api('saveSettings', { name: guest ? '' : $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme, minimal: $('[data-minimal]', E).checked }) }).then(function (r) {
         S.user = r; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
         m.close(); render(); toast('Settings saved.');
       }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
     });
-    $('[data-change]', E).addEventListener('click', function () {
+    if (!guest) $('[data-change]', E).addEventListener('click', function () {
       var btn = this, old = $('[data-old]', E); busy(btn, true);
       api('changePassword', { oldPassword: old ? old.value : '', newPassword: $('[data-pw]', E).value }).then(function () {
         busy(btn, false); if (old) old.value = ''; $('[data-pw]', E).value = ''; toast('Password saved.');
         if (!S.user.hasPassword) { S.user.hasPassword = true; cacheNow(); m.close(); openSettings(); }
       }, function (e) { busy(btn, false); toast(e.message, true); });
     });
-    $('[data-out]', E).addEventListener('click', function () {
+    if (!guest) $('[data-out]', E).addEventListener('click', function () {
       flush().then(function () { return api('logout'); }).catch(function () {}).then(signedOut);
     });
     $('[data-resetall]', E).addEventListener('click', function () { m.close(); resetDecks(S.decks.map(function (d) { return d.id; }), 'all your decks'); });
@@ -3395,7 +3588,7 @@ var TextUtil = (function () {
     var frontBody = '<div class="face-body">' + mediaHtml(x.qm) + textHtml(x.q);
     if (kind === 'typed') frontBody += '<form class="answer-in" data-typed><input class="input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the answer" data-answer></form>';
     if (kind === 'choice') frontBody += '<div class="choices">' + s.cur.options.map(function (o, i) { return '<button class="choice" data-opt="' + i + '"><kbd>' + (i + 1) + '</kbd><span></span></button>'; }).join('') + '</div>';
-    frontBody += '</div>' + (kind === 'basic' ? '<div class="tap-hint">Tap to flip</div>' : '');
+    frontBody += '</div>' + (kind === 'basic' ? '<div class="tap-hint">Tap to flip</div>' : kind === 'tf' ? '<div class="tap-hint">Drag left for true, right for false</div>' : '');
 
     app.innerHTML = '<div class="study"><div class="wrap" style="display:flex;flex-direction:column;flex:1">' +
       '<div class="study-top"><button class="btn ghost icon-btn" data-exit aria-label="End session">' + I.x + '</button>' +
@@ -3403,7 +3596,7 @@ var TextUtil = (function () {
       (s.free ? '<div class="qcounts"><span style="color:var(--muted)">' + s.label + ' &middot; ' + (rem.r + 1) + ' left</span></div>' : '') +
       (s.free ? '' : '<div class="qcounts"><span class="n' + (curKey === 'n' ? ' cur' : '') + '">' + (rem.n + (curKey === 'n' ? 1 : 0)) + '</span><span class="l' + (curKey === 'l' ? ' cur' : '') + '">' + (rem.l + (curKey === 'l' ? 1 : 0)) + '</span><span class="r' + (curKey === 'r' ? ' cur' : '') + '">' + (rem.r + (curKey === 'r' ? 1 : 0)) + '</span></div>') +
       '<button class="btn ghost icon-btn" data-edit aria-label="Edit card" title="Edit card (E)">' + I.edit + '</button></div>' +
-      '<div class="stage">' + pointsRow(c, item.dir, s) + '<div class="flip" data-flip><span class="swipe-hint l">Wrong</span><span class="swipe-hint r">Right</span><div class="inner">' +
+      '<div class="stage">' + pointsRow(c, item.dir, s) + '<div class="flip" data-flip><span class="swipe-hint l' + (kind === 'tf' ? ' neutral">True' : '">Wrong') + '</span><span class="swipe-hint r' + (kind === 'tf' ? ' neutral">False' : '">Right') + '</span><div class="inner">' +
       '<div class="face front"><div class="face-label">' + label + '</div>' + frontBody + '</div>' +
       '<div class="face back"><div class="face-label">Answer</div><div class="face-body" data-back></div></div>' +
       '</div></div><div class="dock" data-dock></div></div></div></div>';
@@ -3623,7 +3816,13 @@ var TextUtil = (function () {
       dx = e.clientX - sx;
       var dy = e.clientY - sy;
       if (!moved && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) { moved = true; try { flip.setPointerCapture(e.pointerId); } catch (x) {} }
-      if (!moved || !S.study.cur.revealed) return;
+      var cur = S.study.cur, answering = kind === 'tf' && !cur.revealed && !cur.verdict;
+      if (!moved || !(cur.revealed || answering)) return;
+      if (cur.revealed) {
+        var opts = dockChoices(S.study);
+        hl.textContent = opts[0].label; hr.textContent = opts[opts.length - 1].label;
+        hl.classList.remove('neutral'); hr.classList.remove('neutral');
+      }
       flip.style.transition = 'none';
       flip.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 22) + 'deg)';
       hl.style.opacity = Math.max(0, Math.min(1, -dx / 90));
@@ -3636,6 +3835,13 @@ var TextUtil = (function () {
       if (!moved) {
         if (!s.cur.revealed && kind === 'basic') reveal();
         else if (s.cur.revealed) flip.classList.toggle('flipped');
+        return;
+      }
+      if (kind === 'tf' && !s.cur.revealed && !s.cur.verdict && Math.abs(dx) > 100) {
+        flip.style.transition = 'transform .3s var(--ease)';
+        flip.style.transform = '';
+        hl.style.opacity = 0; hr.style.opacity = 0;
+        pickTf(dx < 0);
         return;
       }
       if (s.cur.revealed && Math.abs(dx) > 100) {
