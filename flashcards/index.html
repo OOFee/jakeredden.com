@@ -838,6 +838,10 @@ img { max-width: 100%; }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .45s; animation-timing-function: ease; }
 html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after { transition: background-color .45s ease, color .45s ease, border-color .45s ease, fill .45s ease, stroke .45s ease !important; }
 
+/* true / false answers in the dock under the card */
+.tf-dock .tf-btn { flex-direction: row; justify-content: center; gap: 10px; padding: 0 14px; }
+.tf-dock .tf-btn b { font-size: 22px; }
+
 </style>
 </head>
 <body>
@@ -3080,7 +3084,6 @@ var TextUtil = (function () {
 
     var frontBody = '<div class="face-body">' + mediaHtml(x.qm) + textHtml(x.q);
     if (kind === 'typed') frontBody += '<form class="answer-in" data-typed><input class="input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the answer" data-answer></form>';
-    if (kind === 'tf') frontBody += '<div class="tf-btns"><button class="tf-btn t" data-tf="1"><b>O</b>True</button><button class="tf-btn f" data-tf="0"><b>X</b>False</button></div>';
     if (kind === 'choice') frontBody += '<div class="choices">' + s.cur.options.map(function (o, i) { return '<button class="choice" data-opt="' + i + '"><kbd>' + (i + 1) + '</kbd><span></span></button>'; }).join('') + '</div>';
     frontBody += '</div>' + (kind === 'basic' ? '<div class="tap-hint">Tap to flip</div>' : '');
 
@@ -3207,11 +3210,12 @@ var TextUtil = (function () {
     if (!s.cur.revealed) {
       dock.innerHTML = kind === 'basic' ? '<button class="btn primary show-btn" data-show>Flip</button><div class="keys"><kbd>Space</kbd> flip</div>'
         : kind === 'typed' ? '<button class="btn primary show-btn" data-check>Check</button><div class="keys"><kbd>Enter</kbd> check &middot; <kbd>Esc</kbd> end</div>'
-        : kind === 'tf' ? '<div class="keys"><kbd>O</kbd> or <kbd>&larr;</kbd> true &middot; <kbd>X</kbd> or <kbd>&rarr;</kbd> false</div>'
+        : kind === 'tf' ? '<div class="grades two tf-dock"><div class="grade-wrap"><button class="grade tf-btn t" data-tf="1"><b>O</b>True</button></div><div class="grade-wrap"><button class="grade tf-btn f" data-tf="0"><b>X</b>False</button></div></div><div class="keys"><kbd>O</kbd> or <kbd>&larr;</kbd> true &middot; <kbd>X</kbd> or <kbd>&rarr;</kbd> false</div>'
         : '<div class="keys"><kbd>1</kbd>-<kbd>4</kbd> pick an answer</div>';
       dock.insertAdjacentHTML('beforeend', dockFoot(s));
       var sk0 = $('[data-skip]', dock); if (sk0) sk0.addEventListener('click', skipCard);
       var sb = $('[data-show]', dock); if (sb) sb.addEventListener('click', reveal);
+      $$('[data-tf]', dock).forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); pickTf(b.getAttribute('data-tf') === '1'); }); });
       var cb = $('[data-check]', dock); if (cb) cb.addEventListener('click', function () { $('[data-typed]').requestSubmit(); });
       return;
     }
