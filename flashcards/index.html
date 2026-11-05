@@ -971,6 +971,19 @@ html.study-on .swipe-hint.neutral { color: var(--text); }
 .swipe-hint.r { right: auto; left: 22px; transform: rotate(-10deg); }
 .brand { white-space: nowrap; }
 @media (max-width: 600px) { .topbar .sync { display: none; } }
+/* Phones: the quote gets its own line under the title, in full */
+@media (max-width: 600px) {
+  .topbar .wrap { flex-wrap: wrap; height: auto; row-gap: 0; padding-top: 8px; padding-bottom: 9px; }
+  .topbar .spacer { flex: 1 1 0; }
+  .tb-quote { order: 9; flex: 0 0 100%; margin: 0; padding-left: 38px; font-size: 12.5px; line-height: 1.3; }
+  .tb-quote span { white-space: normal; overflow: visible; text-overflow: clip; }
+}
+@media (max-width: 370px) {
+  .topbar .wrap { column-gap: 0; }
+  .brand { font-size: 15px; gap: 7px; }
+  .topbar .icon-btn { width: 34px; }
+  .tb-quote { padding-left: 35px; }
+}
 .flip, .flip * { touch-action: none; }
 .deck-bar { position: absolute; left: 20px; right: 66px; bottom: 30px; }
 .deck.solid { padding-bottom: 46px; }
@@ -2173,14 +2186,27 @@ var TextUtil = (function () {
       '<button class="btn ghost icon-btn" data-theme-toggle aria-label="Switch light or dark" title="Light / dark">' + (isDark() ? I.sun : I.moon) + '</button>' +
       '<button class="btn ghost icon-btn" data-settings aria-label="Settings">' + I.gear + '</button></div></header>';
   }
-  var quoteTimer = null;
+  var quoteTimer = null, quoteResize = null;
   function startQuotes(root) {
     var box = $('.tb-quote span', root);
     if (!box) return;
     var list = (S.quotes || []).filter(Boolean);
     if (!list.length) { box.parentNode.hidden = true; return; }
     if (S.quoteIdx == null) S.quoteIdx = Math.floor(Math.random() * 1000);
+    /* On phones quotes wrap under the title. Hold room for the longest one so the page never shifts when they change. */
+    function holdRoom() {
+      if (!box.isConnected) return;
+      var keep = box.textContent, tallest = 0;
+      box.parentNode.style.minHeight = '';
+      list.forEach(function (q) { box.textContent = q; tallest = Math.max(tallest, box.offsetHeight); });
+      box.textContent = keep;
+      box.parentNode.style.minHeight = tallest + 'px';
+    }
     box.textContent = list[S.quoteIdx % list.length];
+    holdRoom();
+    if (quoteResize) window.removeEventListener('resize', quoteResize);
+    quoteResize = holdRoom;
+    window.addEventListener('resize', quoteResize);
     clearInterval(quoteTimer);
     if (list.length < 2) return;
     quoteTimer = setInterval(function () {
