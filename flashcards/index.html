@@ -998,6 +998,15 @@ html.study-on .swipe-hint.neutral { color: var(--text); }
 .tf-ans b { display: inline; width: auto; height: auto; font-size: inherit; font-weight: 800; border-radius: 0; background: none; color: inherit; }
 .pts-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .pts-next { opacity: .55; }
+.pts-row.levelup .fbadge { transition: opacity .3s, transform .3s var(--ease); }
+.pts-row.levelup .fbadge:not(.pts-next) { opacity: .4; transform: scale(.85); }
+.pts-row.levelup .pts-next { opacity: 1; animation: fxFaceUp .6s .1s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes fxFaceUp { from { transform: scale(.8); opacity: .55; } 55% { transform: scale(1.5); box-shadow: 0 0 22px var(--lc); } to { transform: scale(1.22); box-shadow: 0 0 12px var(--lc); opacity: 1; } }
+.pts-lbl.levelup { color: #f5b83d !important; opacity: 1 !important; font-weight: 700; animation: resultIn .3s var(--ease) both; }
+@media (prefers-reduced-motion: reduce) { .pts-row.levelup .pts-next, .pts-lbl.levelup { animation: none; } }
+.fi-demo { margin: 0 0 18px; }
+.modal .sx-pop { position: static; width: auto; opacity: 1; transform: none; pointer-events: auto; box-shadow: none; }
+.modal .sx-title { display: none; }
 .pts .dots.bar { display: block; width: 130px; height: 8px; border-radius: 99px; overflow: hidden; background: var(--gl-track, var(--surface-3)); }
 .pts .dots.bar i { display: block; height: 100%; border-radius: inherit; box-shadow: none; transition: width .25s var(--ease); }
 .flip.fx-done .face-body { opacity: .22; transition: opacity .2s; }
@@ -2340,7 +2349,7 @@ var TextUtil = (function () {
       '<section class="hero' + (solo ? ' solo' : '') + '">' +
       '<div class="hero-main m-' + mode + '"><div>' +
       '<div class="seg mode" role="tablist" aria-label="Study mode">' + Object.keys(MODES).map(function (k) { return '<button role="tab" data-mode="' + k + '" class="' + (mode === k ? 'on' : '') + '" aria-selected="' + (mode === k) + '" title="' + MODE_DESC[k] + '">' + MODES[k] + '</button>'; }).join('') + '</div>' +
-      '<p class="mode-desc">' + (mode !== 'mission' ? MODE_DESC[mode] : MODE_DESC[mode].replace(/ (\S+)$/, ' <span class="nw">$1 <button class="hero-i" data-mode-info aria-label="How Mission works">i</button></span>')) + '</p>' +
+      '<p class="mode-desc">' + MODE_DESC[mode].replace(/ (\S+)$/, ' <span class="nw">$1 <button class="hero-i" data-mode-info aria-label="How ' + MODES[mode] + ' works">i</button></span>') + '</p>' +
       '<div class="eyebrow">' + hello + '</div>' +
       '<div class="big">' + big + '</div>' +
       '<div class="sub">' + sub + '</div></div>' +
@@ -2375,7 +2384,7 @@ var TextUtil = (function () {
     wireTop(app);
     afterModeRender(app);
     var mi = $('[data-mode-info]', app);
-    if (mi) mi.addEventListener('click', function (e) { e.stopPropagation(); missionInfo(); });
+    if (mi) mi.addEventListener('click', function (e) { e.stopPropagation(); if (mode === 'mission') missionInfo(); else if (mode === 'focus') focusInfo(sel); else freeInfo(sel); });
     $$('[data-mode]', app).forEach(function (b) { b.addEventListener('click', function () { if (b.getAttribute('data-mode') !== mode) setMode(b.getAttribute('data-mode')); }); });
     var gb = $('[data-go]', app);
     if (gb) gb.addEventListener('click', function () { startMode(mode, sel, 'home'); });
@@ -2457,19 +2466,48 @@ var TextUtil = (function () {
     }
     return cells.join('');
   }
-  function stageExplainer(ids) {
+  /* The "right in a row" number for these decks; if they differ, the usual 5 stands in for the explainers. */
+  function goalOf(ids) {
     var g = {}; ids.forEach(function (id) { g[deckGoal(id)] = 1; });
-    var k = Object.keys(g), n = k.length === 1 ? k[0] : '5';
+    var k = Object.keys(g);
+    return k.length === 1 ? k[0] : '5';
+  }
+  function stageExplainer(ids) {
+    var n = goalOf(ids);
     var st = [4, 3, 2, 1].map(function (l, i) {
       return '<div class="sx-st lv' + l + '"><span class="sx-b">' + esc(FACES[l]) + '</span><small>' + FACE_NAMES[l] + '</small></div>' +
         (i < 3 ? '<div class="sx-gap"><span class="sx-when">' + ['back tomorrow', 'back in 3 days', 'back in a week'][i] + '</span></div>' : '');
     }).join('');
-    return '<div class="sx-pop" data-sx role="dialog" aria-label="How stages work"><div class="sx-title">How cards move up</div>' +
-      '<div class="sx-track">' + st + '<div class="sx-mini"><span>Card</span><span class="sx-ticks">' + new Array(Number(n) + 1).join('<i></i>') + '</span><span class="sx-x">&times;</span></div></div>' +
+    return '<div class="sx-pop" data-sx data-n="' + n + '" role="dialog" aria-label="How stages work"><div class="sx-title">How cards move up</div>' +
+      '<div class="sx-track">' + st + '<div class="sx-mini"><span>Card</span><span class="sx-ticks">' + new Array(Math.min(Number(n), 8) + 1).join('<i></i>') + '</span><span class="sx-x">&times;</span></div></div>' +
       '<p class="sx-cap">Get it right ' + n + ' times in a row...</p>' +
-      '<div class="sx-rules"><span><b>' + n + ' in a row</b> moves a card up a stage</span><span><b>Each stage</b> waits longer: tomorrow, 3 days, a week, 2 weeks+</span><span><b>Wrong</b> drops it back one stage</span>' +
+      '<div class="sx-rules"><span><b>' + n + ' in a row</b> moves a card up a stage</span><span><b>Each stage</b> waits longer: tomorrow, 3 days, a week, 2 weeks+</span><span><b>Wrong</b> drops it back one stage</span><span><b>Stopping is fine.</b> Your count waits until 4am, then that day\'s run starts again</span>' +
       '<span class="sx-note"><b>Note:</b> you can give any deck or folder its own number instead of 5 (Edit deck, or the folder menu).</span></div>' +
       '<div class="sx-foot"><button class="btn sm" data-edit-faces>Change the faces</button></div></div>';
+  }
+  function focusInfo(ids) {
+    var m = modal('How Focus works', '<p class="mi-lead">Focus is how cards move up through the stages. Work on all of them, or pick one stage from the tiles below.</p>' + stageExplainer(ids), '<span class="spacer"></span><button class="btn primary" data-close>Got it</button>');
+    var pop = $('[data-sx]', m.el);
+    pop.classList.add('show');
+    $('[data-edit-faces]', pop).addEventListener('click', function () { m.close(); openFaces(); });
+    m.onClose = sxStop;
+    sxStop();
+    setTimeout(function () { sxRun(pop); }, 120);
+  }
+  function freeInfo(ids) {
+    var n = Number(goalOf(ids)), on = Math.min(2, n - 1), shown = Math.min(n, 12), dots = '';
+    for (var i = 0; i < shown; i++) dots += '<i class="' + (i < on ? 'on' : '') + '"></i>';
+    modal('How Free study works',
+      '<p class="mi-lead">Free study is practice. Go through your cards as much as you like, without changing how well the app thinks you know them.</p>' +
+      '<div class="pts fi-demo"><div class="pts-row"><span class="pts-end bad">' + I.x + '</span><span class="dots">' + dots + '</span><span class="pts-end good">' + I.check + '</span></div><span class="pts-lbl">' + on + ' of ' + n + ' right in a row</span></div>' +
+      '<ul class="mi-rules">' +
+      '<li><b>Every card</b> in the decks you chose comes up, shuffled.</li>' +
+      '<li><b>Right ' + n + ' ' + (n === 1 ? 'time' : 'times in a row') + '</b> and that card is done for this session.</li>' +
+      '<li><b>Wrong</b> sets its count back to 0, and it comes back soon.</li>' +
+      '<li><b>Your number:</b> give any deck or folder its own number in Edit deck or the folder menu.</li>' +
+      '<li><b>Stopping</b> ends the session. Counts are not saved, so next time starts fresh.</li>' +
+      '<li><b>Practice only.</b> Your stages and your Mission schedule stay as they are.</li></ul>',
+      '<span class="spacer"></span><button class="btn primary" data-close>Got it</button>');
   }
   function missionInfo() {
     var gaps = [['10 min', 10], ['1 day', 22], ['3 days', 38], ['8 days', 62], ['20 days', 90], ['50 days', 120]];
@@ -2535,7 +2573,7 @@ var TextUtil = (function () {
     if (reduce) { whens.forEach(function (w) { w.classList.add('on'); }); cap.textContent = 'Get it right enough times in a row to move up a stage.'; return; }
     var t = 300, caps = ['...and it moves up, back tomorrow', 'Again: back in 3 days', 'Again: back in a week'];
     [0, 1, 2].forEach(function (stage) {
-      sxLater(t, function () { ticks.forEach(function (x) { x.className = ''; }); if (stage) cap.textContent = 'Again, ' + ticks.length + ' in a row...'; });
+      sxLater(t, function () { ticks.forEach(function (x) { x.className = ''; }); if (stage) cap.textContent = 'Again, ' + pop.getAttribute('data-n') + ' in a row...'; });
       ticks.forEach(function (x, k) { sxLater(t + 250 + k * 240, function () { x.className = 'on'; }); });
       sxLater(t + 300 + ticks.length * 240, function () { cap.textContent = caps[stage]; at(stage + 1); whens[stage].classList.add('on'); });
       t += 900 + ticks.length * 240 + 800;
@@ -3871,7 +3909,7 @@ var TextUtil = (function () {
       else if (!r.done) {
         var lo = Math.min(s.review.length, 3);
         s.review.splice(lo + Math.floor(Math.random() * (s.review.length - lo + 1)), 0, item);
-      } else { s.doneToday++; s.flash = 'Up to ' + (FACES[5 - r.to] ? FACES[5 - r.to] + ' ' : '') + FACE_NAMES[5 - r.to] + ', back ' + gapLabel(Math.round((r.back - SRS.dayStart(now, 0)) / SRS.DAY)); }
+      } else { s.doneToday++; s.levelUp = FACE_NAMES[5 - r.to] + ', back ' + gapLabel(Math.round((r.back - SRS.dayStart(now, 0)) / SRS.DAY)); }
       return animateOut(right === false ? 'again' : right === null ? 'hard' : 'good', dirOut, r.done ? 'Done for today' : '');
     }
     var mg = right === false ? 'again' : right === null ? 'hard' : 'good';
@@ -3882,6 +3920,19 @@ var TextUtil = (function () {
     s.n++; if (right) s.correct++;
     if (after.s === 'learn') s.learn.push(item);
     animateOut(mg, dirOut, right === true && after.s === 'review' ? 'Done for today' : '', 340);
+  }
+  /* The emoji row shows a card moving up: dots fill, the next face pops, the label says where it went and when it is back. */
+  function tickUpRow(text) {
+    var row = $('.pts .pts-row'), lbl = $('.pts .pts-lbl');
+    if (!row) return;
+    var box = $('.dots', row);
+    if (box) {
+      box.setAttribute('data-n', box.getAttribute('data-goal'));
+      if (box.classList.contains('bar')) box.firstChild.style.width = '100%';
+      else $$('i', box).forEach(function (d) { d.classList.add('on'); });
+    }
+    row.classList.add('levelup');
+    if (lbl) { lbl.removeAttribute('data-of'); lbl.textContent = text; lbl.classList.add('levelup'); }
   }
   /* The card is finished: gold border, a small pop, sparks and a stamp, before it leaves. */
   function celebrate(flip, label) {
@@ -3905,6 +3956,7 @@ var TextUtil = (function () {
     var flip = $('[data-flip]');
     if (flip && finished) {
       celebrate(flip, finished);
+      if (s.levelUp) { tickUpRow(s.levelUp); s.levelUp = null; hold = 1000; }
       setTimeout(function () {
         flip.style.transition = 'transform .24s var(--ease), opacity .24s';
         flip.style.transform = 'translateY(-26px) scale(.97)';
@@ -3914,7 +3966,6 @@ var TextUtil = (function () {
         s.grading = false;
         nextItem();
         if (S.view === 'study') render();
-        if (s.flash) { toast(s.flash); s.flash = null; }
       }, (hold || 640) + 220);
       return;
     }
@@ -3928,7 +3979,6 @@ var TextUtil = (function () {
       s.grading = false;
       nextItem();
       if (S.view === 'study') render();
-      if (s.flash) { toast(s.flash); s.flash = null; }
     }, flip ? 230 : 0);
   }
   /* Dragging the card. The browser must not handle touches on it (touch-action: none in the CSS), or it cancels
