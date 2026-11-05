@@ -774,6 +774,70 @@ img { max-width: 100%; }
 .fr-dir { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
 @media (max-width: 420px) { .fr-stats { grid-template-columns: 1fr 1fr; } .fr-goal { grid-column: 1 / -1; } }
 
+/* batch: focus buttons without boxes */
+.ft-go { background: none !important; box-shadow: none !important; backdrop-filter: none; padding: 4px 0; }
+.ft-go:hover:not(:disabled) .ft-play { background: rgba(255, 255, 255, .35); }
+/* loose deck tiles: solid colour like the wallet cards */
+.deck.solid { border: 1px solid rgba(255, 255, 255, .14); color: #fff;
+  background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 55%, #000)); }
+.deck.solid.has-img, .wc.has-img { background: linear-gradient(135deg, color-mix(in srgb, var(--c, var(--dc)) 80%, transparent), color-mix(in srgb, var(--c, var(--dc)) 45%, rgba(0, 0, 0, .75))), var(--img) center / cover no-repeat; }
+.wc.has-img { background: linear-gradient(135deg, color-mix(in srgb, var(--dc) 80%, transparent), color-mix(in srgb, var(--dc) 45%, rgba(0, 0, 0, .75))), var(--img) center / cover no-repeat; }
+.deck.solid::before { display: none; }
+.deck.solid .meta { color: rgba(255, 255, 255, .8); }
+.deck.solid .dot { background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, .25); }
+.deck.solid .chip { background: rgba(0, 0, 0, .22); color: #fff; }
+.deck.solid .go { background: rgba(255, 255, 255, .95); color: #111; }
+.deck.solid .pick i { border-color: rgba(255, 255, 255, .8); background: rgba(0, 0, 0, .15); }
+.deck.solid .pick input:checked + i { background: rgba(255, 255, 255, .95); border-color: #fff; }
+.deck.solid .pick input:checked + i::after { border-color: var(--c); }
+.deck.solid:not(.picked) { opacity: .6; }
+.img-prev { height: 90px; border-radius: 12px; background: center / cover no-repeat var(--surface-2); margin: -4px 0 12px; border: 1px solid var(--line); }
+/* submenus */
+.menu button.has-sub { position: relative; }
+.menu .sub-arrow { margin-left: auto; display: inline-flex; color: var(--muted); }
+.menu .sub-arrow svg { width: 14px; height: 14px; }
+.menu button.has-sub.open { background: var(--surface-2); }
+.menu.sub { z-index: 61; animation: subIn .2s var(--ease); }
+@keyframes subIn { from { opacity: 0; transform: translateX(-8px); } }
+/* quote in the top bar */
+.tb-quote { flex: 1 1 auto; min-width: 0; margin-left: 18px; font-size: 13.5px; color: var(--muted); font-style: italic; overflow: hidden; }
+.tb-quote span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: opacity .45s, transform .45s var(--ease); }
+.tb-quote span.out { opacity: 0; transform: translateY(-6px); }
+.topbar .spacer { flex: 0 1 12px; }
+@media (max-width: 480px) { .tb-quote { font-size: 12px; margin-left: 10px; } }
+/* hero go button with decks chosen inside */
+.go-btn { height: auto !important; padding: 10px 20px 10px 16px !important; gap: 12px; }
+.go-btn span { display: grid; text-align: left; line-height: 1.2; }
+.go-btn small { font-size: 12px; font-weight: 600; opacity: .65; }
+/* heat card cog + home cards */
+.heat-r { display: inline-flex; align-items: center; gap: 8px; }
+.heat-cog { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0; }
+.heat-cog svg { width: 15px; height: 15px; }
+.heat-cog:hover { background: var(--surface-2); color: var(--text); }
+.home-cog { align-self: start; justify-self: end; }
+.hero-side.no-heat { grid-template-rows: auto auto; }
+.hc-list { display: grid; gap: 10px; }
+/* explainer above everything; faces editor */
+.levels { position: relative; z-index: 6; }
+.sx-pop { z-index: 70; }
+.sx-foot { margin-top: 12px; display: flex; justify-content: flex-end; }
+.sx-foot .btn { background: #fff; color: #16181d; border-color: #d6d9e0; }
+.fx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; transition: opacity .2s; }
+.fx-grid.off { opacity: .4; pointer-events: none; }
+.fx { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; padding: 10px; border-radius: 12px; background: var(--surface-2); }
+.fx-dot { grid-row: span 2; width: 14px; height: 14px; border-radius: 50%; background: var(--lc); }
+.fx .input { height: 38px; font-size: 20px; }
+.fbadge:empty { width: 22px; height: 22px; background: var(--lc); }
+.sx-b:empty { background: var(--lc); }
+/* tabs: each a slightly different shade */
+.hero-main .seg.mode button[data-mode="free"] { background: rgba(0, 0, 0, .04) !important; }
+.hero-main .seg.mode button[data-mode="focus"] { background: rgba(0, 0, 0, .1) !important; }
+.hero-main .seg.mode button[data-mode="mission"] { background: rgba(0, 0, 0, .17) !important; }
+
+/* fade between light and dark */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .45s; animation-timing-function: ease; }
+html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after { transition: background-color .45s ease, color .45s ease, border-color .45s ease, fill .45s ease, stroke .45s ease !important; }
+
 </style>
 </head>
 <body>
@@ -1140,7 +1204,15 @@ var TextUtil = (function () {
     var t = isDark() ? 'light' : 'dark';
     if (S.user) S.user.settings.theme = t;
     ls('fc.theme', t);
-    applyTheme(); render(); cacheNow();
+    var swap = function () { applyTheme(); render(); };
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (document.startViewTransition && !reduce) document.startViewTransition(swap);
+    else if (!reduce) {
+      document.documentElement.classList.add('theme-fade');
+      swap();
+      setTimeout(function () { document.documentElement.classList.remove('theme-fade'); }, 500);
+    } else swap();
+    cacheNow();
     if (S.user) api('saveSettings', { settings: S.user.settings }).catch(function () {});
   }
   if (window.matchMedia) {
@@ -1218,15 +1290,28 @@ var TextUtil = (function () {
       $('[data-ok]', m.el).addEventListener('click', function () { done = true; m.close(); resolve(true); });
     });
   }
-  function menu(anchor, items, pt) {
-    closeMenus();
-    var m = el('<div class="menu"></div>');
+  function menu(anchor, items, pt, isSub) {
+    if (!isSub) closeMenus();
+    var m = el('<div class="menu' + (isSub ? ' sub' : '') + '"></div>');
+    var openSub = null;
     items.forEach(function (it) {
-      var b = el('<button class="' + (it.danger ? 'danger' : '') + '">' + (I[it.icon] || '') + '<span></span></button>');
+      var b = el('<button class="' + (it.danger ? 'danger' : '') + (it.sub ? ' has-sub' : '') + '">' + (I[it.icon] || '') + '<span></span>' + (it.sub ? '<em class="sub-arrow">' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</em>' : '') + '</button>');
       $('span', b).textContent = it.label;
-      b.addEventListener('click', function (e) { e.stopPropagation(); closeMenus(); it.run(); });
+      if (it.sub) {
+        var show = function () {
+          if (openSub && openSub.isConnected) { if (openSub.owner === b) return; openSub.remove(); }
+          $$('.has-sub', m).forEach(function (x) { x.classList.toggle('open', x === b); });
+          openSub = subMenu(b, it.sub, m); openSub.owner = b;
+        };
+        b.addEventListener('mouseenter', show);
+        b.addEventListener('click', function (e) { e.stopPropagation(); show(); });
+      } else {
+        b.addEventListener('mouseenter', function () { if (openSub && openSub.isConnected) { openSub.remove(); openSub = null; $$('.has-sub', m).forEach(function (x) { x.classList.remove('open'); }); } });
+        b.addEventListener('click', function (e) { e.stopPropagation(); closeMenus(); it.run(); });
+      }
       m.appendChild(b);
     });
+    if (isSub) return m;
     document.body.appendChild(m);
     var r = pt ? { left: pt.x, right: pt.x + m.offsetWidth, top: pt.y, bottom: pt.y } : anchor.getBoundingClientRect();
     var left = Math.min(r.right - m.offsetWidth, window.innerWidth - m.offsetWidth - 12);
@@ -1237,6 +1322,18 @@ var TextUtil = (function () {
     setTimeout(function () { document.addEventListener('click', closeMenus, { once: true }); }, 0);
   }
   function closeMenus() { $$('.menu').forEach(function (m) { m.remove(); }); }
+  function subMenu(btn, items, parent) {
+    var m = menu(null, items, null, true);
+    document.body.appendChild(m);
+    var r = btn.getBoundingClientRect(), pr = parent.getBoundingClientRect();
+    var left = pr.right + 4;
+    if (left + m.offsetWidth > window.innerWidth - 8) left = pr.left - m.offsetWidth - 4;
+    if (left < 8) { left = Math.max(8, pr.left + 16); }
+    var top = Math.min(r.top - 6, window.innerHeight - m.offsetHeight - 12);
+    m.style.left = left + 'px'; m.style.top = Math.max(12, top) + 'px';
+    m.addEventListener('click', function (e) { e.stopPropagation(); });
+    return m;
+  }
   function busy(btn, on) {
     if (!btn) return;
     if (on) { btn.dataset.label = btn.innerHTML; btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true; }
@@ -1251,7 +1348,16 @@ var TextUtil = (function () {
   function dirsOf(card) { return card.reverse && card.type !== 'tf' ? ['f', 'r'] : ['f']; }
   function newLimit() { var n = S.user ? Number(S.user.settings.newPerDay) : 20; return isNaN(n) ? 20 : n; }
 
-  var FACES = { 1: '🤩', 2: '😐', 3: '😓', 4: '🥶' };
+  var DEFAULT_FACES = { 1: '🤩', 2: '😐', 3: '😓', 4: '🥶' };
+  var FACES = Object.assign({}, DEFAULT_FACES);
+  function facesOff() { return S.user && S.user.settings.faces === 'off'; }
+  function applyFaces() {
+    var f = S.user && S.user.settings.faces;
+    FACES = Object.assign({}, DEFAULT_FACES);
+    if (Array.isArray(f)) [4, 3, 2, 1].forEach(function (l, i) { if (f[i]) FACES[l] = f[i]; });
+    if (f === 'off') FACES = { 1: '', 2: '', 3: '', 4: '' };
+  }
+  function faceLabel(l) { return FACES[l] || FACE_NAMES[l]; }
   var FACE_NAMES = { 1: 'Know it', 2: 'Nearly there', 3: 'Getting it', 4: 'Learning it' };
   function gapLabel(days) {
     if (days <= 1) return 'tomorrow';
@@ -1260,7 +1366,9 @@ var TextUtil = (function () {
     if (days < 60) return 'in ' + Math.round(days / 7) + ' weeks';
     return 'in ' + Math.round(days / 30) + ' months';
   }
-  function fbadge(l, cls) { return '<span class="fbadge lv' + l + (cls ? ' ' + cls : '') + '" title="' + FACE_NAMES[l] + '">' + FACES[l] + '</span>'; }
+  function fbadge(l, cls) { return '<span class="fbadge lv' + l + (cls ? ' ' + cls : '') + '" title="' + FACE_NAMES[l] + '">' + esc(FACES[l]) + '</span>'; }
+  function safeImg(v) { return /^https:[^\s"'()<>\\]+$/i.test(String(v || '')) && String(v).indexOf(':' + '/' + '/') === 5; }
+  function coverStyle(d) { return safeImg(d.image) ? ';--img:url(&quot;' + esc(d.image) + '&quot;)' : ''; }
   function deckGoal(deckId) { var d = deckById(deckId); var n = d && Number(d.streak); return n >= 1 && n <= 10 ? n : 5; }
   function tfAnswer(card) {
     var ch = String(card.back || '').trim().charAt(0);
@@ -1595,6 +1703,7 @@ var TextUtil = (function () {
   }
   function render() {
     closeMenus();
+    applyFaces();
     var app = $('#app');
     var deck = S.deckId && deckById(S.deckId);
     if (S.view === 'deck' && !deck) S.view = 'home';
@@ -1613,12 +1722,29 @@ var TextUtil = (function () {
 
   function topbar(extra) {
     return '<header class="topbar"><div class="wrap"><button class="brand" data-home><span class="mark"></span>Flash Cards</button>' +
-      '<span class="spacer"></span><span class="sync hide-sm"><i></i><span>Saved</span></span>' + (extra || '') +
+      '<span class="tb-quote" aria-live="off"><span></span></span><span class="spacer"></span><span class="sync hide-sm"><i></i><span>Saved</span></span>' + (extra || '') +
       '<button class="btn ghost icon-btn" data-friends aria-label="Friends" title="Friends">' + I.people + '</button>' +
       '<button class="btn ghost icon-btn" data-theme-toggle aria-label="Switch light or dark" title="Light / dark">' + (isDark() ? I.sun : I.moon) + '</button>' +
       '<button class="btn ghost icon-btn" data-settings aria-label="Settings">' + I.gear + '</button></div></header>';
   }
+  var quoteTimer = null;
+  function startQuotes(root) {
+    var box = $('.tb-quote span', root);
+    if (!box) return;
+    var list = (S.quotes || []).filter(Boolean);
+    if (!list.length) { box.parentNode.hidden = true; return; }
+    if (S.quoteIdx == null) S.quoteIdx = Math.floor(Math.random() * 1000);
+    box.textContent = list[S.quoteIdx % list.length];
+    clearInterval(quoteTimer);
+    if (list.length < 2) return;
+    quoteTimer = setInterval(function () {
+      if (!box.isConnected) { clearInterval(quoteTimer); return; }
+      box.classList.add('out');
+      setTimeout(function () { S.quoteIdx++; box.textContent = list[S.quoteIdx % list.length]; box.classList.remove('out'); }, 450);
+    }, 9000);
+  }
   function wireTop(root) {
+    startQuotes(root);
     $('[data-home]', root).addEventListener('click', function () { go('home'); });
     $('[data-settings]', root).addEventListener('click', openSettings);
     var fr = $('[data-friends]', root); if (fr) fr.addEventListener('click', function () { go('friends'); });
@@ -1748,23 +1874,27 @@ var TextUtil = (function () {
     if (S.quoteIdx == null) S.quoteIdx = Math.floor(Math.random() * 1000);
     var quote = S.quotes.length ? S.quotes[S.quoteIdx % S.quotes.length] : '';
     var st = streak();
+    var hide = {}; (S.user.settings.hide || []).forEach(function (h) { hide[h] = 1; });
     var empty = !S.cards.length ? (S.decks.length ? 'Add some cards to start studying.' : 'Make your first deck to get started.') : '';
 
     var big, sub, buttons;
+    var chosenTxt = allOn ? 'All ' + plural(S.decks.length, 'deck') : sel.length + ' of ' + plural(S.decks.length, 'deck');
+    function goBtn(label, attr, ghost) {
+      return '<button class="btn lg go-btn' + (ghost ? ' ghost-light' : '') + '" ' + attr + (selCards ? '' : ' disabled') + '>' + I.play + '<span><b>' + label + '</b><small>' + chosenTxt + '</small></span></button>';
+    }
     if (mode === 'free') {
       big = fs.ready + fs.resting;
       sub = empty || plural(big, 'card') + ' in your chosen decks. Every one, shuffled.';
-      buttons = '<button class="btn lg" data-go ' + (selCards ? '' : 'disabled') + '>' + I.play + 'Start free study</button>';
+      buttons = goBtn('Start free study', 'data-go');
     } else if (mode === 'focus') {
       big = fs.ready;
       sub = empty || (fs.ready ? plural(fs.ready, 'card') + ' to study now. Or pick a stage below.' : 'Nothing due right now. Pick a stage below to practise early.');
-      buttons = '<button class="btn lg" data-go ' + (selCards ? '' : 'disabled') + '>' + I.play + 'Start focus</button>';
+      buttons = goBtn('Start focus', 'data-go');
     } else {
       big = ready;
       sub = empty || (ready ? (due ? plural(due, 'review') + ' due' : 'No reviews due') + (fresh ? ' and ' + fresh + ' new' : '') + ' today.'
         : 'Mission complete' + (allOn ? '' : ' for your chosen decks') + '.' + (nextDue(sel) ? ' Next cards are due ' + whenLabel(nextDue(sel)) + '.' : ''));
-      buttons = ready ? '<button class="btn lg" data-go>' + I.play + 'Start mission</button>'
-        : '<button class="btn lg ghost-light" data-free-instead ' + (selCards ? '' : 'disabled') + '>' + I.play + 'Free study instead</button>';
+      buttons = ready ? goBtn('Start mission', 'data-go') : goBtn('Free study instead', 'data-free-instead', true);
     }
 
     app.innerHTML = topbar() + '<main class="wrap home"><div class="appear">' +
@@ -1776,31 +1906,33 @@ var TextUtil = (function () {
       '<div class="big">' + big + '</div>' +
       '<div class="sub">' + sub + '</div></div>' +
       '<div class="row" style="margin-top:20px">' + buttons + '</div>' +
-      '<div class="chosen">' + (allOn ? 'All ' + plural(S.decks.length, 'deck') + ' chosen' : sel.length + ' of ' + plural(S.decks.length, 'deck') + ' chosen') + ' &middot; tick decks or folders below</div></div>' +
-      '<div class="hero-side"><div class="stats">' +
-      '<div class="stat"><svg class="ring" viewBox="0 0 46 46"><circle class="bg" cx="23" cy="23" r="18"/><circle class="fg" cx="23" cy="23" r="18" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct)) + '"/></svg>' +
-      '<div><div class="num">' + done + '<span style="font-size:15px;color:var(--faint);font-weight:600">/' + goal + '</span></div><div class="lbl">Today\'s goal</div></div></div>' +
-      '<div class="stat"><div class="flame">' + I.flame + '</div><div><div class="num">' + st + '</div><div class="lbl">Day streak</div></div></div>' +
-      '</div><div class="heat"><div class="heat-head"><span>Last 17 weeks</span><span>' + plural(totalReviews(), 'review') + '</span></div><div class="heat-grid">' + heatCells(goal) + '</div></div></div>' +
+      '</div>' +
+      '<div class="hero-side' + (hide.goal && hide.streak ? ' no-stats' : '') + (hide.heat ? ' no-heat' : '') + '">' + (hide.goal && hide.streak ? '' : '<div class="stats">') +
+      (hide.goal ? '' : '<div class="stat"><svg class="ring" viewBox="0 0 46 46"><circle class="bg" cx="23" cy="23" r="18"/><circle class="fg" cx="23" cy="23" r="18" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct)) + '"/></svg>' +
+      '<div><div class="num">' + done + '<span style="font-size:15px;color:var(--faint);font-weight:600">/' + goal + '</span></div><div class="lbl">Today\'s goal</div></div></div>') +
+      (hide.streak ? '' : '<div class="stat"><div class="flame">' + I.flame + '</div><div><div class="num">' + st + '</div><div class="lbl">Day streak</div></div></div>') +
+      (hide.goal && hide.streak ? '' : '</div>') +
+      (hide.heat ? '<button class="btn sm ghost home-cog" data-home-cog>' + I.gear + 'Home cards</button>'
+        : '<div class="heat"><div class="heat-head"><span>Last 17 weeks</span><span class="heat-r">' + plural(totalReviews(), 'review') + '<button class="heat-cog" data-home-cog aria-label="Edit goal and cards" title="Goal and cards">' + I.gear + '</button></span></div><div class="heat-grid">' + heatCells(goal) + '</div></div>') + '</div>' +
       '</section>' +
-      (quote ? '<p class="quote"><b></b></p>' : '') +
+
       (S.cards.length && mode === 'focus' ? '<section class="levels"><div class="levels-head"><h2>Pick by how well you know them</h2>' +
         '<button class="info-btn" data-stage-info aria-label="How stages work" aria-expanded="false">i</button>' + stageExplainer(sel) + '</div>' +
         '<div class="ftiles">' + [4, 3, 2, 1].map(function (l) {
           var n = levelCounts[l];
           var upTo = [1, 2, 3, 4].filter(function (k) { return k >= l; }).reduce(function (s2, k) { return s2 + levelCounts[k]; }, 0);
-          var main = l === 4 ? 'Study ' + FACES[4] : l === 1 ? 'Study all' : 'Study ' + FACES[l] + ' and below';
-          return '<div class="ftile lv' + l + (n ? '' : ' ft-empty') + '"><span class="ft-face">' + FACES[l] + '</span>' +
-            '<div class="ft-name"><span>' + FACES[l] + '</span>' + FACE_NAMES[l] + '</div><div class="ft-num">' + n + '<small>' + (n === 1 ? 'card' : 'cards') + '</small></div>' +
+          var main = l === 4 ? 'Study ' + esc(faceLabel(4)) : l === 1 ? 'Study all' : 'Study ' + esc(faceLabel(l)) + ' and below';
+          return '<div class="ftile lv' + l + (n ? '' : ' ft-empty') + '">' + (FACES[l] ? '<span class="ft-face">' + esc(FACES[l]) + '</span>' : '') +
+            '<div class="ft-name">' + (FACES[l] ? '<span>' + esc(FACES[l]) + '</span>' : '') + FACE_NAMES[l] + '</div><div class="ft-num">' + n + '<small>' + (n === 1 ? 'card' : 'cards') + '</small></div>' +
             '<button class="ft-go" data-level="' + l + '"' + (l < 4 ? ' data-worse' : '') + (upTo ? '' : ' disabled') + '><span><b>' + main + '</b><small>' + plural(upTo, 'card') + '</small></span><i class="ft-play">' + I.play + '</i></button>' +
-            (l < 4 ? '<button class="ft-only" data-level="' + l + '"' + (n ? '' : ' disabled') + '>Only ' + FACES[l] + ' &middot; ' + n + '</button>' : '<span class="ft-only-gap"></span>') + '</div>';
+            (l < 4 ? '<button class="ft-only" data-level="' + l + '"' + (n ? '' : ' disabled') + '>Only ' + esc(faceLabel(l)) + ' &middot; ' + n + '</button>' : '<span class="ft-only-gap"></span>') + '</div>';
         }).join('') + '</div></section>' : '') +
       '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>' +
       ('<button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Discover</span></button>' +
       (S.decks.length ? '<button class="btn sm ghost" data-new-folder>' + I.folder + '<span class="hide-sm">New folder</span></button>' : '')) + '<button class="btn sm" data-new-deck>' + I.plus + 'New deck</button></div>' +
       deckGroups(allStats) +
       '</div></main>';
-    if (quote) $('.quote b', app).textContent = quote;
+
     wireTop(app);
     afterModeRender(app);
     var mi = $('[data-mode-info]', app);
@@ -1808,6 +1940,7 @@ var TextUtil = (function () {
     $$('[data-mode]', app).forEach(function (b) { b.addEventListener('click', function () { if (b.getAttribute('data-mode') !== mode) setMode(b.getAttribute('data-mode')); }); });
     var gb = $('[data-go]', app);
     if (gb) gb.addEventListener('click', function () { startMode(mode, sel, 'home'); });
+    var hc = $('[data-home-cog]', app); if (hc) hc.addEventListener('click', openHomeCards);
     var fi = $('[data-free-instead]', app);
     if (fi) fi.addEventListener('click', function () { startMode('free', sel, 'home'); });
     var si = $('[data-stage-info]', app);
@@ -1888,14 +2021,15 @@ var TextUtil = (function () {
     var g = {}; ids.forEach(function (id) { g[deckGoal(id)] = 1; });
     var k = Object.keys(g), n = k.length === 1 ? k[0] : '5';
     var st = [4, 3, 2, 1].map(function (l, i) {
-      return '<div class="sx-st lv' + l + '"><span class="sx-b">' + FACES[l] + '</span><small>' + FACE_NAMES[l] + '</small></div>' +
+      return '<div class="sx-st lv' + l + '"><span class="sx-b">' + esc(FACES[l]) + '</span><small>' + FACE_NAMES[l] + '</small></div>' +
         (i < 3 ? '<div class="sx-gap"><span class="sx-when">' + ['back tomorrow', 'back in 3 days', 'back in a week'][i] + '</span></div>' : '');
     }).join('');
     return '<div class="sx-pop" data-sx role="dialog" aria-label="How stages work"><div class="sx-title">How cards move up</div>' +
       '<div class="sx-track">' + st + '<div class="sx-mini"><span>Card</span><span class="sx-ticks">' + new Array(Number(n) + 1).join('<i></i>') + '</span><span class="sx-x">&times;</span></div></div>' +
       '<p class="sx-cap">Get it right ' + n + ' times in a row...</p>' +
       '<div class="sx-rules"><span><b>' + n + ' in a row</b> moves a card up a stage</span><span><b>Each stage</b> waits longer: tomorrow, 3 days, a week, 2 weeks+</span><span><b>Wrong</b> drops it back one stage</span>' +
-      '<span class="sx-note"><b>Note:</b> you can give any deck or folder its own number instead of 5 (Edit deck, or the folder menu).</span></div></div>';
+      '<span class="sx-note"><b>Note:</b> you can give any deck or folder its own number instead of 5 (Edit deck, or the folder menu).</span></div>' +
+      '<div class="sx-foot"><button class="btn sm" data-edit-faces>Change the faces</button></div></div>';
   }
   function missionInfo() {
     var gaps = [['10 min', 10], ['1 day', 22], ['3 days', 38], ['8 days', 62], ['20 days', 90], ['50 days', 120]];
@@ -1913,6 +2047,26 @@ var TextUtil = (function () {
     var chart = $('.mi-chart', m.el);
     setTimeout(function () { chart.classList.add('go'); }, 80);
   }
+  function openFaces() {
+    var cur = S.user.settings.faces, off = cur === 'off';
+    var vals = [4, 3, 2, 1].map(function (l) { return Array.isArray(cur) && cur[[4, 3, 2, 1].indexOf(l)] || DEFAULT_FACES[l]; });
+    var m = modal('Faces', '<p class="hint" style="margin:0 0 14px">Pick any emoji (or a short word) for each stage, or turn faces off to show just the colours.</p>' +
+      '<label class="switch" style="margin-bottom:16px"><input type="checkbox" data-on' + (off ? '' : ' checked') + '><i></i>Show faces</label>' +
+      '<div class="fx-grid">' + [4, 3, 2, 1].map(function (l, i) {
+        return '<label class="fx lv' + l + '"><span class="fx-dot"></span><b>' + FACE_NAMES[l] + '</b><input class="input" maxlength="8" data-f="' + i + '" value="' + esc(vals[i]) + '"></label>';
+      }).join('') + '</div>',
+      '<button class="btn ghost" data-reset>Use the originals</button><span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>Save</button>');
+    var E = m.el, on = $('[data-on]', E);
+    function paint() { $('.fx-grid', E).classList.toggle('off', !on.checked); }
+    on.addEventListener('change', paint); paint();
+    $('[data-reset]', E).addEventListener('click', function () { $$('[data-f]', E).forEach(function (x, i) { x.value = DEFAULT_FACES[[4, 3, 2, 1][i]]; }); on.checked = true; paint(); });
+    $('[data-save]', E).addEventListener('click', function () {
+      var list = $$('[data-f]', E).map(function (x, i) { return x.value.trim() || DEFAULT_FACES[[4, 3, 2, 1][i]]; });
+      var same = list.every(function (v, i) { return v === DEFAULT_FACES[[4, 3, 2, 1][i]]; });
+      S.user.settings.faces = !on.checked ? 'off' : same ? null : list;
+      saveSettingsSoon(); m.close(); render(); toast('Faces saved.');
+    });
+  }
   var sxTimers = [];
   function sxStop() { sxTimers.forEach(clearTimeout); sxTimers = []; }
   function sxLater(ms, fn) { sxTimers.push(setTimeout(fn, ms)); }
@@ -1924,6 +2078,8 @@ var TextUtil = (function () {
     btn.setAttribute('aria-expanded', on);
     sxStop();
     if (!on) return;
+    var ef = $('[data-edit-faces]', pop);
+    if (ef && !ef.wired) { ef.wired = true; ef.addEventListener('click', function (e) { e.stopPropagation(); toggleStageInfo(btn, false); openFaces(); }); }
     var close = function (e) { if (!pop.contains(e.target)) { toggleStageInfo(btn, false); document.removeEventListener('click', close); } };
     setTimeout(function () { document.addEventListener('click', close); }, 0);
     sxRun(pop);
@@ -1985,7 +2141,7 @@ var TextUtil = (function () {
     var k = knownLabel(lv), extra = Math.max(0, xs.length - WC_MAX);
     var cards = xs.map(function (x, i) {
       var d = x.deck, dl = levelsOf([d.id]), kl = knownLabel(dl);
-      return '<div class="wc' + (i >= WC_MAX ? ' extra' : '') + '" data-wdeck="' + esc(d.id) + '" style="--dc:' + esc(d.color) + ';--i:' + i + ';--ci:' + Math.min(i, WC_MAX - 1) + ';z-index:' + (i + 1) + '">' +
+      return '<div class="wc' + (i >= WC_MAX ? ' extra' : '') + (safeImg(d.image) ? ' has-img' : '') + '" data-wdeck="' + esc(d.id) + '" style="--dc:' + esc(d.color) + coverStyle(d) + ';--i:' + i + ';--ci:' + Math.min(i, WC_MAX - 1) + ';z-index:' + (i + 1) + '">' +
         '<div class="wtop"><b>' + esc(d.name) + '</b><span>' + (kl === 'New' || kl === 'Empty' ? kl : kl + ' known') + '</span></div>' +
         '<div class="wbot"><small>' + plural(dl.total, 'card') + '</small>' + lvBar(dl) + '</div>' +
         '<label class="pick wpick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
@@ -2013,7 +2169,7 @@ var TextUtil = (function () {
       ? (mode === 'free' ? '' : (fs.ready ? '<span class="chip new">' + fs.ready + ' ready</span>' : '') + (fs.resting ? '<span class="chip">' + fs.resting + ' resting</span>' : ''))
       : (st.due + st.learn ? '<span class="chip due">' + (st.due + st.learn) + ' due</span>' : '') + (st.newToday ? '<span class="chip new">' + st.newToday + ' new</span>' : '') + (!st.ready ? '<span class="chip">Done for today</span>' : '');
     var canGo = free ? st.total > 0 : st.ready > 0;
-    return '<div class="deck' + (x.on ? ' picked' : '') + '" role="button" tabindex="0" data-id="' + esc(d.id) + '" style="--c:' + esc(d.color) + '">' +
+    return '<div class="deck solid' + (safeImg(d.image) ? ' has-img' : '') + (x.on ? ' picked' : '') + '" role="button" tabindex="0" data-id="' + esc(d.id) + '" style="--c:' + esc(d.color) + coverStyle(d) + '">' +
       '<label class="pick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
       '<span class="dot"></span><h3>' + esc(d.name) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
       '<div class="counts">' + chips + deckBadges(d) + '</div>' +
@@ -2044,12 +2200,14 @@ var TextUtil = (function () {
     items.push({ label: 'Open deck', icon: 'cards', run: function () { go('deck', { deckId: d.id }); } });
     items.push({ label: 'Choose only this deck', icon: 'check', run: function () { setSelected([d.id]); render(); } });
     items.push({ label: 'Edit deck', icon: 'edit', run: function () { openDeckEditor(d); } });
-    folderNames().filter(function (f) { return f !== cur; }).slice(0, 8).forEach(function (f) {
-      items.push({ label: 'Move to ' + f, icon: 'folder', run: function () { setFolder(d.id, f); toast('Moved to ' + f + '.'); } });
+    var sub = folderNames().filter(function (f) { return f !== cur; }).map(function (f) {
+      return { label: f, icon: 'folder', run: function () { setFolder(d.id, f); toast('Moved to ' + f + '.'); } };
     });
-    items.push({ label: 'Move to a new folder', icon: 'plus', run: function () { openFolderEditor(null, [d.id]); } });
-    if (cur) items.push({ label: 'Take out of ' + cur, icon: 'x', run: function () { setFolder(d.id, ''); } });
+    sub.push({ label: 'New folder...', icon: 'plus', run: function () { openFolderEditor(null, [d.id]); } });
+    if (cur) sub.push({ label: 'Take out of ' + cur, icon: 'x', run: function () { setFolder(d.id, ''); } });
+    items.push({ label: 'Move to folder', icon: 'folder', sub: sub });
     items.push({ label: 'Share...', icon: 'share', run: function () { openShare([d.id]); } });
+    if (n) items.push({ label: d.mine ? 'Reset progress' : 'Reset my progress', icon: 'reset', run: function () { resetDeck(d); } });
     items.push(d.mine ? { label: 'Delete deck', icon: 'trash', danger: true, run: function () { deleteDeck(d); } }
                       : { label: 'Leave deck', icon: 'logout', danger: true, run: function () { leaveDeck(d); } });
     menu(anchor, items, pt);
@@ -2280,12 +2438,18 @@ var TextUtil = (function () {
       '<label class="field"><span>Folder</span><input class="input" data-folder maxlength="40" list="fc-folders" placeholder="None"><datalist id="fc-folders">' + folderNames().map(function (f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist></label>' +
       '<div class="field"><span>Colour</span><div class="swatches">' + COLORS.map(function (c) { return '<button class="swatch" data-c="' + c + '" style="background:' + c + '" aria-label="' + c + '"></button>'; }).join('') +
       '<label class="swatch" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);cursor:pointer" title="Custom"><input type="color" data-custom style="opacity:0;width:100%;height:100%;cursor:pointer"></label></div></div>' +
+      '<label class="field"><span>Cover image link (optional)</span><input class="input" data-image placeholder="https:&#47;&#47;..." autocomplete="off"><span class="hint" style="font-size:12px">Paste a link to a picture. It shows behind the deck name, tinted with the colour.</span></label>' +
+      '<div class="img-prev" data-img-prev hidden></div>' +
       '<div class="error" data-err></div>',
       '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>' + (deck ? 'Save' : 'Create deck') + '</button>');
     var name = $('[data-name]', m.el);
     name.value = deck ? deck.name : '';
     $('[data-folder]', m.el).value = deck ? folderOf(deck.id) : (presetFolder || '');
     $('[data-streak]', m.el).value = String(deck ? deckGoal(deck.id) : 5);
+    var imgIn = $('[data-image]', m.el), imgPrev = $('[data-img-prev]', m.el);
+    imgIn.value = deck && deck.image || '';
+    function paintImg() { var v = imgIn.value.trim(); imgPrev.hidden = !safeImg(v); if (safeImg(v)) imgPrev.style.backgroundImage = 'url("' + v + '")'; }
+    imgIn.addEventListener('input', paintImg); paintImg();
     function paint() { $$('.swatch[data-c]', m.el).forEach(function (s) { s.classList.toggle('on', s.getAttribute('data-c') === color); }); }
     $$('.swatch[data-c]', m.el).forEach(function (s) { s.addEventListener('click', function () { color = s.getAttribute('data-c'); paint(); }); });
     $('[data-custom]', m.el).value = color;
@@ -2294,7 +2458,7 @@ var TextUtil = (function () {
     function save() {
       var btn = $('[data-save]', m.el);
       busy(btn, true);
-      api('saveDeck', { id: deck && deck.id, name: name.value, color: color, streak: Number($('[data-streak]', m.el).value) }).then(function (d) {
+      api('saveDeck', { id: deck && deck.id, name: name.value, color: color, streak: Number($('[data-streak]', m.el).value), image: imgIn.value.trim() }).then(function (d) {
         if (deck) { Object.assign(deck, d); } else { S.decks.push(d); }
         var fname = $('[data-folder]', m.el).value.replace(/\s+/g, ' ').trim().slice(0, 40);
         if (fname !== folderOf(d.id)) {
@@ -2599,7 +2763,7 @@ var TextUtil = (function () {
       }).join('') + '</div></section>';
       html += '<section class="fr-sec"><h2>' + (d.friends.length ? 'Your friends' : 'No friends yet') + '</h2>' + (d.friends.length ? '<div class="fr-grid">' + d.friends.map(function (f, i) {
         var x = f.stats;
-        return '<div class="fr-card"><div class="fr-top"><span class="fr-av big">' + esc(f.name.charAt(0)) + '</span><div><b>' + esc(f.full || f.name) + '</b><small>' + plural(x.cards, 'card') + ' &middot; ' + x.known + ' at ' + FACES[1] + '</small></div><span class="spacer"></span><button class="btn ghost icon-btn sm" data-fmenu="' + i + '" aria-label="Friend options">' + I.more + '</button></div>' +
+        return '<div class="fr-card"><div class="fr-top"><span class="fr-av big">' + esc(f.name.charAt(0)) + '</span><div><b>' + esc(f.full || f.name) + '</b><small>' + plural(x.cards, 'card') + ' &middot; ' + x.known + ' at ' + esc(faceLabel(1)) + '</small></div><span class="spacer"></span><button class="btn ghost icon-btn sm" data-fmenu="' + i + '" aria-label="Friend options">' + I.more + '</button></div>' +
           '<div class="fr-stats"><div><span class="fr-streak big">' + I.flame + x.streak + '</span><small>day streak</small></div>' +
           '<div>' + weekBars(x.week) + '<small>' + plural(x.weekTotal, 'review') + ' this week</small></div>' +
           '<div class="fr-goal">' + goalRing(x.today, x.goal) + '<span><b>' + x.today + '</b>/' + x.goal + '</span><small>today</small></div></div>' +
@@ -2722,6 +2886,25 @@ var TextUtil = (function () {
     });
   }
 
+  function openHomeCards() {
+    var st = S.user.settings, hide = st.hide || [];
+    var m = modal('Goal and home cards',
+      '<div class="grid2"><label class="field"><span>Daily goal (answers)</span><input class="input" type="number" min="1" max="2000" data-goal></label>' +
+      '<label class="field"><span>New cards a day (Mission)</span><input class="input" type="number" min="0" max="500" data-new></label></div>' +
+      '<div class="field"><span>Show on the home screen</span><div class="hc-list">' + [['goal', 'Today\'s goal'], ['streak', 'Day streak'], ['heat', 'Last 17 weeks chart']].map(function (x) {
+        return '<label class="switch"><input type="checkbox" data-show="' + x[0] + '"' + (hide.indexOf(x[0]) < 0 ? ' checked' : '') + '><i></i>' + x[1] + '</label>';
+      }).join('') + '</div></div><div class="error" data-err></div>',
+      '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>Save</button>');
+    var E = m.el;
+    $('[data-goal]', E).value = st.goal; $('[data-new]', E).value = st.newPerDay;
+    $('[data-save]', E).addEventListener('click', function () {
+      st.goal = Math.max(1, Math.min(2000, Math.floor(Number($('[data-goal]', E).value)) || 50));
+      st.newPerDay = Math.max(0, Math.min(500, Math.floor(Number($('[data-new]', E).value)) || 0));
+      st.hide = $$('[data-show]', E).filter(function (x) { return !x.checked; }).map(function (x) { return x.getAttribute('data-show'); });
+      saveSettingsSoon(); m.close(); render(); toast('Saved.');
+    });
+  }
+
   /* ================= settings ================= */
   function openSettings() {
     var u = S.user, s = u.settings, theme = s.theme;
@@ -2731,7 +2914,7 @@ var TextUtil = (function () {
       '<div class="grid2"><label class="field"><span>New cards per deck per day</span><input class="input" type="number" min="0" max="500" data-new></label>' +
       '<label class="field"><span>Daily goal (reviews)</span><input class="input" type="number" min="1" max="2000" data-goal></label></div>' +
       '<div class="field"><span>Theme</span><div class="seg" data-theme><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>' +
-      '<label class="field"><span>Quotes on the home screen (one per line)</span><textarea class="textarea" data-quotes></textarea></label>' +
+
       '<div class="row" style="justify-content:flex-end;margin-bottom:6px"><span class="error" data-err style="flex:1"></span><button class="btn primary" data-save>Save settings</button></div>' +
       '<div class="danger-zone"><div class="field"><span>' + (u.hasPassword ? 'Change password' : 'You sign in with Google. You can also set a password.') + '</span><div class="grid2">' +
       (u.hasPassword ? '<input class="input" type="password" placeholder="Current password" data-old autocomplete="current-password">' : '<input class="input" placeholder="Type your email to delete account" data-old autocomplete="off">') +
@@ -2741,18 +2924,16 @@ var TextUtil = (function () {
     var E = m.el;
     $('[data-name]', E).value = u.name; $('[data-email]', E).value = u.email;
     $('[data-new]', E).value = s.newPerDay; $('[data-goal]', E).value = s.goal;
-    $('[data-quotes]', E).value = S.quotes.join('\n');
+
     function paintTheme() { $$('[data-v]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === theme); }); }
     $$('[data-v]', E).forEach(function (b) { b.addEventListener('click', function () { theme = b.getAttribute('data-v'); paintTheme(); }); });
     paintTheme();
     $('[data-save]', E).addEventListener('click', function () {
       var btn = this; busy(btn, true);
-      var quotes = $('[data-quotes]', E).value.split('\n');
       Promise.all([
-        api('saveSettings', { name: $('[data-name]', E).value, settings: { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme } }),
-        api('saveQuotes', { quotes: quotes })
+        api('saveSettings', { name: $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme }) })
       ]).then(function (r) {
-        S.user = r[0]; S.quotes = r[1].quotes; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
+        S.user = r[0]; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
         m.close(); render(); toast('Settings saved.');
       }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
     });
@@ -3088,7 +3269,7 @@ var TextUtil = (function () {
       else if (!r.done) {
         var lo = Math.min(s.review.length, 3);
         s.review.splice(lo + Math.floor(Math.random() * (s.review.length - lo + 1)), 0, item);
-      } else { s.doneToday++; s.flash = 'Up to ' + FACES[5 - r.to] + ' ' + FACE_NAMES[5 - r.to] + ', back ' + gapLabel(Math.round((r.back - SRS.dayStart(now, 0)) / SRS.DAY)); }
+      } else { s.doneToday++; s.flash = 'Up to ' + (FACES[5 - r.to] ? FACES[5 - r.to] + ' ' : '') + FACE_NAMES[5 - r.to] + ', back ' + gapLabel(Math.round((r.back - SRS.dayStart(now, 0)) / SRS.DAY)); }
       return animateOut(right === false ? 'again' : right === null ? 'hard' : 'good', dirOut);
     }
     var mg = right === false ? 'again' : right === null ? 'hard' : 'good';
