@@ -844,9 +844,6 @@ html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after { transit
 
 /* hero body takes the shade of the selected tab */
 .hero-main { transition: box-shadow .45s ease; }
-.hero-main.m-free { box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, .04), 0 30px 60px -30px var(--accent); }
-.hero-main.m-focus { box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, .1), 0 30px 60px -30px var(--accent); }
-.hero-main.m-mission { box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, .17), 0 30px 60px -30px var(--accent); }
 
 /* the selected tab is the same colour as the box; the others sit a little darker */
 .hero-main .seg.mode { background: none !important; box-shadow: none; }
@@ -863,6 +860,41 @@ body.is-dragging .wallet-tile:not(.drop-on) { border-style: dashed; }
 .hero-main .seg.mode button[data-mode="free"]:not(.on) { background: rgba(0, 0, 0, .1) !important; box-shadow: none !important; }
 .hero-main .seg.mode button[data-mode="focus"]:not(.on) { background: rgba(0, 0, 0, .15) !important; box-shadow: none !important; }
 .hero-main .seg.mode button[data-mode="mission"]:not(.on) { background: rgba(0, 0, 0, .2) !important; box-shadow: none !important; }
+
+/* each mode has its own colour; the box fades between them and the selected tab matches it */
+@property --h1 { syntax: '<color>'; inherits: true; initial-value: #5b4fe0; }
+@property --h2 { syntax: '<color>'; inherits: true; initial-value: #4f8cff; }
+.hero-main { --h1: #5b4fe0; --h2: #4f8cff; background: linear-gradient(140deg, var(--h1) 0%, var(--h2) 100%) !important; box-shadow: 0 30px 60px -30px var(--h1) !important; transition: --h1 .5s ease, --h2 .5s ease, box-shadow .5s ease; }
+.hero-main.m-focus { --h1: #0f8f88; --h2: #2f6fe4; }
+.hero-main.m-mission { --h1: #d9581f; --h2: #c2337a; }
+.hero-main .seg.mode button[data-mode="free"] { --tc: #5b4fe0; }
+.hero-main .seg.mode button[data-mode="focus"] { --tc: #0f8f88; }
+.hero-main .seg.mode button[data-mode="mission"] { --tc: #d9581f; }
+.hero-main .seg.mode button[data-mode]:not(.on) { background: color-mix(in srgb, var(--tc) 78%, #0b0c10) !important; color: rgba(255, 255, 255, .78); }
+.hero-main .seg.mode button[data-mode]:not(.on):hover { background: color-mix(in srgb, var(--tc) 90%, #0b0c10) !important; color: #fff; }
+/* drag ghost */
+.drag-ghost { position: fixed !important; left: 0; top: 0; z-index: 200; pointer-events: none; margin: 0; opacity: .95; box-shadow: 0 24px 50px rgba(0, 0, 0, .45) !important; transition: transform .08s linear; transform-origin: 50% 20%; }
+/* phones: more room under the top bar */
+@media (max-width: 600px) { .home { padding-top: 26px; } }
+/* settings */
+.set-sec { padding: 4px 0 16px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.set-sec:last-of-type { border-bottom: 0; margin-bottom: 0; }
+.set-h { font-size: 11.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+.set-sec.danger .set-h { color: var(--again); }
+.set-email { font-size: 13px; color: var(--muted); margin-top: -4px; }
+.set-email b { color: var(--text); font-weight: 600; }
+.set-theme { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
+.set-rows { display: grid; gap: 6px; }
+.set-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; text-align: left; cursor: pointer; transition: border-color .2s, background .2s; }
+.set-row:hover { border-color: var(--line-strong); }
+.set-row > svg { width: 18px; height: 18px; flex: none; color: var(--muted); }
+.set-row > svg:last-child { width: 16px; height: 16px; margin-left: auto; transition: transform .2s; }
+.set-row.open > svg:last-child { transform: rotate(90deg); }
+.set-row span { display: grid; gap: 2px; font-weight: 600; font-size: 14px; }
+.set-row small { font-weight: 500; font-size: 12px; color: var(--muted); }
+.set-sec.danger .set-row > svg:first-child, .set-sec.danger .set-row span { color: var(--again); }
+.set-sec.danger .set-row small { color: var(--muted); }
+.set-panel { padding: 4px 2px 6px; }
 
 </style>
 </head>
@@ -2188,6 +2220,38 @@ var TextUtil = (function () {
       '<div class="wstack" style="height:' + walletH(xs.length, open) + 'px">' + cards + '</div>' +
       (extra ? '<div class="wextra">+' + plural(extra, 'more deck') + '</div>' : '') + '</div>';
   }
+  /* While dragging, a copy of the deck follows the pointer and tilts the way you move it. */
+  var ghost = null;
+  function startGhost(n, e) {
+    stopGhost();
+    var r = n.getBoundingClientRect();
+    try { var img = new Image(); img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP' + '/' + '/' + '/yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; e.dataTransfer.setDragImage(img, 0, 0); } catch (x) {}
+    var g = n.cloneNode(true);
+    g.classList.add('drag-ghost'); g.classList.remove('dragging');
+    g.style.width = r.width + 'px'; g.style.height = r.height + 'px';
+    document.body.appendChild(g);
+    ghost = { el: g, ox: e.clientX - r.left, oy: e.clientY - r.top, lx: e.clientX, tilt: 0, x: e.clientX, y: e.clientY };
+    ghost.move = function (ev) {
+      if (!ghost || (!ev.clientX && !ev.clientY)) return;
+      var vx = ev.clientX - ghost.lx; ghost.lx = ev.clientX;
+      ghost.tilt = Math.max(-10, Math.min(10, ghost.tilt * 0.65 + vx * 0.45));
+      ghost.x = ev.clientX; ghost.y = ev.clientY;
+      g.style.transform = 'translate(' + (ghost.x - ghost.ox) + 'px,' + (ghost.y - ghost.oy) + 'px) rotate(' + ghost.tilt.toFixed(1) + 'deg) scale(1.04)';
+    };
+    ghost.settle = setInterval(function () {
+      if (!ghost) return;
+      ghost.tilt *= 0.7;
+      g.style.transform = 'translate(' + (ghost.x - ghost.ox) + 'px,' + (ghost.y - ghost.oy) + 'px) rotate(' + ghost.tilt.toFixed(1) + 'deg) scale(1.04)';
+    }, 60);
+    document.addEventListener('dragover', ghost.move);
+    ghost.move(e);
+  }
+  function stopGhost() {
+    if (!ghost) return;
+    document.removeEventListener('dragover', ghost.move);
+    clearInterval(ghost.settle);
+    ghost.el.remove(); ghost = null;
+  }
   /* Drag a deck onto a folder to move it there; drop it on the open grid to take it out of its folder. */
   function wireDrag(app) {
     var drag = null;
@@ -2197,10 +2261,12 @@ var TextUtil = (function () {
         drag = n.getAttribute('data-id') || n.getAttribute('data-wdeck');
         e.dataTransfer.effectAllowed = 'move';
         try { e.dataTransfer.setData('text/plain', drag); } catch (x) {}
+        startGhost(n, e);
         setTimeout(function () { n.classList.add('dragging'); document.body.classList.add('is-dragging'); }, 0);
         e.stopPropagation();
       });
       n.addEventListener('dragend', function () {
+        stopGhost();
         n.classList.remove('dragging'); document.body.classList.remove('is-dragging');
         $$('.drop-on', app).forEach(function (x) { x.classList.remove('drop-on'); });
         drag = null;
@@ -3000,39 +3066,51 @@ var TextUtil = (function () {
   /* ================= settings ================= */
   function openSettings() {
     var u = S.user, s = u.settings, theme = s.theme;
+    var chev = I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6');
     var m = modal('Settings',
-      '<div class="grid2"><label class="field"><span>Username</span><input class="input" data-name maxlength="24"></label>' +
-      '<label class="field"><span>Email</span><input class="input" disabled data-email></label></div>' +
-      '<div class="grid2"><label class="field"><span>New cards per deck per day</span><input class="input" type="number" min="0" max="500" data-new></label>' +
-      '<label class="field"><span>Daily goal (reviews)</span><input class="input" type="number" min="1" max="2000" data-goal></label></div>' +
-      '<div class="field"><span>Theme</span><div class="seg" data-theme><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>' +
-
-      '<div class="row" style="justify-content:flex-end;margin-bottom:6px"><span class="error" data-err style="flex:1"></span><button class="btn primary" data-save>Save settings</button></div>' +
-      '<div class="danger-zone"><div class="field"><span>' + (u.hasPassword ? 'Change password' : 'You sign in with Google. You can also set a password.') + '</span><div class="grid2">' +
-      (u.hasPassword ? '<input class="input" type="password" placeholder="Current password" data-old autocomplete="current-password">' : '<input class="input" placeholder="Type your email to delete account" data-old autocomplete="off">') +
-      '<input class="input" type="password" placeholder="New password (8+ characters)" data-pw autocomplete="new-password"></div></div>' +
-      '<div class="row"><button class="btn sm" data-change>' + (u.hasPassword ? 'Change password' : 'Set password') + '</button><span class="spacer"></span><button class="btn sm" data-out>' + I.logout + 'Sign out</button>' +
-      '<button class="btn sm danger" data-resetall>' + I.reset + 'Reset all progress</button>' + (u.owner ? '' : '<button class="btn sm danger" data-delacct>' + I.trash + 'Delete account</button>') + '</div></div>', '');
+      '<div class="set-sec"><div class="set-h">Profile</div>' +
+        '<label class="field"><span>Username</span><input class="input" data-name maxlength="24"></label>' +
+        '<div class="set-email">Signed in as <b data-email></b></div></div>' +
+      '<div class="set-sec"><div class="set-h">Studying</div>' +
+        '<div class="grid2"><label class="field"><span>Daily goal</span><input class="input" type="number" min="1" max="2000" data-goal></label>' +
+        '<label class="field"><span>New cards a day (Mission)</span><input class="input" type="number" min="0" max="500" data-new></label></div>' +
+        '<div class="field"><span>Theme</span><div class="seg set-theme" data-theme><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div></div>' +
+      '<div class="set-sec"><div class="set-h">Account</div><div class="set-rows">' +
+        '<button class="set-row" data-open="pw">' + I.edit + '<span>' + (u.hasPassword ? 'Change password' : 'Set a password') + '<small>' + (u.hasPassword ? 'Update the password you sign in with' : 'You sign in with Google. A password lets you sign in without it.') + '</small></span>' + chev + '</button>' +
+        '<div class="set-panel" data-panel="pw" hidden><div class="grid2">' + (u.hasPassword ? '<input class="input" type="password" placeholder="Current password" data-old autocomplete="current-password">' : '') +
+          '<input class="input" type="password" placeholder="New password (8+ characters)" data-pw autocomplete="new-password"></div><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn sm primary" data-change>Save password</button></div></div>' +
+        '<button class="set-row" data-out>' + I.logout + '<span>Sign out<small>You can sign back in any time</small></span>' + chev + '</button>' +
+      '</div></div>' +
+      '<div class="set-sec danger"><div class="set-h">Danger zone</div><div class="set-rows">' +
+        '<button class="set-row" data-resetall>' + I.reset + '<span>Reset all progress<small>Every card goes back to the start. Your cards stay.</small></span>' + chev + '</button>' +
+        (u.owner ? '' : '<button class="set-row" data-open="del">' + I.trash + '<span>Delete account<small>Removes your decks, cards and progress for good</small></span>' + chev + '</button>' +
+          '<div class="set-panel" data-panel="del" hidden><input class="input" ' + (u.hasPassword ? 'type="password" placeholder="Your password"' : 'placeholder="Type your email to confirm"') + ' data-delpw autocomplete="off"><div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn sm danger" data-delacct>Delete my account</button></div></div>') +
+      '</div></div><div class="error" data-err></div>',
+      '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>Save</button>');
     var E = m.el;
-    $('[data-name]', E).value = u.name; $('[data-email]', E).value = u.email;
+    $('[data-name]', E).value = u.name; $('[data-email]', E).textContent = u.email;
     $('[data-new]', E).value = s.newPerDay; $('[data-goal]', E).value = s.goal;
-
     function paintTheme() { $$('[data-v]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === theme); }); }
     $$('[data-v]', E).forEach(function (b) { b.addEventListener('click', function () { theme = b.getAttribute('data-v'); paintTheme(); }); });
     paintTheme();
+    $$('[data-open]', E).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var pnl = $('[data-panel="' + b.getAttribute('data-open') + '"]', E), open = pnl.hidden;
+        pnl.hidden = !open; b.classList.toggle('open', open);
+        if (open) { var f = $('input', pnl); if (f) f.focus(); }
+      });
+    });
     $('[data-save]', E).addEventListener('click', function () {
       var btn = this; busy(btn, true);
-      Promise.all([
-        api('saveSettings', { name: $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme }) })
-      ]).then(function (r) {
-        S.user = r[0]; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
+      api('saveSettings', { name: $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme }) }).then(function (r) {
+        S.user = r; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
         m.close(); render(); toast('Settings saved.');
       }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
     });
     $('[data-change]', E).addEventListener('click', function () {
-      var btn = this; busy(btn, true);
-      api('changePassword', { oldPassword: $('[data-old]', E).value, newPassword: $('[data-pw]', E).value }).then(function () {
-        busy(btn, false); $('[data-old]', E).value = ''; $('[data-pw]', E).value = ''; toast('Password saved.');
+      var btn = this, old = $('[data-old]', E); busy(btn, true);
+      api('changePassword', { oldPassword: old ? old.value : '', newPassword: $('[data-pw]', E).value }).then(function () {
+        busy(btn, false); if (old) old.value = ''; $('[data-pw]', E).value = ''; toast('Password saved.');
         if (!S.user.hasPassword) { S.user.hasPassword = true; cacheNow(); m.close(); openSettings(); }
       }, function (e) { busy(btn, false); toast(e.message, true); });
     });
@@ -3042,8 +3120,8 @@ var TextUtil = (function () {
     $('[data-resetall]', E).addEventListener('click', function () { m.close(); resetDecks(S.decks.map(function (d) { return d.id; }), 'all your decks'); });
     var del = $('[data-delacct]', E);
     if (del) del.addEventListener('click', function () {
-      var pw = $('[data-old]', E).value;
-      if (!pw) { toast(u.hasPassword ? 'Type your current password in the password box first.' : 'Type your email address in the box first.', true); $('[data-old]', E).focus(); return; }
+      var pw = $('[data-delpw]', E).value;
+      if (!pw) { toast(u.hasPassword ? 'Type your password first.' : 'Type your email address first.', true); $('[data-delpw]', E).focus(); return; }
       confirmBox('Delete your account?', 'All your decks, cards and progress will be deleted for good.', 'Delete account', true).then(function (ok) {
         if (!ok) return;
         api('deleteAccount', { password: pw }).then(function () { signedOut(); toast('Account deleted.'); }, fail);
