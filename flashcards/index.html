@@ -1178,6 +1178,7 @@ var TextUtil = (function () {
   }
   function cardKind(c, s) {
     if (c.type === 'tf') return tfAnswer(c) == null ? 'basic' : 'tf';
+    if ((!c.type || c.type === 'basic') && /^\s*[OX] \((true|false)\)/.test(String(c.back || ''))) return 'tf';
     if (c.type === 'choice' && s && s.cur && !s.cur.options) return 'basic';
     return c.type || 'basic';
   }
