@@ -494,12 +494,25 @@ img { max-width: 100%; }
 .fbar { display: flex; gap: 2px; height: 6px; border-radius: 99px; overflow: hidden; margin-top: auto; background: var(--surface-2); }
 .fbar b { min-width: 4px; }
 .folder-tile .meta { margin-bottom: 14px; }
-.fmore { position: absolute; right: 10px; bottom: 18px; width: 32px; height: 32px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; opacity: 0; transition: opacity .2s, background .2s; }
+.fmore { position: absolute; right: 48px; bottom: 18px; width: 32px; height: 32px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; opacity: 0; transition: opacity .2s, background .2s; }
 .fmore svg { width: 18px; height: 18px; }
 .folder-tile:hover .fmore, .fmore:focus-visible { opacity: 1; }
 .fmore:hover { background: var(--surface-2); color: var(--text); }
 @media (hover: none) { .fmore { opacity: 1; } }
-.folder-tile .fbar { margin-right: 40px; }
+.folder-tile .fbar { margin-right: 84px; }
+.fexpand { position: absolute; right: 10px; bottom: 18px; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); display: grid; place-items: center; transition: background .2s, color .2s; }
+.fexpand svg { width: 18px; height: 18px; transition: transform .25s var(--ease); }
+.fexpand:hover { color: var(--text); }
+.fexpand.on { background: color-mix(in srgb, var(--c) 22%, var(--surface-2)); color: var(--text); }
+.fexpand.on svg { transform: rotate(180deg); }
+.folder-strip { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; margin-top: -4px; border-radius: var(--r); background: var(--surface); border: 1px dashed var(--line-strong); }
+.folder-strip.opening { animation: rise .3s var(--ease) both; }
+.fchip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px 7px 8px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); cursor: pointer; user-select: none; max-width: 100%; transition: border-color .15s, background .15s; }
+.fchip:hover { border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
+.fchip i { width: 20px; height: 20px; border-radius: 6px; flex: none; }
+.fchip span { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fchip small { color: var(--muted); font-size: 12px; }
+.fchip:has(input:checked) { background: color-mix(in srgb, var(--c) 14%, var(--surface-2)); border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
 .section-head.folder-open { flex-wrap: wrap; }
 .section-head.folder-open h2 { overflow-wrap: anywhere; }
 .decks.opening > * { animation: rise .4s var(--ease) both; }
@@ -1450,8 +1463,17 @@ var TextUtil = (function () {
         setSelected(cur); render();
       });
       box.addEventListener('click', function () { openFolder(f); });
+      $('[data-fexpand]', box).addEventListener('click', function (e) {
+        e.stopPropagation();
+        var o = ls('fc.fopen') || {};
+        if (o[f]) delete o[f]; else { o[f] = 1; S.justExpanded = f; }
+        ls('fc.fopen', o); render();
+      });
       $('[data-fedit]', box).addEventListener('click', function (e) { e.stopPropagation(); folderMenu(f, ids, e.currentTarget); });
       box.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); folderMenu(f, ids, e.currentTarget, { x: e.clientX, y: e.clientY }); });
+    });
+    $$('.fchip', app).forEach(function (chip) {
+      chip.addEventListener('contextmenu', function (e) { e.preventDefault(); e.stopPropagation(); deckMenu(deckById(chip.getAttribute('data-chip')), chip, { x: e.clientX, y: e.clientY }); });
     });
     var fb = $('[data-folder-back]', app);
     if (fb) {
@@ -1506,14 +1528,23 @@ var TextUtil = (function () {
       var inside = allStats.filter(function (x) { return folderOf(x.deck.id) === open; });
       return '<div class="decks' + (S.justOpened ? ' opening' : '') + '">' + inside.map(deckTile).join('') + '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>';
     }
+    var expanded = ls('fc.fopen') || {};
     var tiles = folderNames().map(function (f) {
-      return folderTile(f, allStats.filter(function (x) { return folderOf(x.deck.id) === f; }));
+      var xs = allStats.filter(function (x) { return folderOf(x.deck.id) === f; });
+      return folderTile(f, xs, !!expanded[f]) + (expanded[f] ? folderStrip(f, xs) : '');
     });
     var loose = allStats.filter(function (x) { return !folderOf(x.deck.id); });
     return '<div class="decks' + (S.justOpened ? ' opening' : '') + '">' + tiles.join('') + loose.map(deckTile).join('') + '<button class="deck add" data-new-deck>' + I.plus + 'New deck</button></div>';
   }
   var LEVEL_COLOR = { 1: 'easy', 2: 'good', 3: 'hard', 4: 'again' };
-  function folderTile(f, xs) {
+  function folderStrip(f, xs) {
+    var fresh = S.justExpanded === f;
+    if (fresh) S.justExpanded = null;
+    return '<div class="folder-strip' + (fresh ? ' opening' : '') + '" data-strip="' + esc(f) + '">' + xs.map(function (x) {
+      return '<label class="pick fchip" data-chip="' + esc(x.deck.id) + '" style="--c:' + esc(x.deck.color) + '"><input type="checkbox" data-pick="' + esc(x.deck.id) + '"' + (x.on ? ' checked' : '') + '><i></i><span>' + esc(x.deck.name) + '</span><small>' + x.st.total + '</small></label>';
+    }).join('') + '</div>';
+  }
+  function folderTile(f, xs, open) {
     var on = xs.filter(function (x) { return x.on; }).length;
     var cards = xs.reduce(function (n, x) { return n + x.st.total; }, 0);
     var lv = { 1: 0, 2: 0, 3: 0, 4: 0 };
@@ -1523,10 +1554,11 @@ var TextUtil = (function () {
     var bar = cards ? '<div class="fbar" title="' + [1, 2, 3, 4].map(function (l) { return FACES[l] + ' ' + lv[l]; }).join('   ') + '">' + [1, 2, 3, 4].map(function (l) {
       return lv[l] ? '<b style="flex:' + lv[l] + ';background:var(--' + LEVEL_COLOR[l] + ')"></b>' : '';
     }).join('') + '</div>' : '<div class="fbar empty"></div>';
-    return '<div class="deck folder-tile' + (on === xs.length ? ' picked' : '') + '" role="button" tabindex="0" data-folder="' + esc(f) + '" style="--c:' + esc(top[0] ? top[0].deck.color : DEFAULT_ACCENT) + '">' +
+    return '<div class="deck folder-tile' + (on ? ' picked' : '') + '" role="button" tabindex="0" data-folder="' + esc(f) + '" style="--c:' + esc(top[0] ? top[0].deck.color : DEFAULT_ACCENT) + '">' +
       '<label class="pick" title="Choose every deck in this folder"><input type="checkbox" data-fpick' + (on === xs.length ? ' checked' : '') + (on && on < xs.length ? ' data-some' : '') + '><i></i></label>' +
       '<div class="stack">' + sheets + '</div>' +
       '<h3>' + esc(f) + '</h3><div class="meta">' + plural(xs.length, 'deck') + ' &middot; ' + plural(cards, 'card') + '</div>' + bar +
+      '<button class="fexpand' + (open ? ' on' : '') + '" data-fexpand aria-expanded="' + !!open + '" aria-label="Show decks here" title="' + (open ? 'Hide decks' : 'Show decks here to pick them') + '">' + I.chev + '</button>' +
       '<button class="fmore" data-fedit aria-label="Folder actions" title="Folder actions (or right-click)">' + I.more + '</button></div>';
   }
   function deckTile(x) {
