@@ -972,9 +972,36 @@ html.study-on .swipe-hint.neutral { color: var(--text); }
 .brand { white-space: nowrap; }
 @media (max-width: 600px) { .topbar .sync { display: none; } }
 .flip, .flip * { touch-action: none; }
+.deck-bar { position: absolute; left: 20px; right: 66px; bottom: 30px; }
+.deck.solid { padding-bottom: 46px; }
+@media (min-width: 601px) and (max-width: 1120px) { .home { padding-left: 20px; padding-right: 20px; } }
 .pts { flex-direction: column; gap: 4px; }
+/* result: spinning border, then a plain coloured edge */
+@property --fx-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.fx-ring { --fx: #1fb866; position: absolute; inset: -2px; z-index: 4; pointer-events: none; border-radius: 36px; filter: drop-shadow(0 0 12px var(--fx)); }
+.fx-ring.bad { --fx: #ef3f4e; }
+.fx-ring.close { --fx: #f0a020; }
+.fx-ring::before, .fx-ring b { content: ''; display: block; position: absolute; inset: 0; border-radius: inherit; padding: 4px; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+.fx-ring::before { background: var(--fx); opacity: 0; animation: fxSettle .4s .85s ease-out forwards; }
+.fx-ring b { background: conic-gradient(from var(--fx-a), var(--fx) 0deg, transparent 110deg, var(--fx) 180deg, transparent 290deg, var(--fx) 360deg); animation: fxSpin 1.2s cubic-bezier(.3, .1, .3, 1) forwards; }
+@keyframes fxSpin { from { --fx-a: 0deg; } 80% { opacity: 1; } to { --fx-a: 720deg; opacity: 0; } }
+@keyframes fxSettle { to { opacity: .85; } }
+@media (prefers-reduced-motion: reduce) { .fx-ring b { display: none; } .fx-ring::before { animation-delay: 0s; } }
+.result { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px 9px 16px; border-radius: 99px; color: #fff; font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: -.01em; line-height: 1.15; animation: resultIn .35s var(--ease) both; }
+.result svg { width: 22px; height: 22px; flex: none; stroke-width: 3; }
+.result.good { background: #0e8a4a; }
+.result.bad { background: #cf2f3f; }
+.result.close { background: #b5740a; }
+@keyframes resultIn { from { transform: scale(.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .result { animation: none; } }
+.tf-ans { display: block; font-size: 24px; font-weight: 500; letter-spacing: -.01em; margin: 2px 0; }
+.tf-ans b { display: inline; width: auto; height: auto; font-size: inherit; font-weight: 800; border-radius: 0; background: none; color: inherit; }
 .pts-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .pts-next { opacity: .55; }
+.pts-end { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: #fff; }
+.pts-end svg { width: 17px; height: 17px; stroke-width: 3; }
+.pts-end.bad { background: #cf2f3f; }
+.pts-end.good { background: #0e8a4a; }
 @media (min-width: 761px) { html.study-on .choices { grid-template-columns: 1fr 1fr; max-width: none; } }
 @media (prefers-reduced-motion: reduce) { html.study-on .bg-blobs i { animation: none; } }
 
@@ -1561,7 +1588,7 @@ var TextUtil = (function () {
   function saveSettingsSoon() { cacheNow(); api('saveSettings', { settings: S.user.settings }).catch(function () {}); }
   var MODES = { free: 'Free study', focus: 'Focus', mission: 'Mission' };
   var MODE_DESC = {
-    free: 'Go through every card in the decks you pick, at your own pace. Practice only: stages stay as they are.',
+    free: 'Keep going until you get every card right enough times in a row. Practice only: stages stay as they are.',
     focus: 'Pick which stage to work on. Blue cards need the most work.',
     mission: 'Your daily plan. The app picks the cards due today, plus a few new ones, so you remember them long term.'
   };
@@ -1659,13 +1686,35 @@ var TextUtil = (function () {
     });
     return st;
   }
-  /* This card's stage, then dots for the right answers in a row needed to reach the next face. */
+  /* Above the card. Focus: this card's stage, dots to the next stage, next stage.
+     Free study: wrong, dots for right answers in a row this session, done. Stages don't move there.
+     Mission: wrong, dots for what finishes this card today (new cards 2, reviews 1), done. */
   function pointsRow(card, dir, s) {
-    var pr = prog(card, dir), now = Date.now(), l = SRS.level(pr, now);
-    var goal = deckGoal(card.deckId), n = Math.min(goal, SRS.pointsToday(pr, now)), dots = '';
-    for (var i = 0; i < goal; i++) dots += '<i class="' + (i < n ? 'on' : '') + '"></i>';
-    var next = l > 1 ? fbadge(l - 1, 'pts-next') : '';
-    return '<div class="pts"><div class="pts-row">' + fbadge(l) + '<span class="dots" title="' + n + ' of ' + goal + ' right in a row">' + dots + '</span>' + next + '</div><span class="pts-lbl">' + FACE_NAMES[l] + '</span></div>';
+    var pr = prog(card, dir), now = Date.now(), dots = '';
+    function row(left, n, goal, right, label, counted) {
+      for (var i = 0; i < goal; i++) dots += '<i class="' + (i < n ? 'on' : '') + '"></i>';
+      return '<div class="pts"><div class="pts-row">' + left + '<span class="dots">' + dots + '</span>' + right + '</div><span class="pts-lbl"' + (counted ? ' data-of="' + goal + '" data-tail="' + counted + '"' : '') + '>' + label + '</span></div>';
+    }
+    if (s.free && !s.simple) {
+      var l = SRS.level(pr, now), g = deckGoal(card.deckId);
+      return row(fbadge(l), Math.min(g, SRS.pointsToday(pr, now)), g, l > 1 ? fbadge(l - 1, 'pts-next') : '', FACE_NAMES[l]);
+    }
+    var bad = '<span class="pts-end bad">' + I.x + '</span>', good = '<span class="pts-end good">' + I.check + '</span>';
+    if (s.simple) {
+      var goal = deckGoal(card.deckId), run = Math.min(goal, (s.cur && s.cur.item.run) || 0);
+      return row(bad, run, goal, good, run + ' of ' + goal + ' right in a row', 'right in a row');
+    }
+    var p = SRS.normalize(pr), needs = p.s === 'review' || p.ivl > 0 ? 1 : 2, have = p.s === 'learn' && !p.ivl ? Math.min(needs, p.step) : 0;
+    return row(bad, have, needs, good, have + ' of ' + needs + ' right today', 'right today');
+  }
+  /* Show the answer's effect on the dots straight away. */
+  function paintDots(right) {
+    var dots = $$('.pts .dots i');
+    if (!dots.length) return;
+    var n = right ? Math.min(dots.length, dots.filter(function (d) { return d.classList.contains('on'); }).length + 1) : 0;
+    dots.forEach(function (d, i) { d.classList.toggle('on', i < n); });
+    var lbl = $('.pts-lbl[data-of]');
+    if (lbl) lbl.textContent = n + ' of ' + lbl.getAttribute('data-of') + ' ' + lbl.getAttribute('data-tail');
   }
 
   function deckStats(deckId, now) {
@@ -2643,6 +2692,7 @@ var TextUtil = (function () {
       '<label class="pick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
       '<span class="dot"></span><h3>' + esc(d.name) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
       '<div class="counts">' + chips + deckBadges(d) + '</div>' +
+      (st.total ? '<div class="deck-bar">' + lvBar(levelsOf([d.id])) + '</div>' : '') +
       '<button class="go" aria-label="Study ' + esc(d.name) + '">' + (canGo ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
   }
   function folderMenu(f, ids, anchor, pt) {
@@ -3616,6 +3666,7 @@ var TextUtil = (function () {
         e.preventDefault();
         s.cur.typed = inp.value;
         s.cur.verdict = TextUtil.check(inp.value, x.a);
+        resultRing(s.cur.verdict);
         reveal();
       });
     }
@@ -3626,11 +3677,24 @@ var TextUtil = (function () {
     if (s.cur.revealed) showBack(true);
   }
 
+  /* Colour spins around the card's border, then stays as a plain coloured edge until the next card. */
+  function resultRing(v) {
+    var flip = $('[data-flip]');
+    if (!flip) return;
+    var old = $('.fx-ring', flip); if (old) old.remove();
+    if (v !== 'close') paintDots(v === 'exact');
+    flip.appendChild(el('<i class="fx-ring ' + (v === 'exact' ? 'good' : v === 'close' ? 'close' : 'bad') + '" aria-hidden="true"><b></b></i>'));
+  }
+  /* The result, in words nobody can misread. */
+  function resultBadge(v, text) {
+    return '<div class="result ' + (v === 'exact' ? 'good' : v === 'close' ? 'close' : 'bad') + '" role="status">' + (v === 'wrong' ? I.x : I.check) + '<span>' + text + '</span></div>';
+  }
   function pick(i) {
     var s = S.study;
     if (!s.cur || s.cur.revealed || !s.cur.options || !s.cur.options[i]) return;
     s.cur.picked = i;
     s.cur.verdict = s.cur.options[i].right ? 'exact' : 'wrong';
+    resultRing(s.cur.verdict);
     $$('[data-opt]').forEach(function (b, j) {
       b.disabled = true;
       if (s.cur.options[j].right) b.classList.add('right'); else if (j === i) b.classList.add('wrong');
@@ -3643,6 +3707,7 @@ var TextUtil = (function () {
     var truth = tfAnswer(s.cur.item.card);
     s.cur.verdict = said === truth ? 'exact' : 'wrong';
     s.cur.said = said;
+    resultRing(s.cur.verdict);
     $$('[data-tf]').forEach(function (b) {
       b.disabled = true;
       var isTrue = b.getAttribute('data-tf') === '1';
@@ -3663,8 +3728,8 @@ var TextUtil = (function () {
     var v = s.cur.verdict, c = s.cur.item.card, html;
     if (cardKind(c, s) === 'tf') {
       var truth = tfAnswer(c), ex = tfExplain(c);
-      html = '<div class="q-small"></div><div class="tf-ans ' + (truth ? 't' : 'f') + '"><b>' + (truth ? 'O' : 'X') + '</b>' + (truth ? 'True' : 'False') + '</div>' +
-        (v ? '<span class="verdict ' + v + '">' + (v === 'exact' ? 'You got it' : 'Not this time') + '</span>' : '') + (ex ? '<p class="tf-ex"></p>' : '') + mediaHtml(x.am);
+      html = (v ? resultBadge(v, v === 'exact' ? 'Correct' : 'Wrong') : '') + '<div class="q-small"></div>' +
+        '<div class="tf-ans">The answer is <b>' + (truth ? 'True' : 'False') + '</b></div>' + (ex ? '<p class="tf-ex"></p>' : '') + mediaHtml(x.am);
       back.innerHTML = html;
       $('.q-small', back).textContent = x.q;
       var exEl = $('.tf-ex', back); if (exEl) exEl.textContent = ex;
@@ -3675,8 +3740,7 @@ var TextUtil = (function () {
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       return;
     }
-    html = '<div class="q-small"></div>' + mediaHtml(x.am) + textHtml(x.a);
-    if (v) html += '<span class="verdict ' + v + '">' + (v === 'exact' ? 'Correct' : v === 'close' ? 'Almost, check the spelling' : 'Not quite') + '</span>';
+    html = (v ? resultBadge(v, v === 'exact' ? 'Correct' : v === 'close' ? 'Almost, check the spelling' : 'Wrong') : '') + '<div class="q-small"></div>' + mediaHtml(x.am) + textHtml(x.a);
     if (s.cur.typed && v !== 'exact') html += '<div class="typed-was">You wrote: <s></s></div>';
     back.innerHTML = html;
     $('.q-small', back).textContent = x.q;
@@ -3754,15 +3818,19 @@ var TextUtil = (function () {
     s.grading = true;
     var item = s.cur.item, c = item.card, now = Date.now();
     var right = g === 'right' ? true : g === 'wrong' ? false : null;
+    if (!s.cur.verdict && right !== null) resultRing(right ? 'exact' : 'wrong');
     c.srs = c.srs || {};
     if (s.simple) {
       s.n++;
       bumpDaily(!!right);
-      if (right === false) {
-        item.missed = true;
+      if (right !== false) s.correct++;
+      item.run = right === false ? 0 : (item.run || 0) + 1;
+      if (right === false) item.missed = true;
+      if (item.run >= deckGoal(c.deckId)) { s.done++; if (!item.missed) s.firstTry++; }
+      else {
         var lo2 = Math.min(s.review.length, 3);
         s.review.splice(lo2 + Math.floor(Math.random() * (s.review.length - lo2 + 1)), 0, item);
-      } else { s.correct++; s.done++; if (!item.missed) s.firstTry++; }
+      }
       return animateOut(right === false ? 'again' : 'good', dirOut);
     }
     if (s.free) {
@@ -3897,7 +3965,7 @@ var TextUtil = (function () {
     var nextLearn = s.learn.length ? prog(s.learn[0].card, s.learn[0].dir).due : 0;
     app.innerHTML = '<div class="study"><div class="wrap"><div class="done appear">' +
       '<div class="burst chroma">' + I.check + '</div><h1>' + (s.free ? s.label + ' done' : 'Mission complete') + '</h1>' +
-      '<p class="hint" style="font-size:15px">' + (s.simple ? 'You went through ' + plural(s.done, 'card') + ', ' + s.firstTry + ' right first time' + (s.skipped ? ', ' + s.skipped + ' skipped' : '') + '. Stages stay as they were.' : s.free ? plural(s.doneToday, 'card') + ' moved up a stage. They come back when they are due.' : nextLearn ? plural(s.learn.length, 'card') + ' still learning. They come back in about ' + Math.max(1, Math.round((nextLearn - Date.now()) / 60000)) + ' min.' : 'Nice work. Everything due here is done.') + '</p>' +
+      '<p class="hint" style="font-size:15px">' + (s.simple ? 'You finished ' + plural(s.done, 'card') + ', ' + s.firstTry + ' with no wrong answers' + (s.skipped ? ', ' + s.skipped + ' skipped' : '') + '. Stages stay as they were.' : s.free ? plural(s.doneToday, 'card') + ' moved up a stage. They come back when they are due.' : nextLearn ? plural(s.learn.length, 'card') + ' still learning. They come back in about ' + Math.max(1, Math.round((nextLearn - Date.now()) / 60000)) + ' min.' : 'Nice work. Everything due here is done.') + '</p>' +
       '<div class="done-stats"><div><b>' + s.n + '</b><span>Answers</span></div><div><b>' + acc + '%</b><span>Correct</span></div><div><b>' + mins + 'm</b><span>Time</span></div></div>' +
       '<div class="row" style="justify-content:center"><button class="btn primary lg" data-fin>Done</button></div></div></div></div>';
     $('[data-fin]', app).addEventListener('click', endStudy);
