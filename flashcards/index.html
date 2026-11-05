@@ -338,11 +338,16 @@ img { max-width: 100%; }
 .levels-head h2 { font-family: var(--display); font-size: clamp(18px, 4.6vw, 22px); letter-spacing: -.03em; margin: 0; }
 .levels-head .switch { white-space: nowrap; }
 .level-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-.level { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 14px 8px 12px; display: grid; justify-items: center; gap: 2px; transition: transform .2s var(--ease), box-shadow .2s, border-color .2s; }
-.level:hover:not(:disabled) { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--line-strong); }
-.level:disabled { opacity: .45; cursor: default; }
+.level { border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 16px 12px 12px; display: grid; justify-items: center; gap: 4px; min-width: 0; }
 .level .lv-face { font-size: 34px; line-height: 1.1; }
-.level b { font-family: var(--display); font-size: 22px; letter-spacing: -.02em; }
+.level b { font-family: var(--display); font-size: 17px; letter-spacing: -.02em; margin-bottom: 8px; }
+.level .btn { width: 100%; justify-content: center; }
+.level .lv-go { background: color-mix(in srgb, var(--lc) 18%, var(--surface-2)); color: var(--text); border-color: color-mix(in srgb, var(--lc) 40%, transparent); }
+.level .lv-go:hover:not(:disabled) { background: color-mix(in srgb, var(--lc) 30%, var(--surface-2)); }
+.level .lv-worse { color: var(--muted); font-size: 12.5px; }
+.level .btn:disabled { opacity: .4; }
+.lv-worse-gap { height: 32px; }
+.lv4 { --lc: var(--again); } .lv3 { --lc: var(--hard); } .lv2 { --lc: var(--good); } .lv1 { --lc: var(--easy); }
 .level small { font-size: 12px; color: var(--muted); font-weight: 600; text-align: center; }
 .chosen { margin-top: 10px; font-size: 12.5px; opacity: .8; position: relative; z-index: 1; }
 .deck .pick { position: absolute; top: 12px; right: 12px; z-index: 2; cursor: pointer; }
@@ -453,9 +458,11 @@ img { max-width: 100%; }
   .face { padding: 22px 20px; border-radius: 24px; }
   .grade { min-height: 48px; font-size: 15px; border-radius: 14px; }
   .grade-hint { font-size: 11px; }
-  .level-row { gap: 8px; }
+  .level-row { gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .level .lv-face { font-size: 28px; }
   .level small { font-size: 11px; }
+  .level { padding: 12px 6px 8px; }
+  .level .btn { font-size: 12px; padding-left: 4px; padding-right: 4px; }
   .flip { min-height: 64vh; min-height: 64svh; }
   .hide-sm { display: none; }
 }
@@ -1347,7 +1354,6 @@ var TextUtil = (function () {
     var allOn = sel.length === S.decks.length;
     var levelCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
     S.cards.forEach(function (c) { if (sel.indexOf(c.deckId) >= 0) levelCounts[cardLevel(c)]++; });
-    var andWorse = ls('fc.andWorse') !== false;
     var ready = stats.reduce(function (n, x) { return n + x.st.ready; }, 0);
     var due = stats.reduce(function (n, x) { return n + x.st.due + x.st.learn; }, 0);
     var fresh = stats.reduce(function (n, x) { return n + x.st.newToday; }, 0);
@@ -1399,12 +1405,14 @@ var TextUtil = (function () {
       '</div><div class="heat"><div class="heat-head"><span>Last 17 weeks</span><span>' + plural(totalReviews(), 'review') + '</span></div><div class="heat-grid">' + heatCells(goal) + '</div></div></div>' +
       '</section>' +
       (quote ? '<p class="quote"><b></b></p>' : '') +
-      (S.cards.length && mode === 'focus' ? '<section class="levels"><div class="levels-head"><h2>By how well you know them</h2><span class="spacer"></span>' +
-        '<label class="switch"><input type="checkbox" data-worse' + (andWorse ? ' checked' : '') + '><i></i>And worse</label></div>' +
+      (S.cards.length && mode === 'focus' ? '<section class="levels"><div class="levels-head"><h2>Pick by how well you know them</h2></div>' +
         '<div class="level-row">' + [4, 3, 2, 1].map(function (l) {
-          var n = andWorse ? [1, 2, 3, 4].filter(function (k) { return k >= l; }).reduce(function (s2, k) { return s2 + levelCounts[k]; }, 0) : levelCounts[l];
-          return '<button class="level" data-level="' + l + '"' + (n ? '' : ' disabled') + '><span class="lv-face">' + FACES[l] + '</span><b>' + n + '</b><small>' + FACE_NAMES[l] + (andWorse && l < 4 ? ' and worse' : '') + '</small></button>';
-        }).join('') + '</div><p class="hint" style="margin:8px 2px 0">Tap a face to focus on those cards from your chosen decks.</p></section>' : '') +
+          var n = levelCounts[l];
+          var worse = [1, 2, 3, 4].filter(function (k) { return k >= l; }).reduce(function (s2, k) { return s2 + levelCounts[k]; }, 0);
+          return '<div class="level lv' + l + '"><span class="lv-face">' + FACES[l] + '</span><small>' + FACE_NAMES[l] + '</small><b>' + plural(n, 'card') + '</b>' +
+            '<button class="btn sm lv-go" data-level="' + l + '"' + (n ? '' : ' disabled') + '>Study these</button>' +
+            (l < 4 ? '<button class="btn sm ghost lv-worse" data-level="' + l + '" data-worse' + (worse ? '' : ' disabled') + ' title="' + FACE_NAMES[l] + ' and every face to its left">+ worse &middot; ' + worse + '</button>' : '<span class="lv-worse-gap"></span>') + '</div>';
+        }).join('') + '</div></section>' : '') +
       (openFolderName() ? '<div class="section-head folder-open"><button class="btn ghost sm" data-folder-back>' + I.back + 'All decks</button><h2>' + esc(openFolderName()) + '</h2><span class="spacer"></span>' +
         '<button class="btn sm" data-folder-study>' + I.play + '<span class="hide-sm">' + MODES[mode] + '</span></button><button class="btn sm ghost icon-btn" data-folder-more aria-label="Folder actions">' + I.more + '</button>' : '<div class="section-head"><h2>Your decks</h2><span class="spacer"></span>') +
       (openFolderName() ? '' : '<button class="btn sm ghost" data-catalog>' + I.search + '<span class="hide-sm">Browse public decks</span></button>' + (S.decks.length ? '<button class="btn sm ghost" data-send-all>' + I.upload + '<span class="hide-sm">Send a copy</span></button>' : '') +
@@ -1419,10 +1427,8 @@ var TextUtil = (function () {
     var fi = $('[data-free-instead]', app);
     if (fi) fi.addEventListener('click', function () { startMode('free', sel, 'home'); });
     $$('[data-level]', app).forEach(function (b) {
-      b.addEventListener('click', function () { startFree(sel, 'home', Number(b.getAttribute('data-level')), andWorse); });
+      b.addEventListener('click', function () { startFree(sel, 'home', Number(b.getAttribute('data-level')), b.hasAttribute('data-worse')); });
     });
-    var wb = $('[data-worse]', app);
-    if (wb) wb.addEventListener('change', function () { ls('fc.andWorse', wb.checked); render(); });
     $$('.pick', app).forEach(function (l) { l.addEventListener('click', function (e) { e.stopPropagation(); }); });
     $$('[data-pick]', app).forEach(function (cb) {
       cb.addEventListener('change', function () {
