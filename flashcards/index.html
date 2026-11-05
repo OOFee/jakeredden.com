@@ -842,6 +842,28 @@ html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after { transit
 .tf-dock .tf-btn { flex-direction: row; justify-content: center; gap: 10px; padding: 0 14px; }
 .tf-dock .tf-btn b { font-size: 22px; }
 
+/* hero body takes the shade of the selected tab */
+.hero-main { transition: box-shadow .45s ease; }
+.hero-main.m-free { box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, .04), 0 30px 60px -30px var(--accent); }
+.hero-main.m-focus { box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, .1), 0 30px 60px -30px var(--accent); }
+.hero-main.m-mission { box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, .17), 0 30px 60px -30px var(--accent); }
+
+/* the selected tab is the same colour as the box; the others sit a little darker */
+.hero-main .seg.mode { background: none !important; box-shadow: none; }
+.hero-main .seg.mode .seg-ind { background: none; box-shadow: inset 0 -3px 0 #fff; }
+.hero-main .seg.mode button:not(.on) { box-shadow: inset 0 0 0 2000px rgba(0, 0, 0, .12) !important; }
+.hero-main .seg.mode button { transition: color .25s, background .45s, box-shadow .45s; }
+/* drag decks onto folders */
+.deck.dragging, .wc.dragging { opacity: .4; }
+.wallet-tile.drop-on { border-color: var(--accent) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent), var(--shadow-lg); transform: scale(1.02); }
+.decks.drop-on { outline: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent); outline-offset: 8px; border-radius: 12px; }
+body.is-dragging .wallet-tile:not(.drop-on) { border-style: dashed; }
+/* selected tab shows the box exactly; the others are each a little darker, by a different amount */
+.hero-main .seg.mode button.on { background: none !important; box-shadow: none !important; }
+.hero-main .seg.mode button[data-mode="free"]:not(.on) { background: rgba(0, 0, 0, .1) !important; box-shadow: none !important; }
+.hero-main .seg.mode button[data-mode="focus"]:not(.on) { background: rgba(0, 0, 0, .15) !important; box-shadow: none !important; }
+.hero-main .seg.mode button[data-mode="mission"]:not(.on) { background: rgba(0, 0, 0, .2) !important; box-shadow: none !important; }
+
 </style>
 </head>
 <body>
@@ -1419,6 +1441,7 @@ var TextUtil = (function () {
     var seg = $('.seg.mode'), on = seg && $('button.on', seg);
     S.modeFrom = on && seg ? { left: on.offsetLeft, width: on.offsetWidth } : null;
     var lv = $('.levels');
+    S.prevMode = studyMode();
     var go = function () { S.user.settings.mode = m; S.modeSwap = true; saveSettingsSoon(); render(); };
     if (lv && m !== 'focus') {
       lv.style.height = lv.offsetHeight + 'px'; lv.style.overflow = 'hidden';
@@ -1444,7 +1467,13 @@ var TextUtil = (function () {
     }
     if (!S.modeSwap) return;
     S.modeSwap = false; S.modeFrom = null;
-    var hm = $('.hero-main', app); if (hm) { hm.classList.remove('swap'); hm.offsetWidth; hm.classList.add('swap'); }
+    var hm = $('.hero-main', app);
+    if (hm) {
+      var now = 'm-' + studyMode();
+      if (S.prevMode) { hm.style.transition = 'none'; hm.classList.remove(now); hm.classList.add('m-' + S.prevMode); hm.offsetWidth; hm.style.transition = ''; hm.classList.remove('m-' + S.prevMode); hm.classList.add(now); }
+      hm.classList.remove('swap'); hm.offsetWidth; hm.classList.add('swap');
+    }
+    S.prevMode = null;
     var lv = $('.levels', app);
     if (lv) {
       var h = lv.scrollHeight;
@@ -1717,7 +1746,7 @@ var TextUtil = (function () {
     S.lastKey = key;
     if (S.view === 'boot') { app.innerHTML = '<div class="boot"><div class="spinner"></div></div>'; return; }
     if (S.view === 'auth') return renderAuth(app);
-    if (S.view === 'home') return renderHome(app);
+    if (S.view === 'home') { renderHome(app); if (S.user && S.user.needsName) askUsername(); return; }
     if (S.view === 'deck') return renderDeck(app, deck);
     if (S.view === 'study') return renderStudy(app);
     if (S.view === 'discover') return renderDiscover(app);
@@ -1812,7 +1841,7 @@ var TextUtil = (function () {
       '<form class="panel" novalidate>' +
       (mode !== 'reset' && googleOk() ? '<div class="gbtn" data-gbtn></div><div class="or"><span>or use email</span></div>' : '') +
       (mode !== 'reset' ? '<div class="seg"><button type="button" data-m="in" class="' + (mode === 'in' ? 'on' : '') + '">Sign in</button><button type="button" data-m="up" class="' + (mode === 'up' ? 'on' : '') + '">Create account</button></div>' : '') +
-      (mode === 'up' ? '<label class="field"><span>Name</span><input class="input" name="name" autocomplete="name" maxlength="60"></label>' : '') +
+      (mode === 'up' ? '<label class="field"><span>Username</span><input class="input" name="name" autocomplete="username" maxlength="24" placeholder="What friends will see"></label>' : '') +
       '<label class="field"><span>Email</span><input class="input" name="email" type="email" autocomplete="email" required autofocus></label>' +
       (mode === 'reset' ? '<div data-step2 hidden><label class="field"><span>Code from the email</span><input class="input" name="code" inputmode="numeric" maxlength="6"></label>' +
         '<label class="field"><span>New password</span><input class="input" name="password" type="password" autocomplete="new-password" minlength="8"></label></div>'
@@ -1903,7 +1932,7 @@ var TextUtil = (function () {
 
     app.innerHTML = topbar() + '<main class="wrap home"><div class="appear">' +
       '<section class="hero">' +
-      '<div class="hero-main"><div>' +
+      '<div class="hero-main m-' + mode + '"><div>' +
       '<div class="seg mode" role="tablist" aria-label="Study mode">' + Object.keys(MODES).map(function (k) { return '<button role="tab" data-mode="' + k + '" class="' + (mode === k ? 'on' : '') + '" aria-selected="' + (mode === k) + '" title="' + MODE_DESC[k] + '">' + MODES[k] + '</button>'; }).join('') + '</div>' +
       '<p class="mode-desc">' + (mode !== 'mission' ? MODE_DESC[mode] : MODE_DESC[mode].replace(/ (\S+)$/, ' <span class="nw">$1 <button class="hero-i" data-mode-info aria-label="How Mission works">i</button></span>')) + '</p>' +
       '<div class="eyebrow">' + hello + '</div>' +
@@ -1961,6 +1990,7 @@ var TextUtil = (function () {
         setSelected(ids); render();
       });
     });
+    wireDrag(app);
     $$('.wallet-tile', app).forEach(function (box) {
       var f = box.getAttribute('data-folder');
       var ids = S.decks.filter(function (d) { return folderOf(d.id) === f; }).map(function (d) { return d.id; });
@@ -2157,6 +2187,45 @@ var TextUtil = (function () {
       '<button class="fmore" data-fedit aria-label="Folder actions" title="Folder actions (or right-click)">' + I.more + '</button></div>' +
       '<div class="wstack" style="height:' + walletH(xs.length, open) + 'px">' + cards + '</div>' +
       (extra ? '<div class="wextra">+' + plural(extra, 'more deck') + '</div>' : '') + '</div>';
+  }
+  /* Drag a deck onto a folder to move it there; drop it on the open grid to take it out of its folder. */
+  function wireDrag(app) {
+    var drag = null;
+    $$('.decks > .deck[data-id], .wc[data-wdeck]', app).forEach(function (n) {
+      n.setAttribute('draggable', 'true');
+      n.addEventListener('dragstart', function (e) {
+        drag = n.getAttribute('data-id') || n.getAttribute('data-wdeck');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', drag); } catch (x) {}
+        setTimeout(function () { n.classList.add('dragging'); document.body.classList.add('is-dragging'); }, 0);
+        e.stopPropagation();
+      });
+      n.addEventListener('dragend', function () {
+        n.classList.remove('dragging'); document.body.classList.remove('is-dragging');
+        $$('.drop-on', app).forEach(function (x) { x.classList.remove('drop-on'); });
+        drag = null;
+      });
+    });
+    $$('.wallet-tile', app).forEach(function (box) {
+      var f = box.getAttribute('data-folder');
+      box.addEventListener('dragover', function (e) { if (!drag || folderOf(drag) === f) return; e.preventDefault(); e.stopPropagation(); box.classList.add('drop-on'); });
+      box.addEventListener('dragleave', function (e) { if (!box.contains(e.relatedTarget)) box.classList.remove('drop-on'); });
+      box.addEventListener('drop', function (e) {
+        e.preventDefault(); e.stopPropagation(); box.classList.remove('drop-on');
+        if (!drag || folderOf(drag) === f) return;
+        var name = (deckById(drag) || {}).name; setFolder(drag, f); toast('Moved ' + (name ? '"' + name + '" ' : '') + 'to ' + f + '.');
+      });
+    });
+    var grid = $('.decks', app);
+    if (grid) {
+      grid.addEventListener('dragover', function (e) { if (drag && folderOf(drag) && !e.target.closest('.wallet-tile')) { e.preventDefault(); grid.classList.add('drop-on'); } });
+      grid.addEventListener('dragleave', function (e) { if (!grid.contains(e.relatedTarget)) grid.classList.remove('drop-on'); });
+      grid.addEventListener('drop', function (e) {
+        grid.classList.remove('drop-on');
+        if (!drag || !folderOf(drag) || e.target.closest('.wallet-tile')) return;
+        e.preventDefault(); var from = folderOf(drag); setFolder(drag, ''); toast('Taken out of ' + from + '.');
+      });
+    }
   }
   function toggleWallet(box, f, force) {
     var o = ls('fc.fopen') || {};
@@ -2909,11 +2978,30 @@ var TextUtil = (function () {
     });
   }
 
+  function askUsername() {
+    if (S.askingName) return;
+    S.askingName = true;
+    var m = modal('Pick a username', '<p class="hint" style="margin:0 0 14px">This is the name friends and other people see. It is never taken from your Google account.</p>' +
+      '<label class="field"><span>Username</span><input class="input" data-un maxlength="24" autofocus placeholder="e.g. jake_r"></label><div class="error" data-err></div>',
+      '<span class="spacer"></span><button class="btn primary" data-ok>Save</button>');
+    var E = m.el, inp = $('[data-un]', E);
+    $$('[data-close]', E).forEach(function (x) { x.remove(); });
+    m.onClose = function () { S.askingName = false; if (S.user && S.user.needsName) setTimeout(askUsername, 50); };
+    function save() {
+      var b = $('[data-ok]', E); busy(b, true);
+      api('saveSettings', { settings: S.user.settings, name: inp.value }).then(function (u) {
+        S.user = u; cacheNow(); m.onClose = function () { S.askingName = false; }; m.close(); toast('Hi, ' + u.name + '!'); render();
+      }, function (e) { busy(b, false); $('[data-err]', E).textContent = e.message; });
+    }
+    $('[data-ok]', E).addEventListener('click', save);
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') save(); });
+  }
+
   /* ================= settings ================= */
   function openSettings() {
     var u = S.user, s = u.settings, theme = s.theme;
     var m = modal('Settings',
-      '<div class="grid2"><label class="field"><span>Name</span><input class="input" data-name maxlength="60"></label>' +
+      '<div class="grid2"><label class="field"><span>Username</span><input class="input" data-name maxlength="24"></label>' +
       '<label class="field"><span>Email</span><input class="input" disabled data-email></label></div>' +
       '<div class="grid2"><label class="field"><span>New cards per deck per day</span><input class="input" type="number" min="0" max="500" data-new></label>' +
       '<label class="field"><span>Daily goal (reviews)</span><input class="input" type="number" min="1" max="2000" data-goal></label></div>' +
