@@ -670,6 +670,15 @@ img { max-width: 100%; }
 }
 .nw { white-space: nowrap; }
 
+/* Free study: progress bar along the bottom, with Skip */
+.sbar { width: 100%; max-width: 460px; margin: 16px auto 0; }
+.sbar-top { display: flex; align-items: center; justify-content: space-between; font-size: 12.5px; font-weight: 650; color: var(--muted); margin-bottom: 6px; }
+.sbar-skip { display: inline-flex; align-items: center; gap: 2px; border: 0; background: none; color: var(--muted); font: 650 12.5px var(--font, inherit); font-family: inherit; cursor: pointer; padding: 3px 6px 3px 10px; border-radius: 8px; }
+.sbar-skip svg { width: 15px; height: 15px; }
+.sbar-skip:hover { color: var(--text); background: var(--surface-2); }
+.sbar-track { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.sbar-track i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #22d3ee)); transition: width .4s var(--ease); }
+
 </style>
 </head>
 <body>
@@ -1188,7 +1197,7 @@ var TextUtil = (function () {
   function saveSettingsSoon() { cacheNow(); api('saveSettings', { settings: S.user.settings }).catch(function () {}); }
   var MODES = { free: 'Free study', focus: 'Focus', mission: 'Mission' };
   var MODE_DESC = {
-    free: 'Every card that is due in the decks you pick. Get each one right 5 times in a row to move it up a stage.',
+    free: 'Go through every card in the decks you pick, at your own pace. Practice only: stages stay as they are.',
     focus: 'Pick which stage to work on. Blue cards need the most work.',
     mission: 'Your daily plan. The app picks the cards due today, plus a few new ones, so you remember them long term.'
   };
@@ -1258,7 +1267,7 @@ var TextUtil = (function () {
   }
   function pointsRow(card, dir, s) {
     var pr = prog(card, dir), now = Date.now(), l = SRS.level(pr, now);
-    if (!s.free) return '<div class="pts">' + fbadge(l) + '<span class="pts-lbl">' + FACE_NAMES[l] + '</span></div>';
+    if (!s.free || s.simple) return '<div class="pts">' + fbadge(l) + '<span class="pts-lbl">' + FACE_NAMES[l] + '</span></div>';
     var goal = deckGoal(card.deckId), n = SRS.pointsToday(pr, now), dots = '';
     for (var i = 0; i < goal; i++) dots += '<i class="' + (i < n ? 'on' : '') + '"></i>';
     return '<div class="pts">' + fbadge(l) + '<span class="pts-lbl">' + FACE_NAMES[l] + '</span><span class="dots" title="' + n + ' of ' + goal + ' right in a row">' + dots + '</span><span class="pts-lbl">' + n + '/' + goal + '</span></div>';
@@ -1641,8 +1650,8 @@ var TextUtil = (function () {
 
     var big, sub, buttons;
     if (mode === 'free') {
-      big = fs.ready;
-      sub = empty || (fs.ready ? plural(fs.ready, 'card') + ' to study now' + (fs.resting ? ', ' + fs.resting + ' away for now' : '') + '.' : 'Nothing due right now.' + (fs.nextRest ? ' The next ones are back ' + whenLabel(fs.nextRest) + '.' : '') + ' You can go again anyway.');
+      big = fs.ready + fs.resting;
+      sub = empty || plural(big, 'card') + ' in your chosen decks. Every one, shuffled.';
       buttons = '<button class="btn lg" data-go ' + (selCards ? '' : 'disabled') + '>' + I.play + 'Start free study</button>';
     } else if (mode === 'focus') {
       big = fs.ready;
@@ -2571,7 +2580,7 @@ var TextUtil = (function () {
         dirsOf(c).forEach(function (d) {
           var p = prog(c, d), l = SRS.level(p);
           if (lvl && !(l === lvl || (andWorse && l > lvl))) return;
-          var skip = !lvl && p.rest > now;
+          var skip = !lvl && !all && p.rest > now;
           (skip ? resting : items).push({ card: c, dir: d });
         });
       });
@@ -2584,7 +2593,7 @@ var TextUtil = (function () {
     if (!items.length) { toast(lvl ? 'No cards at that level right now.' : 'Add some cards first.'); return; }
     var deck = deckIds.length === 1 ? deckById(deckIds[0]) : null;
     S.study = {
-      free: true, label: all ? 'Free study' : 'Focus', learn: [], review: shuffle(items), later: [], fresh: [], n: 0, correct: 0, rested: 0, doneToday: 0, started: now, from: from,
+      free: true, simple: !!all, done: 0, skipped: 0, firstTry: 0, label: all ? 'Free study' : 'Focus', learn: [], review: shuffle(items), later: [], fresh: [], n: 0, correct: 0, rested: 0, doneToday: 0, started: now, from: from,
       color: deck ? deck.color : DEFAULT_ACCENT, title: deck ? deck.name : 'All decks', total: items.length, cur: null
     };
     if (deck) S.deckId = deck.id;
@@ -2655,7 +2664,7 @@ var TextUtil = (function () {
 
     app.innerHTML = '<div class="study"><div class="wrap" style="display:flex;flex-direction:column;flex:1">' +
       '<div class="study-top"><button class="btn ghost icon-btn" data-exit aria-label="End session">' + I.x + '</button>' +
-      '<div class="progress"><i style="width:' + Math.round(100 * done / total) + '%"></i></div>' +
+      (s.simple ? '<div class="spacer"></div>' : '<div class="progress"><i style="width:' + Math.round(100 * done / total) + '%"></i></div>') +
       (s.free ? '<div class="qcounts"><span style="color:var(--muted)">' + s.label + ' &middot; ' + (rem.r + 1) + ' left</span></div>' : '') +
       (s.free ? '' : '<div class="qcounts"><span class="n' + (curKey === 'n' ? ' cur' : '') + '">' + (rem.n + (curKey === 'n' ? 1 : 0)) + '</span><span class="l' + (curKey === 'l' ? ' cur' : '') + '">' + (rem.l + (curKey === 'l' ? 1 : 0)) + '</span><span class="r' + (curKey === 'r' ? ' cur' : '') + '">' + (rem.r + (curKey === 'r' ? 1 : 0)) + '</span></div>') +
       '<button class="btn ghost icon-btn" data-edit aria-label="Edit card" title="Edit card (E)">' + I.edit + '</button></div>' +
@@ -2753,6 +2762,7 @@ var TextUtil = (function () {
   /* Two buttons. A = wrong, B = right. True/false cards answered right offer Guessed / Knew it instead. */
   function dockChoices(s) {
     var c = s.cur.item.card, kind = cardKind(c, s), v = s.cur.verdict;
+    if (s.simple && kind === 'tf') return [{ g: v === 'wrong' ? 'wrong' : 'right', label: 'Next', cls: v === 'wrong' ? 'again' : 'good' }];
     if (kind === 'tf') {
       if (v === 'wrong') return [{ g: 'wrong', label: 'Next', cls: 'again', key: 'Enter' }];
       return [{ g: 'guess', label: 'Guessed', cls: 'hard' }, { g: 'right', label: 'Knew it', cls: 'good' }];
@@ -2777,15 +2787,34 @@ var TextUtil = (function () {
         : kind === 'typed' ? '<button class="btn primary show-btn" data-check>Check</button><div class="keys"><kbd>Enter</kbd> check &middot; <kbd>Esc</kbd> end</div>'
         : kind === 'tf' ? '<div class="keys"><kbd>O</kbd> or <kbd>&larr;</kbd> true &middot; <kbd>X</kbd> or <kbd>&rarr;</kbd> false</div>'
         : '<div class="keys"><kbd>1</kbd>-<kbd>4</kbd> pick an answer</div>';
+      dock.insertAdjacentHTML('beforeend', dockFoot(s));
+      var sk0 = $('[data-skip]', dock); if (sk0) sk0.addEventListener('click', skipCard);
       var sb = $('[data-show]', dock); if (sb) sb.addEventListener('click', reveal);
       var cb = $('[data-check]', dock); if (cb) cb.addEventListener('click', function () { $('[data-typed]').requestSubmit(); });
       return;
     }
     var ch = dockChoices(s);
     dock.innerHTML = '<div class="grades two' + (ch.length === 1 ? ' one' : '') + '">' + ch.map(function (o) {
-      return '<div class="grade-wrap"><button class="grade ' + o.cls + (o.sug ? ' suggest' : '') + '" data-g="' + o.g + '">' + o.label + '</button><span class="grade-hint">' + dockHint(s, o.g) + '</span></div>';
-    }).join('') + '</div><div class="keys">' + (ch.length === 1 ? '<kbd>Enter</kbd> next' : '<kbd>1</kbd> or <kbd>&larr;</kbd> ' + ch[0].label.toLowerCase() + ' &middot; <kbd>2</kbd> or <kbd>&rarr;</kbd> ' + ch[1].label.toLowerCase()) + ' &middot; <kbd>Space</kbd> flip back</div>';
+      return '<div class="grade-wrap"><button class="grade ' + o.cls + (o.sug ? ' suggest' : '') + '" data-g="' + o.g + '">' + o.label + '</button>' + (s.simple ? '' : '<span class="grade-hint">' + dockHint(s, o.g) + '</span>') + '</div>';
+    }).join('') + '</div>' + dockFoot(s) + '<div class="keys">' + (ch.length === 1 ? '<kbd>Enter</kbd> next' : '<kbd>1</kbd> or <kbd>&larr;</kbd> ' + ch[0].label.toLowerCase() + ' &middot; <kbd>2</kbd> or <kbd>&rarr;</kbd> ' + ch[1].label.toLowerCase()) + ' &middot; <kbd>Space</kbd> flip back</div>';
     $$('[data-g]', dock).forEach(function (b) { b.addEventListener('click', function () { grade(b.getAttribute('data-g')); }); });
+    var sk = $('[data-skip]', dock); if (sk) sk.addEventListener('click', skipCard);
+  }
+  /* Under the buttons: Free study gets a progress bar; every mode gets Skip (no change to progress, back next session). */
+  function dockFoot(s) {
+    if (s.simple) return simpleBar(s, true);
+    return '<div class="sbar"><div class="sbar-top"><span></span><button class="sbar-skip" data-skip title="Skip for now, it comes back next session (S)">Skip ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</button></div></div>';
+  }
+  /* Free study progress bar along the bottom, with Skip. */
+  function simpleBar(s, withSkip) {
+    var gone = s.done + s.skipped, pct = s.total ? Math.round(100 * gone / s.total) : 0;
+    return '<div class="sbar"><div class="sbar-top"><span>' + gone + ' of ' + s.total + ' done</span>' + (withSkip ? '<button class="sbar-skip" data-skip title="Skip this card (S)">Skip ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</button>' : '') + '</div><div class="sbar-track"><i style="width:' + pct + '%"></i></div></div>';
+  }
+  function skipCard() {
+    var s = S.study;
+    if (!s || !s.cur || s.grading) return;
+    s.grading = true; s.skipped = (s.skipped || 0) + 1;
+    animateOut('hard', 0);
   }
   function grade(g, dirOut) {
     var s = S.study;
@@ -2796,6 +2825,16 @@ var TextUtil = (function () {
     var item = s.cur.item, c = item.card, now = Date.now();
     var right = g === 'right' ? true : g === 'wrong' ? false : null;
     c.srs = c.srs || {};
+    if (s.simple) {
+      s.n++;
+      bumpDaily(!!right);
+      if (right === false) {
+        item.missed = true;
+        var lo2 = Math.min(s.review.length, 3);
+        s.review.splice(lo2 + Math.floor(Math.random() * (s.review.length - lo2 + 1)), 0, item);
+      } else { s.correct++; s.done++; if (!item.missed) s.firstTry++; }
+      return animateOut(right === false ? 'again' : 'good', dirOut);
+    }
     if (s.free) {
       var r = SRS.answer(prog(c, item.dir), right, now, deckGoal(c.deckId));
       c.srs[item.dir] = r.p;
@@ -2897,7 +2936,7 @@ var TextUtil = (function () {
     var nextLearn = s.learn.length ? prog(s.learn[0].card, s.learn[0].dir).due : 0;
     app.innerHTML = '<div class="study"><div class="wrap"><div class="done appear">' +
       '<div class="burst chroma">' + I.check + '</div><h1>' + (s.free ? s.label + ' done' : 'Mission complete') + '</h1>' +
-      '<p class="hint" style="font-size:15px">' + (s.free ? plural(s.doneToday, 'card') + ' moved up a stage. They come back when they are due.' : nextLearn ? plural(s.learn.length, 'card') + ' still learning. They come back in about ' + Math.max(1, Math.round((nextLearn - Date.now()) / 60000)) + ' min.' : 'Nice work. Everything due here is done.') + '</p>' +
+      '<p class="hint" style="font-size:15px">' + (s.simple ? 'You went through ' + plural(s.done, 'card') + ', ' + s.firstTry + ' right first time' + (s.skipped ? ', ' + s.skipped + ' skipped' : '') + '. Stages stay as they were.' : s.free ? plural(s.doneToday, 'card') + ' moved up a stage. They come back when they are due.' : nextLearn ? plural(s.learn.length, 'card') + ' still learning. They come back in about ' + Math.max(1, Math.round((nextLearn - Date.now()) / 60000)) + ' min.' : 'Nice work. Everything due here is done.') + '</p>' +
       '<div class="done-stats"><div><b>' + s.n + '</b><span>Answers</span></div><div><b>' + acc + '%</b><span>Correct</span></div><div><b>' + mins + 'm</b><span>Time</span></div></div>' +
       '<div class="row" style="justify-content:center"><button class="btn primary lg" data-fin>Done</button></div></div></div></div>';
     $('[data-fin]', app).addEventListener('click', endStudy);
@@ -2936,6 +2975,7 @@ var TextUtil = (function () {
         grade(ch.length === 1 ? ch[0].g : sg ? sg.g : 'right'); return;
       }
     }
+    if (e.key === 's' || e.key === 'S') { e.preventDefault(); skipCard(); return; }
     if (e.key === 'e' || e.key === 'E') { e.preventDefault(); editCurrent(); }
   });
   document.addEventListener('keydown', function (e) {
