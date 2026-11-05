@@ -679,12 +679,24 @@ img { max-width: 100%; }
 .sbar-track { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
 .sbar-track i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 60%, #22d3ee)); transition: width .4s var(--ease); }
 /* medium screens (hero stacked): heat chart on the left, the two counters stacked on its right */
-@media (min-width: 601px) and (max-width: 860px) {
+@media (max-width: 860px) {
   .hero-side { grid-template-columns: minmax(0, 1fr) minmax(190px, 240px); grid-template-rows: auto; grid-template-areas: "heat stats"; align-items: stretch; }
   .hero-side .stats { grid-area: stats; grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
   .hero-side .heat { grid-area: heat; }
   .heat-grid i { max-height: 26px; }
 }
+@media (max-width: 600px) {
+  .hero-side { grid-template-columns: minmax(0, 1fr) 124px; gap: 10px; }
+  .hero-side .stats { gap: 10px; }
+  .hero-side .stat { gap: 8px; padding: 10px; }
+  .hero-side .stat .ring, .hero-side .stat .flame { width: 26px; height: 26px; border-radius: 9px; }
+  .hero-side .stat .flame svg { width: 14px; height: 14px; }
+  .hero-side .stat .num { font-size: 20px; }
+  .hero-side .stat .lbl { font-size: 11.5px; }
+  .heat { padding: 12px; }
+  .heat-head { font-size: 11.5px; }
+}
+@media (max-width: 420px) { .section-head { flex-wrap: wrap; row-gap: 8px; } }
 
 </style>
 </head>
