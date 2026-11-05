@@ -971,6 +971,7 @@ html.study-on .swipe-hint.neutral { color: var(--text); }
 .swipe-hint.r { right: auto; left: 22px; transform: rotate(-10deg); }
 .brand { white-space: nowrap; }
 @media (max-width: 600px) { .topbar .sync { display: none; } }
+.flip, .flip * { touch-action: none; }
 .pts { flex-direction: column; gap: 4px; }
 .pts-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .pts-next { opacity: .55; }
@@ -3804,20 +3805,43 @@ var TextUtil = (function () {
       if (s.flash) { toast(s.flash); s.flash = null; }
     }, flip ? 230 : 0);
   }
+  /* Dragging the card. The browser must not handle touches on it (touch-action: none in the CSS), or it cancels
+     the drag partway. So up-and-down moves scroll the long card or the page by hand here. */
   function wireSwipe(flip, kind) {
-    var sx = 0, sy = 0, dx = 0, active = false, moved = false;
+    var SWIPE = 70, FLICK = 30, FLICK_SPEED = 0.2;
+    var sx = 0, sy = 0, dx = 0, lastY = 0, startAt = 0, active = false, moved = false, vertical = false, wandered = false, canScroll = false;
     var hl = $('.swipe-hint.l', flip), hr = $('.swipe-hint.r', flip);
+    function resetCard() {
+      flip.style.transition = 'transform .3s var(--ease)';
+      flip.style.transform = '';
+      hl.style.opacity = 0; hr.style.opacity = 0;
+    }
+    function activeFace() { return $(flip.classList.contains('flipped') ? '.face.back' : '.face.front', flip); }
+    function answeringTf() { var c = S.study && S.study.cur; return kind === 'tf' && c && !c.revealed && !c.verdict; }
     flip.addEventListener('pointerdown', function (e) {
       if (e.target.closest('input,button,form')) return;
-      active = true; moved = false; sx = e.clientX; sy = e.clientY; dx = 0;
+      var fc = activeFace();
+      canScroll = !!(fc && fc.scrollHeight > fc.clientHeight + 1) || document.documentElement.scrollHeight > window.innerHeight + 1;
+      active = true; moved = false; vertical = false; wandered = false; sx = e.clientX; sy = lastY = e.clientY; dx = 0; startAt = Date.now();
+      try { flip.setPointerCapture(e.pointerId); } catch (x) {}
     });
     flip.addEventListener('pointermove', function (e) {
-      if (!active) return;
+      if (!active || !S.study || !S.study.cur) return;
       dx = e.clientX - sx;
       var dy = e.clientY - sy;
-      if (!moved && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) { moved = true; try { flip.setPointerCapture(e.pointerId); } catch (x) {} }
-      var cur = S.study.cur, answering = kind === 'tf' && !cur.revealed && !cur.verdict;
-      if (!moved || !(cur.revealed || answering)) return;
+      if (!moved && !vertical) {
+        if (Math.abs(dy) > 12) wandered = true;
+        if (Math.abs(dx) > 8 && Math.abs(dx) >= Math.abs(dy) * 0.6) moved = true;
+        else if (canScroll && Math.abs(dy) > 26) vertical = true;
+      }
+      if (vertical) {
+        var face = activeFace(), step = lastY - e.clientY;
+        if (face && face.scrollHeight > face.clientHeight) face.scrollTop += step; else window.scrollBy(0, step);
+        lastY = e.clientY;
+        return;
+      }
+      var cur = S.study.cur;
+      if (!moved || !(cur.revealed || answeringTf())) return;
       if (cur.revealed) {
         var opts = dockChoices(S.study);
         hl.textContent = opts[0].label; hr.textContent = opts[opts.length - 1].label;
@@ -3825,35 +3849,30 @@ var TextUtil = (function () {
       }
       flip.style.transition = 'none';
       flip.style.transform = 'translateX(' + dx + 'px) rotate(' + (dx / 22) + 'deg)';
-      hl.style.opacity = Math.max(0, Math.min(1, -dx / 90));
-      hr.style.opacity = Math.max(0, Math.min(1, dx / 90));
+      hl.style.opacity = Math.max(0, Math.min(1, -dx / SWIPE));
+      hr.style.opacity = Math.max(0, Math.min(1, dx / SWIPE));
     });
-    function up() {
+    flip.addEventListener('pointerup', function () {
       if (!active) return;
       active = false;
       var s = S.study;
+      if (!s || !s.cur || vertical) return;
       if (!moved) {
+        if (wandered) return;
         if (!s.cur.revealed && kind === 'basic') reveal();
         else if (s.cur.revealed) flip.classList.toggle('flipped');
         return;
       }
-      if (kind === 'tf' && !s.cur.revealed && !s.cur.verdict && Math.abs(dx) > 100) {
-        flip.style.transition = 'transform .3s var(--ease)';
-        flip.style.transform = '';
-        hl.style.opacity = 0; hr.style.opacity = 0;
-        pickTf(dx < 0);
-        return;
-      }
-      if (s.cur.revealed && Math.abs(dx) > 100) {
+      var far = Math.abs(dx);
+      var enough = far > SWIPE || (far > FLICK && far / Math.max(1, Date.now() - startAt) > FLICK_SPEED);
+      if (answeringTf() && enough) { resetCard(); pickTf(dx < 0); return; }
+      if (s.cur.revealed && enough) {
         var ch = dockChoices(s), g = ch.length === 1 ? ch[0].g : (dx > 0 ? ch[1].g : ch[0].g);
         grade(g, dx > 0 ? 3 : -3); return;
       }
-      flip.style.transition = 'transform .3s var(--ease)';
-      flip.style.transform = '';
-      hl.style.opacity = 0; hr.style.opacity = 0;
-    }
-    flip.addEventListener('pointerup', up);
-    flip.addEventListener('pointercancel', up);
+      resetCard();
+    });
+    flip.addEventListener('pointercancel', function () { if (active) { active = false; resetCard(); } });
   }
   function editCurrent() {
     var s = S.study;
