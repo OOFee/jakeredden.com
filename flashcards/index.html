@@ -913,6 +913,53 @@ html.minimal .ftile, html.minimal .deck.solid, html.minimal .wc { filter: satura
 html.minimal .flip, html.minimal .study { --accent: #7c818c; }
 html { transition: none; }
 
+/* ================= study: Glass ================= */
+.bg-blobs { display: none; }
+html.study-on { --gl-bg: #06070d; --gl-card-a: rgba(255, 255, 255, .11); --gl-card-b: rgba(255, 255, 255, .04); --gl-edge: rgba(255, 255, 255, .28); --gl-shine: rgba(255, 255, 255, .3); --gl-shadow: 0 30px 70px -30px rgba(0, 0, 0, .6); --gl-btn: rgba(255, 255, 255, .13); --gl-btn-edge: rgba(255, 255, 255, .26); --gl-track: rgba(255, 255, 255, .2); }
+html.study-on[data-theme=light] { --gl-bg: #eef0f8; --gl-card-a: rgba(255, 255, 255, .72); --gl-card-b: rgba(255, 255, 255, .42); --gl-edge: rgba(255, 255, 255, .8); --gl-shine: #fff; --gl-shadow: 0 30px 70px -30px rgba(20, 20, 60, .35); --gl-btn: rgba(255, 255, 255, .55); --gl-btn-edge: rgba(255, 255, 255, .85); --gl-track: rgba(20, 20, 60, .12); }
+html.study-on body { background: var(--gl-bg); }
+html.study-on body::before { display: none; }
+html.study-on .bg-blobs { display: block; position: fixed; inset: -25%; z-index: 0; pointer-events: none; overflow: hidden; }
+html.study-on .bg-blobs i { position: absolute; width: 72%; aspect-ratio: 1; border-radius: 50%; opacity: .36; will-change: transform; animation: glassDrift 22s ease-in-out infinite alternate; background: radial-gradient(closest-side, var(--gl-c), transparent); }
+html.study-on .bg-blobs i:nth-child(1) { --gl-c: color-mix(in srgb, var(--accent) 72%, #808080); left: 0; top: 6%; }
+html.study-on .bg-blobs i:nth-child(2) { --gl-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, #19d3e8) 72%, #808080); right: -2%; top: -4%; animation-duration: 28s; animation-delay: -8s; }
+html.study-on .bg-blobs i:nth-child(3) { --gl-c: color-mix(in srgb, color-mix(in srgb, var(--accent) 45%, #ff5ca8) 72%, #808080); left: 20%; bottom: -6%; animation-duration: 34s; animation-delay: -14s; }
+@keyframes glassDrift { to { transform: translate(14%, -12%) scale(1.2); } }
+html.minimal.study-on .bg-blobs { display: none; }
+html.study-on .study { position: relative; z-index: 1; }
+html.study-on .face { background: linear-gradient(160deg, var(--gl-card-a), var(--gl-card-b)); border: 1px solid var(--gl-edge); border-radius: 34px; box-shadow: var(--gl-shadow), inset 0 1px 0 var(--gl-shine); -webkit-backdrop-filter: blur(70px) saturate(1.05); backdrop-filter: blur(70px) saturate(1.05); padding: 28px 30px; }
+html.study-on .face::before { display: none; }
+html.study-on .face-label { text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 500; color: var(--text); opacity: .72; }
+html.study-on .face-body { gap: 10px; padding-block: 8px 0; }
+html.study-on .face-text { font-weight: 600; font-size: clamp(42px, 7vw, 68px); letter-spacing: -.035em; line-height: 1.1; }
+html.study-on .face-text.mid { font-size: clamp(30px, 4.2vw, 48px); line-height: 1.08; }
+html.study-on .face-text.long { font-family: var(--display); font-size: clamp(21px, 3vw, 28px); font-weight: 600; letter-spacing: -.015em; line-height: 1.3; text-align: center; }
+html.study-on .face:has(.choices) .face-text, html.study-on .face:has(.face-img) .face-text { font-size: clamp(25px, 3.2vw, 36px); line-height: 1.12; }
+html.study-on .face .q-small { color: var(--text); opacity: .75; font-size: 18px; }
+html.study-on .face-img { max-height: min(200px, 24svh); }
+html.study-on .tap-hint { color: var(--text); opacity: .55; }
+html.study-on .pts-lbl, html.study-on .keys, html.study-on .grade-hint, html.study-on .sbar-top, html.study-on .sbar-skip, html.study-on .typed-was { color: var(--text); opacity: .8; }
+html.study-on .qcounts span[style] { color: var(--text) !important; opacity: .8; }
+html.study-on .progress, html.study-on .sbar-track { background: var(--gl-track); }
+html.study-on .progress i, html.study-on .sbar-track i { background: var(--text); }
+html.study-on .pts .dots i { background: var(--gl-track); box-shadow: none; }
+html.study-on .pts .dots i.on { background: var(--text); }
+html.study-on .show-btn, html.study-on .grade, html.study-on .choice, html.study-on .answer-in .input, html.study-on .audio-btn { background: var(--gl-btn); color: var(--text); border: 1px solid var(--gl-btn-edge); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gl-shine) 60%, transparent); }
+html.study-on .show-btn { border-radius: 99px; }
+html.study-on .grade { border-radius: 99px; min-height: 56px; }
+html.study-on .grade:hover, html.study-on .choice:hover:not(:disabled), html.study-on .show-btn:hover { background: color-mix(in srgb, var(--text) 16%, transparent); border-color: var(--gl-btn-edge); }
+html.study-on .grade.suggest { border-color: var(--text); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 22%, transparent); }
+html.study-on .choices { gap: 8px; }
+html.study-on .choice { padding: 10px 14px; }
+html.study-on .choice kbd { background: var(--gl-btn); color: var(--text); }
+html.study-on .choice.right, html.study-on .tf-btn.right { background: color-mix(in srgb, var(--good) 55%, transparent); color: #fff; }
+html.study-on .choice.wrong, html.study-on .tf-btn.wrong { background: color-mix(in srgb, var(--again) 55%, transparent); color: #fff; }
+html.study-on .answer-in .input { border-radius: 99px; }
+html.study-on .done-stats > * { background: var(--gl-btn); border-color: var(--gl-btn-edge); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gl-shine) 60%, transparent); -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px); }
+html.study-on .answer-in .input::placeholder { color: var(--text); opacity: .55; }
+@media (min-width: 761px) { html.study-on .choices { grid-template-columns: 1fr 1fr; max-width: none; } }
+@media (prefers-reduced-motion: reduce) { html.study-on .bg-blobs i { animation: none; } }
+
 </style>
 </head>
 <body>
@@ -1819,10 +1866,16 @@ var TextUtil = (function () {
     render();
     window.scrollTo(0, 0);
   }
+  /* The drifting colour behind the Glass study card. It lives outside #app so it keeps moving smoothly from card to card. */
+  function studyBackdrop(on) {
+    document.documentElement.classList.toggle('study-on', on);
+    if (on && !$('.bg-blobs')) document.body.insertAdjacentHTML('afterbegin', '<div class="bg-blobs" aria-hidden="true"><i></i><i></i><i></i></div>');
+  }
   function render() {
     closeMenus();
     applyFaces();
     if (S.view !== 'home') releasePage();
+    studyBackdrop(S.view === 'study');
     document.documentElement.classList.toggle('minimal', !!(S.user && S.user.settings.minimal));
     var app = $('#app');
     var deck = S.deckId && deckById(S.deckId);
@@ -3326,7 +3379,7 @@ var TextUtil = (function () {
   }
   function textHtml(t) {
     if (!t) return '';
-    return '<div class="face-text' + (t.length > 90 ? ' long' : '') + '">' + esc(t) + '</div>';
+    return '<div class="face-text' + (t.length > 60 ? ' long' : t.length > 18 ? ' mid' : '') + '">' + esc(t) + '</div>';
   }
 
   function renderStudy(app) {
