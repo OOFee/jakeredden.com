@@ -987,7 +987,9 @@ html.study-on .swipe-hint.neutral { color: var(--text); }
 .flip, .flip * { touch-action: none; }
 .deck-bar { position: absolute; left: 20px; right: 66px; bottom: 30px; }
 .deck.solid { padding-bottom: 46px; }
-@media (min-width: 601px) and (max-width: 1120px) { .home { padding-left: 20px; padding-right: 20px; } }
+@media (max-width: 1120px) { .home, .deckpage, .discover, .friends { padding-left: 20px; padding-right: 20px; } }
+@media (max-width: 600px) { .home, .deckpage, .discover, .friends { padding-left: 16px; padding-right: 16px; } }
+.tb-quote[hidden] + .spacer { flex: 1 1 12px; }
 .pts { flex-direction: column; gap: 4px; }
 /* result: spinning border, then a plain coloured edge */
 @property --fx-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
@@ -1011,6 +1013,15 @@ html.study-on .swipe-hint.neutral { color: var(--text); }
 .tf-ans b { display: inline; width: auto; height: auto; font-size: inherit; font-weight: 800; border-radius: 0; background: none; color: inherit; }
 .pts-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .pts-next { opacity: .55; }
+.disc-folder .chip { display: inline-flex; align-items: center; gap: 5px; }
+.disc-folder .chip svg { width: 13px; height: 13px; }
+.pub-list { display: grid; gap: 6px; max-height: 50vh; overflow: auto; }
+.pub-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); color: var(--text); text-align: left; cursor: pointer; font: inherit; }
+.pub-row:hover { border-color: var(--line-strong); }
+.pub-row i { width: 12px; height: 12px; border-radius: 50%; background: var(--c); }
+.pub-row span { display: grid; min-width: 0; }
+.pub-row small { color: var(--muted); font-size: 12.5px; }
+.pub-row svg { width: 16px; height: 16px; color: var(--muted); }
 .pts-row.levelup .fbadge { transition: opacity .3s, transform .3s var(--ease); }
 .pts-row.levelup .fbadge:not(.pts-next) { opacity: .4; transform: scale(.85); }
 .pts-row.levelup .pts-next { opacity: 1; animation: fxFaceUp .6s .1s cubic-bezier(.2, 1.5, .4, 1) both; }
@@ -3429,7 +3440,7 @@ var TextUtil = (function () {
     var st = S.disc || (S.disc = { q: '', sort: 'popular', list: null });
     app.innerHTML = topbar() + '<main class="wrap discover"><div class="appear">' +
       '<button class="btn ghost sm" data-back style="margin-left:-10px">' + I.back + 'Home</button>' +
-      '<div class="disc-head"><div><h1>Discover</h1><p class="hint">Decks other people have made public. Add any of them to your own decks.</p></div></div>' +
+      '<div class="disc-head"><div><h1>Discover</h1><p class="hint">Ready-made folders, plus decks other people have made public. Add any of them to your own decks.</p></div></div>' +
       '<div class="disc-bar"><label class="search">' + I.search + '<input class="input" placeholder="Search by name or maker" data-q></label>' +
       '<div class="seg" data-sort><button data-s="popular">Popular</button><button data-s="new">Newest</button><button data-s="big">Biggest</button></div></div>' +
       '<div data-list class="disc-grid"><div class="spinner"></div></div></div></main>';
@@ -3445,19 +3456,67 @@ var TextUtil = (function () {
       var box = $('[data-list]', app);
       if (!box) return;
       if (!list.length) { box.innerHTML = '<div class="empty" style="grid-column:1/-1">' + (st.q ? 'No public decks match "' + esc(st.q) + '".' : 'No public decks yet. Make one of yours public from its Share button.') + '</div>'; return; }
-      box.innerHTML = list.map(function (d, i) {
+      var groups = {}, tiles = [];
+      list.forEach(function (d, i) {
+        d.at = i;
+        if (!d.folder) { tiles.push({ deck: d }); return; }
+        if (!groups[d.folder]) { groups[d.folder] = { name: d.folder, decks: [] }; tiles.push({ group: groups[d.folder] }); }
+        groups[d.folder].decks.push(d);
+      });
+      tiles = tiles.map(function (t) { return t.group && t.group.decks.length === 1 ? { deck: t.group.decks[0] } : t; });
+      tiles.sort(function (a, b) { return (a.group ? 0 : 1) - (b.group ? 0 : 1); });
+      box.innerHTML = tiles.map(function (t) {
+        if (t.group) {
+          var g = t.group, n = g.decks.reduce(function (s, x) { return s + x.cards; }, 0);
+          g.decks.sort(function (a, b) { return a.order - b.order; });
+          return '<button class="disc-card disc-folder" data-fold="' + esc(g.name) + '" style="--c:' + esc(g.decks[0].color) + '"><span class="disc-top"></span><b>' + esc(g.name) + '</b>' +
+            '<span class="disc-meta">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(n, 'card') + '</span>' +
+            '<span class="disc-foot"><span class="chip">' + I.folder + 'Folder</span><span class="disc-open">Open ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</span></span></button>';
+        }
+        var d = t.deck, i = d.at;
         return '<button class="disc-card" data-i="' + i + '" style="--c:' + esc(d.color) + '"><span class="disc-top"></span><b></b>' +
           '<span class="disc-meta">' + plural(d.cards, 'card') + (d.by ? ' &middot; by ' + esc(d.by) : '') + '</span>' +
           '<span class="disc-foot">' + (d.mine ? '<span class="chip pub">Yours</span>' : d.copies ? '<span class="chip">' + plural(d.copies, 'copy', 'copies') + '</span>' : '<span class="chip">New</span>') + '<span class="disc-open">Preview ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</span></span></button>';
       }).join('');
-      $$('.disc-card b', box).forEach(function (b, i) { b.textContent = list[i].name; });
-      $$('.disc-card', box).forEach(function (c) { c.addEventListener('click', function () { previewPublic(list[Number(c.getAttribute('data-i'))]); }); });
+      $$('.disc-card[data-i]', box).forEach(function (c) {
+        var d = list[Number(c.getAttribute('data-i'))];
+        $('b', c).textContent = d.name;
+        c.addEventListener('click', function () { previewPublic(d); });
+      });
+      $$('.disc-card[data-fold]', box).forEach(function (c) { c.addEventListener('click', function () { openPublicFolder(groups[c.getAttribute('data-fold')]); }); });
     }
     function load() {
       api('catalog', { q: st.q, sort: st.sort }).then(function (list) { st.list = list; paint(list); }, function (e) { var box = $('[data-list]', app); if (box) box.innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc(e.message) + '</div>'; });
     }
     if (st.list) paint(st.list);
     load();
+  }
+  /* A ready-made folder: look inside, preview a deck, or add the lot. */
+  function openPublicFolder(g) {
+    var total = g.decks.reduce(function (s, x) { return s + x.cards; }, 0);
+    var m = modal(g.name, '<p class="hint" style="margin:-4px 0 12px">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(total, 'card') + '</p>' +
+      '<div class="pub-list">' + g.decks.map(function (d, i) {
+        return '<button class="pub-row" data-pd="' + i + '" style="--c:' + esc(d.color) + '"><i></i><span><b></b><small>' + plural(d.cards, 'card') + '</small></span>' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</button>';
+      }).join('') + '</div><div class="error" data-err></div>',
+      '<span class="spacer"></span><button class="btn" data-close>Close</button><button class="btn primary" data-all>' + I.plus + 'Add whole folder</button>', { wide: true });
+    var E = m.el;
+    $$('[data-pd]', E).forEach(function (r) {
+      var d = g.decks[Number(r.getAttribute('data-pd'))];
+      $('b', r).textContent = d.name;
+      r.addEventListener('click', function () { m.close(); previewPublic(d); });
+    });
+    $('[data-all]', E).addEventListener('click', function () {
+      var btn = this; busy(btn, true);
+      api('copyPublicMany', { deckIds: g.decks.map(function (d) { return d.id; }) }).then(function (r) {
+        var fm = Object.assign({}, folders());
+        r.decks.forEach(function (d) { S.decks.push(d); addToSelections(d.id); fm[d.id] = g.name; });
+        S.cards = S.cards.concat(r.cards);
+        S.user.settings.folders = fm;
+        saveSettingsSoon();
+        g.decks.forEach(function (d) { d.copies = (d.copies || 0) + 1; });
+        m.close(); toast('"' + g.name + '" added: ' + plural(r.decks.length, 'deck') + ', ' + plural(r.cards.length, 'card') + '.');
+      }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
+    });
   }
   function previewPublic(d) {
     var m = modal(d.name, '<p class="hint" style="margin:-4px 0 12px">' + (d.cards ? plural(d.cards, 'card') : 'Public deck') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.copies ? ' &middot; copied ' + plural(d.copies, 'time') : '') + '</p>' +
@@ -3466,6 +3525,7 @@ var TextUtil = (function () {
       '<div class="error" data-err></div>',
       '<span class="spacer"></span><button class="btn" data-close>Close</button>' + (d.mine ? '' : '<button class="btn primary" data-add>' + I.plus + 'Add to my decks</button>'), { wide: true });
     var E = m.el;
+    var pf = $('[data-folder]', E); if (pf && d.folder) pf.value = d.folder;
     api('catalogPreview', { deckId: d.id }).then(function (cards) {
       $('[data-prev]', E).innerHTML = cards.map(function () { return '<div><span></span><span style="color:var(--muted)"></span></div>'; }).join('') + (d.cards && d.cards > cards.length ? '<div><span class="hint">and ' + plural(d.cards - cards.length, 'more card') + '</span></div>' : '');
       $$('[data-prev] > div', E).forEach(function (row, i) { if (!cards[i]) return; var sp = $$('span', row); sp[0].textContent = cards[i].front; sp[1].textContent = cards[i].back; });
