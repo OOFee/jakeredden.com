@@ -494,8 +494,6 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 .pick i { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--line-strong); background: var(--surface); transition: background .15s, border-color .15s; }
 .pick input:checked + i { background: var(--c); border-color: var(--c); }
 .pick input:checked + i::after { content: ''; width: 10px; height: 6px; border: solid #fff; border-width: 0 0 2.5px 2.5px; transform: translate(0, -1px) rotate(-45deg); }
-.deck:not(.picked) { opacity: .55; }
-.deck:not(.picked):hover { opacity: .85; }
 .show-btn { width: 100%; height: 56px; border-radius: 16px; font-size: 16px; }
 .keys { margin-top: 12px; text-align: center; font-size: 12px; color: var(--faint); }
 .keys kbd { font-family: var(--font); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line-strong); margin: 0 2px; }
@@ -657,12 +655,12 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 .wgo svg { width: 16px; height: 16px; }
 .wextra { margin-top: 10px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .wallet-tile.open .wextra { display: none; }
-.wallet-tile:not(.picked) .wstack { opacity: .55; }
-/* Some decks ticked: the unticked ones in the folder fade, like an unticked folder. */
-.wallet-tile.picked .wc:not(.picked) { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--bg) 50%, transparent), 0 -6px 18px rgba(0, 0, 0, .3); }
-.wallet-tile.picked .wc:not(.picked) > .wtop, .wallet-tile.picked .wc:not(.picked) > .wbot { opacity: .6; }
-.wallet-tile.picked .wc:not(.picked):hover { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--bg) 20%, transparent), 0 -6px 18px rgba(0, 0, 0, .3); }
-.wallet-tile.picked .wc:not(.picked):hover > .wtop, .wallet-tile.picked .wc:not(.picked):hover > .wbot { opacity: .9; }
+/* Decks not chosen for studying are dimmed, never see-through: a filter keeps every card solid,
+   so stacked cards in a closed folder never show through each other. Chosen decks are full colour. */
+.deck.solid:not(.picked), .wc:not(.picked) { filter: saturate(.5) brightness(1.12) contrast(.82); transition: filter .2s; }
+:root[data-theme='dark'] .deck.solid:not(.picked), :root[data-theme='dark'] .wc:not(.picked) { filter: saturate(.55) brightness(.62); }
+.deck.solid:not(.picked):hover, .wc:not(.picked):hover { filter: saturate(.85) brightness(1.03); }
+:root[data-theme='dark'] .deck.solid:not(.picked):hover, :root[data-theme='dark'] .wc:not(.picked):hover { filter: saturate(.85) brightness(.88); }
 .pick input[data-some] + i { background: var(--c); border-color: var(--c); }
 .pick input[data-some] + i::after { content: ''; width: 10px; height: 2.5px; background: #fff; border-radius: 2px; }
 .folder-picks { display: grid; gap: 6px; max-height: 320px; overflow: auto; }
@@ -935,7 +933,6 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 .deck.solid .pick i { border-color: rgba(255, 255, 255, .8); background: rgba(0, 0, 0, .15); }
 .deck.solid .pick input:checked + i { background: rgba(255, 255, 255, .95); border-color: #fff; }
 .deck.solid .pick input:checked + i::after { border-color: var(--c); }
-.deck.solid:not(.picked) { opacity: .6; }
 .img-prev { height: 90px; border-radius: 12px; background: center / cover no-repeat var(--surface-2); margin: -4px 0 12px; border: 1px solid var(--line); }
 /* submenus */
 .menu button.has-sub { position: relative; }
