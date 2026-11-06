@@ -659,8 +659,10 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 .wallet-tile.open .wextra { display: none; }
 .wallet-tile:not(.picked) .wstack { opacity: .55; }
 /* Some decks ticked: the unticked ones in the folder fade, like an unticked folder. */
-.wallet-tile.picked .wc:not(.picked):not(.extra), .wallet-tile.open.picked .wc:not(.picked) { opacity: .55; }
-.wallet-tile.picked .wc:not(.picked):hover { opacity: .85; }
+.wallet-tile.picked .wc:not(.picked) { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--bg) 50%, transparent), 0 -6px 18px rgba(0, 0, 0, .3); }
+.wallet-tile.picked .wc:not(.picked) > .wtop, .wallet-tile.picked .wc:not(.picked) > .wbot { opacity: .6; }
+.wallet-tile.picked .wc:not(.picked):hover { box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--bg) 20%, transparent), 0 -6px 18px rgba(0, 0, 0, .3); }
+.wallet-tile.picked .wc:not(.picked):hover > .wtop, .wallet-tile.picked .wc:not(.picked):hover > .wbot { opacity: .9; }
 .pick input[data-some] + i { background: var(--c); border-color: var(--c); }
 .pick input[data-some] + i::after { content: ''; width: 10px; height: 2.5px; background: #fff; border-radius: 2px; }
 .folder-picks { display: grid; gap: 6px; max-height: 320px; overflow: auto; }
