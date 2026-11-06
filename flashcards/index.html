@@ -371,6 +371,21 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 @media (max-width: 600px) { .ce-opt span { display: none; } .ce-opt { width: 36px; height: 32px; justify-content: center; padding: 0; } }
 .ce-url { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
 .ce-url .input { flex: 1; min-width: 0; height: 38px; }
+.disc-cats { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; }
+.disc-cats:empty { display: none; }
+.disc-cats.sub { margin-top: 8px; }
+.disc-chip { height: 34px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--muted); font: 600 13.5px var(--font); cursor: pointer; }
+.disc-chip:hover { color: var(--text); }
+.disc-chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.disc-cats.sub .disc-chip { height: 30px; font-size: 13px; }
+.disc-cats + .disc-cats.sub:empty + .disc-grid, .disc-cats.sub + .disc-grid { margin-top: 16px; }
+.cat-chip { width: 100%; justify-content: space-between; }
+.cat-chip select { flex: 1; }
+.sh-pubcat { display: grid; gap: 8px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface-2); font-size: 13.5px; font-weight: 600; }
+.sh-pubcat .ce-chip { justify-content: space-between; }
+.sh-pubcat .ce-chip select { flex: 1; }
+.set-lang .ce-chip { width: 100%; justify-content: space-between; }
+.set-lang .ce-chip select { flex: 1; }
 .ce-more-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .ce-extras { display: grid; gap: 12px; }
 .ce-extras:empty { display: none; }
@@ -1433,7 +1448,21 @@ var TextUtil = (function () {
     return /^[=+\-@\t\r\n]/.test(v) ? "'" + v : v;
   }
 
-  return { fold: fold, lev: lev, check: check, parsePairs: parsePairs, guard: guard };
+  /* Deck categories. Languages also tell the read-aloud voice what to use. */
+  var LANGS = [['en', 'English', 'en-US'], ['ja', 'Japanese', 'ja-JP'], ['zh', 'Chinese (Mandarin)', 'zh-CN'], ['ko', 'Korean', 'ko-KR'],
+    ['es', 'Spanish', 'es-ES'], ['fr', 'French', 'fr-FR'], ['de', 'German', 'de-DE'], ['it', 'Italian', 'it-IT'], ['pt', 'Portuguese', 'pt-PT'],
+    ['ru', 'Russian', 'ru-RU'], ['ar', 'Arabic', 'ar-SA'], ['hi', 'Hindi', 'hi-IN'], ['th', 'Thai', 'th-TH'], ['vi', 'Vietnamese', 'vi-VN'],
+    ['id', 'Indonesian', 'id-ID'], ['tr', 'Turkish', 'tr-TR'], ['nl', 'Dutch', 'nl-NL'], ['pl', 'Polish', 'pl-PL']];
+  var SUBJECTS = [['maths', 'Maths'], ['science', 'Science'], ['history', 'History'], ['geography', 'Geography'], ['arts', 'Arts and music'], ['tests', 'Tests and licences'], ['other', 'Other']];
+  function lang(code) { for (var i = 0; i < LANGS.length; i++) if (LANGS[i][0] === code) return { code: LANGS[i][0], label: LANGS[i][1], tag: LANGS[i][2] }; return null; }
+  function category(id) {
+    id = String(id || '');
+    if (id.indexOf('lang:') === 0) { var l = lang(id.slice(5)); return l ? { id: id, label: l.label, group: 'Languages', lang: l.code } : null; }
+    for (var i = 0; i < SUBJECTS.length; i++) if (SUBJECTS[i][0] === id) return { id: id, label: SUBJECTS[i][1], group: SUBJECTS[i][1], lang: '' };
+    return null;
+  }
+
+  return { fold: fold, lev: lev, check: check, parsePairs: parsePairs, guard: guard, LANGS: LANGS, SUBJECTS: SUBJECTS, lang: lang, category: category };
 })();
 
 /* Flash Cards client. Plain JS, no build-time framework.
@@ -2034,33 +2063,83 @@ var TextUtil = (function () {
     var a = Array.isArray(c.extras) ? c.extras : c.middle ? [c.middle] : [];
     return a.map(function (x) { return x && typeof x === 'object' ? { t: String(x.t || ''), m: Object.assign({}, x.m || {}) } : { t: String(x || ''), m: {} }; });
   }
-  /* Read aloud with the device voice. The language is guessed from the writing. */
-  function speechLang(t, card) {
-    if (/[\u3040-\u30ff]/.test(t)) return 'ja-JP';
-    if (/[\uac00-\ud7af]/.test(t)) return 'ko-KR';
-    if (/[\u4e00-\u9fff]/.test(t)) {
+  /* Read aloud with the device voice.
+     The deck's language (its category) and your own language (Settings) decide the voice; writing systems
+     like Japanese, Chinese or Korean are recognised directly. Mixed text is read in parts, each in its own voice. */
+  var CJK = /[぀-ヿ一-鿿가-힯　-〿＀-￯]/;
+  function myLang() {
+    var l = S.user && S.user.settings && S.user.settings.lang;
+    if (l && TextUtil.lang(l)) return l;
+    var nav = String(navigator.language || 'en').slice(0, 2).toLowerCase();
+    return TextUtil.lang(nav) ? nav : 'en';
+  }
+  function deckLang(card) {
+    var d = card && deckById(card.deckId), cat = d && TextUtil.category(d.category);
+    return cat && cat.lang ? cat.lang : '';
+  }
+  function runLang(t, card, role) {
+    var dl = deckLang(card), me = myLang();
+    if (/[぀-ヿ]/.test(t)) return 'ja';
+    if (/[가-힯]/.test(t)) return 'ko';
+    if (/[一-鿿]/.test(t)) {
+      if (dl === 'ja' || dl === 'zh') return dl;
       var all = card ? [card.front, card.back].concat(exItems(card).map(function (x) { return x.t; })).join(' ') : '';
-      return /[\u3040-\u30ff]/.test(all) ? 'ja-JP' : 'zh-CN';
+      return /[぀-ヿ]/.test(all) ? 'ja' : 'zh';
     }
-    if (/[\u0400-\u04ff]/.test(t)) return 'ru-RU';
-    if (/[\u0e00-\u0e7f]/.test(t)) return 'th-TH';
-    if (/[\u00f1\u00bf\u00a1]/i.test(t)) return 'es-ES';
-    if (/[\u00e4\u00f6\u00fc\u00df]/i.test(t)) return 'de-DE';
-    if (/[\u00e7\u0153\u00e0\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00fb\u00f9]/i.test(t)) return 'fr-FR';
-    return 'en-US';
+    if (/[Ѐ-ӿ]/.test(t)) return 'ru';
+    if (/[฀-๿]/.test(t)) return 'th';
+    if (/[؀-ۿ]/.test(t)) return 'ar';
+    if (/[ऀ-ॿ]/.test(t)) return 'hi';
+    /* Latin letters: a deck in a Latin-script language reads its front in that language and the rest in yours. */
+    var latinDeck = dl && ['ja', 'zh', 'ko', 'ru', 'th', 'ar', 'hi'].indexOf(dl) < 0;
+    if (latinDeck && dl !== me) return role === 'front' ? dl : me;
+    if (latinDeck) return dl;
+    if (!dl) {
+      if (/[ñ¿¡]/i.test(t)) return 'es';
+      if (/[äöüß]/i.test(t)) return 'de';
+      if (/[çœàèêëîïôûù]/i.test(t)) return 'fr';
+    }
+    return me;
+  }
+  /* Split into runs of East Asian writing and everything else. Romanisation in brackets next to Chinese,
+     Japanese or Korean, like (ma3i) or (kau), is skipped: the native voice already says it properly. */
+  function speechParts(t, card, role) {
+    var parts = [], hasCjk = CJK.test(t), re = /([぀-ヿ一-鿿가-힯　-〿＀-￯]+)/;
+    if (hasCjk) t = t.replace(/[(（\[]([^)）\]]*)[)）\]]/g, function (m, inner) { return CJK.test(inner) ? ' ' + inner + ' ' : ' '; });
+    t.split(re).forEach(function (run) {
+      if (!run || !/[^\s.,;:!?'"()\-　-〿]/.test(run)) return;
+      var l = runLang(run, card, role), last = parts[parts.length - 1];
+      if (last && last.lang === l) last.text += ' ' + run; else parts.push({ lang: l, text: run });
+    });
+    return parts;
+  }
+  function pickVoice(tag) {
+    var all = speechSynthesis.getVoices() || [], two = tag.slice(0, 2).toLowerCase();
+    var best = null, bestScore = -1;
+    all.forEach(function (v) {
+      var vl = String(v.lang || '').replace('_', '-').toLowerCase();
+      if (vl.indexOf(two) !== 0) return;
+      var score = (vl === tag.toLowerCase() ? 4 : 0) + (/google|natural|neural|premium|enhanced|siri/i.test(v.name) ? 3 : 0) + (/compact|espeak/i.test(v.name) ? -3 : 0);
+      if (two === 'zh' && /hk|tw|yue|canton/i.test(vl + v.name)) score -= 2;
+      if (score > bestScore) { best = v; bestScore = score; }
+    });
+    return best;
   }
   function canSpeak() { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }
   function stopSpeaking() { try { if (canSpeak()) speechSynthesis.cancel(); } catch (e) { } }
-  function speakText(t, card) {
-    t = String(t || '').trim();
+  function speakText(t, card, role) {
+    t = String(t || '').trim().slice(0, 600);
     if (!t || !canSpeak()) return;
     stopSpeaking();
-    var u = new SpeechSynthesisUtterance(t.slice(0, 400)), lang = speechLang(t, card);
-    u.lang = lang;
-    var v = speechSynthesis.getVoices().filter(function (x) { return String(x.lang).replace('_', '-').toLowerCase().indexOf(lang.slice(0, 2).toLowerCase()) === 0; })[0];
-    if (v) u.voice = v;
-    u.rate = 0.95;
-    speechSynthesis.speak(u);
+    speechParts(t, card, role || 'front').forEach(function (part) {
+      var info = TextUtil.lang(part.lang) || TextUtil.lang('en');
+      var u = new SpeechSynthesisUtterance(part.text.trim());
+      u.lang = info.tag;
+      var v = pickVoice(info.tag);
+      if (v) u.voice = v;
+      u.rate = part.lang === myLang() ? 1 : 0.92;
+      speechSynthesis.speak(u);
+    });
   }
   function uploadFile(file) {
     var isImg = file.type.indexOf('image/') === 0, isAudio = file.type.indexOf('audio/') === 0;
@@ -2120,9 +2199,10 @@ var TextUtil = (function () {
         deck.name = name; deck.color = color;
         if (a.streak != null) deck.streak = guestStreak(a.streak);
         if (a.image != null) deck.image = image;
+        if (a.category != null) deck.category = TextUtil.category(a.category) ? String(a.category) : '';
         return deck;
       }
-      var fresh = { id: guestId(), name: name, color: color, order: d.decks.length, created: Date.now(), public: false, mine: true, streak: guestStreak(a.streak), image: image, members: 0 };
+      var fresh = { id: guestId(), name: name, color: color, order: d.decks.length, created: Date.now(), public: false, mine: true, streak: guestStreak(a.streak), image: image, members: 0, category: TextUtil.category(a.category) ? String(a.category) : '' };
       d.decks.push(fresh);
       return fresh;
     },
@@ -2241,7 +2321,7 @@ var TextUtil = (function () {
     if (!g.decks || !g.decks.length) { ls('fc.guest', null); return; }
     var folders = (g.user && g.user.settings && g.user.settings.folders) || {};
     var decks = g.decks.map(function (d) {
-      return { name: d.name, color: d.color, streak: d.streak, image: d.image, folder: folders[d.id] || '', cards: g.cards.filter(function (c) { return c.deckId === d.id; }).map(function (c) { return { type: c.type, reverse: c.reverse, front: c.front, back: c.back, extras: exItems(c), hint: c.hint || '', speak: c.speak || '', srs: c.srs }; }) };
+      return { name: d.name, color: d.color, streak: d.streak, image: d.image, category: d.category || '', folder: folders[d.id] || '', cards: g.cards.filter(function (c) { return c.deckId === d.id; }).map(function (c) { return { type: c.type, reverse: c.reverse, front: c.front, back: c.back, extras: exItems(c), hint: c.hint || '', speak: c.speak || '', srs: c.srs }; }) };
     });
     S.migrating = true;
     api('importGuest', { decks: decks, daily: g.daily || [] }).then(function (r) {
@@ -3218,10 +3298,18 @@ var TextUtil = (function () {
   }
 
   /* ================= deck editor ================= */
+  /* Category options: languages first (they also set the read-aloud voice), then subjects. */
+  function catOptions(sel, blank) {
+    return '<option value="">' + esc(blank) + '</option><optgroup label="Languages">' + TextUtil.LANGS.map(function (l) { return '<option value="lang:' + l[0] + '"' + (sel === 'lang:' + l[0] ? ' selected' : '') + '>' + esc(l[1]) + '</option>'; }).join('') +
+      '</optgroup><optgroup label="Subjects">' + TextUtil.SUBJECTS.map(function (x) { return '<option value="' + x[0] + '"' + (sel === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>'; }).join('') + '</optgroup>';
+  }
+  function catLabel(id) { var c = TextUtil.category(id); return c ? (c.group === 'Languages' ? c.label : c.label) : ''; }
   function openDeckEditor(deck, presetFolder) {
     var color = deck ? deck.color : COLORS[S.decks.length % COLORS.length];
     var m = modal(deck ? 'Edit deck' : 'New deck',
       '<label class="field"><span>Name</span><input class="input" data-name maxlength="80" autofocus placeholder="e.g. Japanese verbs"></label>' +
+      '<label class="field"><span>Category (optional)</span><span class="ce-chip cat-chip">' + I.folder + '<select data-cat aria-label="Category">' + catOptions(deck ? deck.category || '' : '', 'No category') + '</select>' + I.chev + '</span>' +
+      '<span class="hint" style="font-size:12px">Setting the language helps pick the right voice for reading aloud. Public decks need a category.</span></label>' +
       '<label class="field"><span>Right in a row to finish a card for the day</span><input class="input" type="number" inputmode="numeric" min="1" max="999" step="1" data-streak></label>' +
       '<label class="field"><span>Folder</span><input class="input" data-folder maxlength="40" list="fc-folders" placeholder="None"><datalist id="fc-folders">' + folderNames().map(function (f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist></label>' +
       '<div class="field"><span>Colour</span><div class="swatches">' + COLORS.map(function (c) { return '<button class="swatch" data-c="' + c + '" style="background:' + c + '" aria-label="' + c + '"></button>'; }).join('') +
@@ -3246,7 +3334,7 @@ var TextUtil = (function () {
     function save() {
       var btn = $('[data-save]', m.el);
       busy(btn, true);
-      api('saveDeck', { id: deck && deck.id, name: name.value, color: color, streak: cleanGoal($('[data-streak]', m.el).value), image: imgIn.value.trim() }).then(function (d) {
+      api('saveDeck', { id: deck && deck.id, name: name.value, color: color, streak: cleanGoal($('[data-streak]', m.el).value), image: imgIn.value.trim(), category: $('[data-cat]', m.el).value }).then(function (d) {
         if (deck) { Object.assign(deck, d); } else { S.decks.push(d); }
         var fname = $('[data-folder]', m.el).value.replace(/\s+/g, ' ').trim().slice(0, 40);
         if (fname !== folderOf(d.id)) {
@@ -3600,7 +3688,7 @@ var TextUtil = (function () {
       '<button class="sh-mode" data-m="collab"' + (own.length ? '' : ' disabled') + '><b>' + I.edit + 'Invite to edit</b><span>' + (own.length ? 'You edit ' + (single ? 'this deck' : 'these decks') + ' together. Everyone keeps their own progress.' : 'Only the owner can invite people to edit.') + '</span></button></div>' +
       '<div class="row" style="justify-content:flex-end;margin-top:12px"><span class="error" data-err style="flex:1"></span><button class="btn primary" data-go>Send copy</button></div>' +
       (single && single.mine ? '<div class="sh-sec"><div class="sh-h">People who can edit</div><div data-people><span class="hint">Loading...</span></div></div>' +
-        '<div class="sh-sec sh-pub"><label class="switch"><input type="checkbox" data-public' + (single.public ? ' checked' : '') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your first name is shown.</small></span></label></div>' : '') +
+        '<div class="sh-sec sh-pub"><label class="switch"><input type="checkbox" data-public' + (single.public ? ' checked' : '') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your first name is shown.</small></span></label><div class="sh-pubcat" data-pubcat hidden><span>Pick a category so people can find it in Discover</span><span class="ce-chip">' + I.folder + '<select data-pubcat-sel aria-label="Category">' + catOptions('', 'Choose a category') + '</select>' + I.chev + '</span></div></div>' : '') +
       (!single && own.length ? '<p class="hint" style="margin:14px 0 0">To make decks public or remove people, use Share on a single deck.</p>' : ''),
       '', { wide: false });
     var E = m.el, email = $('[data-email]', E);
@@ -3631,10 +3719,20 @@ var TextUtil = (function () {
       }, function (e) { box.textContent = e.message; });
     }
     loadPeople();
-    var pub = $('[data-public]', E);
+    var pub = $('[data-public]', E), pubCat = $('[data-pubcat]', E);
+    function goPublic(to, cat) {
+      var args = { deckId: single.id, public: to };
+      if (cat) args.category = cat;
+      api('setPublic', args).then(function (d) { single.public = d.public; single.category = d.category; pub.checked = d.public; if (pubCat) pubCat.hidden = true; cacheNow(); render(); toast(to ? 'Public: anyone can find it in Discover.' : 'Private again.'); }, function (e) { pub.checked = !to; $('[data-err]', E).textContent = e.message; });
+    }
+    if (pubCat) {
+      $('[data-pubcat-sel]', E).addEventListener('change', function () { var v = this.value; if (v) goPublic(true, v); });
+    }
     if (pub) pub.addEventListener('change', function () {
       var to = pub.checked;
-      api('setPublic', { deckId: single.id, public: to }).then(function (d) { single.public = d.public; cacheNow(); render(); toast(to ? 'Public: anyone can find it in Discover.' : 'Private again.'); }, function (e) { pub.checked = !to; $('[data-err]', E).textContent = e.message; });
+      if (to && !single.category) { pub.checked = false; pubCat.hidden = false; $('[data-pubcat-sel]', E).focus(); return; }
+      if (pubCat) pubCat.hidden = true;
+      goPublic(to);
     });
     $('[data-go]', E).addEventListener('click', function () {
       var btn = this, who = email.value.trim(), err = $('[data-err]', E);
@@ -3753,12 +3851,13 @@ var TextUtil = (function () {
 
   /* ================= discover (public decks) ================= */
   function renderDiscover(app) {
-    var st = S.disc || (S.disc = { q: '', sort: 'popular', list: null });
+    var st = S.disc || (S.disc = { q: '', sort: 'popular', list: null, cat: '', lang: '' });
     app.innerHTML = topbar() + '<main class="wrap discover"><div class="appear">' +
       '<button class="btn ghost sm" data-back style="margin-left:-10px">' + I.back + 'Home</button>' +
       '<div class="disc-head"><div><h1>Discover</h1><p class="hint">' + (isGuest() ? 'Ready-made folders of flash cards. Make an account to look inside and add them to your decks.' : 'Ready-made folders, plus decks other people have made public. Add any of them to your own decks.') + '</p></div></div>' +
       '<div class="disc-bar"><label class="search">' + I.search + '<input class="input" placeholder="Search by name or maker" data-q></label>' +
       '<div class="seg" data-sort><button data-s="popular">Popular</button><button data-s="new">Newest</button><button data-s="big">Biggest</button></div></div>' +
+      '<div class="disc-cats" data-cats></div><div class="disc-cats sub" data-subcats></div>' +
       '<div data-list class="disc-grid"><div class="spinner"></div></div></div></main>';
     wireTop(app);
     $('[data-back]', app).addEventListener('click', function () { go('home'); });
@@ -3768,9 +3867,28 @@ var TextUtil = (function () {
     $$('[data-s]', app).forEach(function (b) { b.addEventListener('click', function () { st.sort = b.getAttribute('data-s'); paintSort(); load(); }); });
     paintSort();
     q.addEventListener('input', function () { st.q = q.value; clearTimeout(timer); timer = setTimeout(load, 300); });
-    function paint(list) {
+    /* Category chips: All, each subject that has decks, and under Languages the languages that have decks. */
+    function groupOf(d) { var c = TextUtil.category(d.category); return c ? c.group : 'Other'; }
+    function paintCats(all) {
+      var groups = [], langs = [];
+      all.forEach(function (d) {
+        var g = groupOf(d); if (groups.indexOf(g) < 0) groups.push(g);
+        var c = TextUtil.category(d.category); if (c && c.lang && langs.indexOf(c.id) < 0) langs.push(c.id);
+      });
+      var order = ['Languages'].concat(TextUtil.SUBJECTS.map(function (x) { return x[1]; }));
+      groups.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+      if (st.cat && groups.indexOf(st.cat) < 0) st.cat = '';
+      var box = $('[data-cats]', app), sub = $('[data-subcats]', app);
+      box.innerHTML = groups.length > 1 ? [''].concat(groups).map(function (g) { return '<button class="disc-chip' + (st.cat === g ? ' on' : '') + '" data-cat="' + esc(g) + '">' + esc(g || 'All') + '</button>'; }).join('') : '';
+      sub.innerHTML = st.cat === 'Languages' && langs.length > 1 ? ['<button class="disc-chip' + (!st.lang ? ' on' : '') + '" data-lang="">All languages</button>'].concat(langs.map(function (id) { return '<button class="disc-chip' + (st.lang === id ? ' on' : '') + '" data-lang="' + esc(id) + '">' + esc(TextUtil.category(id).label) + '</button>'; })).join('') : '';
+      $$('[data-cat]', box).forEach(function (b) { b.addEventListener('click', function () { st.cat = b.getAttribute('data-cat'); st.lang = ''; paint(st.list); }); });
+      $$('[data-lang]', sub).forEach(function (b) { b.addEventListener('click', function () { st.lang = b.getAttribute('data-lang'); paint(st.list); }); });
+    }
+    function paint(all) {
       var box = $('[data-list]', app);
       if (!box) return;
+      paintCats(all);
+      var list = all.filter(function (d) { return (!st.cat || groupOf(d) === st.cat) && (!st.lang || d.category === st.lang); });
       if (!list.length) { box.innerHTML = '<div class="empty" style="grid-column:1/-1">' + (st.q ? 'No public decks match "' + esc(st.q) + '".' : 'No public decks yet. Make one of yours public from its Share button.') + '</div>'; return; }
       var groups = {}, tiles = [];
       list.forEach(function (d, i) {
@@ -3942,7 +4060,9 @@ var TextUtil = (function () {
         '<div class="grid2"><label class="field"><span>Daily goal</span><input class="input" type="number" min="1" max="2000" data-goal></label>' +
         '<label class="field"><span>New cards a day (Mission)</span><input class="input" type="number" min="0" max="500" data-new></label></div>' +
         '<div class="field"><span>Theme</span><div class="seg set-theme" data-theme><button data-v="system">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>' +
-        '<label class="switch set-min"><input type="checkbox" data-minimal' + (s.minimal ? ' checked' : '') + '><i></i><span><b>Minimalist</b><small>Tone all the colours down to calm greys</small></span></label></div>' +
+        '<label class="switch set-min"><input type="checkbox" data-minimal' + (s.minimal ? ' checked' : '') + '><i></i><span><b>Minimalist</b><small>Tone all the colours down to calm greys</small></span></label>' +
+        '<label class="field set-lang"><span>Your language</span><span class="ce-chip">' + I.audio + '<select data-lang aria-label="Your language"><option value="">Same as this device</option>' + TextUtil.LANGS.map(function (l) { return '<option value="' + l[0] + '"' + (s.lang === l[0] ? ' selected' : '') + '>' + esc(l[1]) + '</option>'; }).join('') + '</select>' + I.chev + '</span>' +
+        '<span class="hint" style="font-size:12px">The language you already speak. Read aloud uses it for your side of a card, and the deck\'s category for the language you are learning.</span></label></div>' +
       (guest ? '' : '<div class="set-sec"><div class="set-h">Account</div><div class="set-rows">' +
         '<button class="set-row" data-open="pw">' + I.edit + '<span>' + (u.hasPassword ? 'Change password' : 'Set a password') + '<small>' + (u.hasPassword ? 'Update the password you sign in with' : 'You sign in with Google. A password lets you sign in without it.') + '</small></span>' + chev + '</button>' +
         '<div class="set-panel" data-panel="pw" hidden><div class="grid2">' + (u.hasPassword ? '<input class="input" type="password" placeholder="Current password" data-old autocomplete="current-password">' : '') +
@@ -3973,7 +4093,7 @@ var TextUtil = (function () {
     });
     $('[data-save]', E).addEventListener('click', function () {
       var btn = this; busy(btn, true);
-      api('saveSettings', { name: guest ? '' : $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme, minimal: $('[data-minimal]', E).checked }) }).then(function (r) {
+      api('saveSettings', { name: guest ? '' : $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme, minimal: $('[data-minimal]', E).checked, lang: $('[data-lang]', E).value }) }).then(function (r) {
         S.user = r; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
         m.close(); render(); toast('Settings saved.');
       }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
@@ -4166,7 +4286,7 @@ var TextUtil = (function () {
       '</div></div><div class="dock" data-dock></div></div></div></div>';
     $$('.choice span', app).forEach(function (sp, i) { sp.textContent = s.cur.options[i].text; });
     hydrate($('.face.front', app));
-    if (!s.cur.autoplayed) { s.cur.autoplayed = true; if (x.qm.audio) playAudio(x.qm.audio); else if (c.speak && c.speak !== 'flip') speakText(x.q, c); }
+    if (!s.cur.autoplayed) { s.cur.autoplayed = true; if (x.qm.audio) playAudio(x.qm.audio); else if (c.speak && c.speak !== 'flip') speakText(x.q, c, item.show === 'r' ? 'back' : 'front'); }
     $$('[data-say]', app).forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); sayCurrent(); }); });
 
     $('[data-exit]', app).addEventListener('click', endStudy);
@@ -4248,23 +4368,24 @@ var TextUtil = (function () {
   /* Say the side that is showing: its recorded sound if it has one, otherwise the device voice. */
   function sideSound(s, k) {
     var x = qa(s.cur.item), c = s.cur.item.card;
-    if (k === 1) return { audio: x.qm.audio, text: x.q };
-    if (k === 2) return { audio: x.am.audio, text: cardKind(c, s) === 'tf' ? (tfAnswer(c) ? 'True. ' : 'False. ') + (tfExplain(c) || '') : x.a };
+    var shownFirst = s.cur.item.show === 'r' ? 'back' : 'front', other = shownFirst === 'front' ? 'back' : 'front';
+    if (k === 1) return { audio: x.qm.audio, text: x.q, role: shownFirst };
+    if (k === 2) return { audio: x.am.audio, text: cardKind(c, s) === 'tf' ? (tfAnswer(c) ? 'True. ' : 'False. ') + (tfExplain(c) || '') : x.a, role: other };
     var it = x.ex[k - 3] || { t: '', m: {} };
-    return { audio: it.m.audio, text: it.t };
+    return { audio: it.m.audio, text: it.t, role: 'extra' };
   }
   function sayCurrent() {
     var s = S.study, fl = $('[data-flip]');
     if (!s || !s.cur || !fl) return;
     var k = fl.classList.contains('flipped') ? (s.cur.view || 2) : 1;
     var snd = sideSound(s, k);
-    if (snd.audio) playAudio(snd.audio); else speakText(snd.text, s.cur.item.card);
+    if (snd.audio) playAudio(snd.audio); else speakText(snd.text, s.cur.item.card, snd.role);
   }
   function autoSay(k) {
     var s = S.study;
     if (!s || !s.cur) return;
     var snd = sideSound(s, k);
-    if (snd.audio) playAudio(snd.audio); else if (s.cur.item.card.speak) speakText(snd.text, s.cur.item.card);
+    if (snd.audio) playAudio(snd.audio); else if (s.cur.item.card.speak) speakText(snd.text, s.cur.item.card, snd.role);
   }
   function sideCount(s) { return 2 + qa(s.cur.item).ex.length; }
   /* After the answer, each tap moves on: the answer, then any extra sides, then back round to the question. */
