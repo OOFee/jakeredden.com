@@ -302,6 +302,8 @@ img { max-width: 100%; }
 .audio-btn { width: 56px; height: 56px; border-radius: 50%; border: 0; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); display: grid; place-items: center; }
 .audio-btn svg { width: 24px; height: 24px; }
 .tap-hint { font-size: 13px; color: var(--faint); text-align: center; }
+.face-label .side-no { margin-left: auto; font-variant-numeric: tabular-nums; }
+.face-label .side-no:empty { display: none; }
 .face .mid-small { font-size: 20px; font-weight: 600; color: var(--text); opacity: .85; white-space: pre-wrap; }
 .face-body.turn-in { animation: turnIn .45s var(--ease); }
 @keyframes turnIn { from { opacity: 0; transform: perspective(900px) rotateY(-70deg); } }
@@ -3914,8 +3916,8 @@ var TextUtil = (function () {
       (s.free ? '' : '<div class="qcounts"><span class="n' + (curKey === 'n' ? ' cur' : '') + '">' + (rem.n + (curKey === 'n' ? 1 : 0)) + '</span><span class="l' + (curKey === 'l' ? ' cur' : '') + '">' + (rem.l + (curKey === 'l' ? 1 : 0)) + '</span><span class="r' + (curKey === 'r' ? ' cur' : '') + '">' + (rem.r + (curKey === 'r' ? 1 : 0)) + '</span></div>') +
       '<button class="btn ghost icon-btn" data-edit aria-label="Edit card" title="Edit card (E)">' + I.edit + '</button></div>' +
       '<div class="stage">' + pointsRow(c, item.dir, s) + '<div class="flip" data-flip><span class="swipe-hint l' + (kind === 'tf' ? ' neutral">True' : '">Wrong') + '</span><span class="swipe-hint r' + (kind === 'tf' ? ' neutral">False' : '">Right') + '</span><div class="inner">' +
-      '<div class="face front"><div class="face-label">' + label + '</div>' + frontBody + '</div>' +
-      '<div class="face back"><div class="face-label">Answer</div><div class="face-body" data-back></div></div>' +
+      '<div class="face front"><div class="face-label"><span>' + label + '</span><span class="side-no"></span></div>' + frontBody + '</div>' +
+      '<div class="face back"><div class="face-label"><span data-blab>Answer</span><span class="side-no"></span></div><div class="face-body" data-back></div></div>' +
       '</div></div><div class="dock" data-dock></div></div></div></div>';
     $$('.choice span', app).forEach(function (sp, i) { sp.textContent = s.cur.options[i].text; });
     hydrate($('.face.front', app));
@@ -3945,8 +3947,9 @@ var TextUtil = (function () {
     }
     wireSwipe(flipEl, kind);
     paintDock();
-    if (s.cur.revealed) showBack(true);
+    if (s.cur.revealed) { var keepView = s.cur.view; showBack(true); if (keepView === 1) $('[data-flip]', app).classList.remove('flipped'); else if (keepView === 2 && sideCount(s) === 3) showMid(true); s.cur.view = keepView || sideCount(s); }
     else if (s.cur.mid) showMid(true);
+    paintSideNo();
   }
 
   /* Colour spins around the card's border, then stays as a plain coloured edge until the next card. */
@@ -3991,22 +3994,42 @@ var TextUtil = (function () {
     var s = S.study;
     if (!s || !s.cur || s.cur.revealed) return;
     s.cur.revealed = true;
+    s.cur.view = sideCount(s);
     showBack(false);
     paintDock();
+    paintSideNo();
   }
   /* Flip cards with a middle side turn twice: first to the middle, then to the answer. */
   function turn() {
     var s = S.study;
     if (!s || !s.cur || s.cur.revealed) return;
-    if (qa(s.cur.item).m && cardKind(s.cur.item.card, s) === 'basic' && !s.cur.mid) { s.cur.mid = true; showMid(false); paintDock(); return; }
+    if (sideCount(s) === 3 && !s.cur.mid) { s.cur.mid = true; s.cur.view = 2; showMid(false); paintDock(); paintSideNo(); return; }
     reveal();
+  }
+  function sideCount(s) { return qa(s.cur.item).m && cardKind(s.cur.item.card, s) === 'basic' ? 3 : 2; }
+  /* After the first flip, each tap moves to the next side and back round to the first. */
+  function cycleSide() {
+    var s = S.study, fl = $('[data-flip]');
+    if (!s || !s.cur || !fl) return;
+    var n = sideCount(s), v = s.cur.view || 1, next = v >= n ? 1 : v + 1;
+    if (next === 1) fl.classList.remove('flipped');
+    else if (n === 3 && next === 2) showMid(false);
+    else if (n === 3) showBack(false);
+    else fl.classList.add('flipped');
+    s.cur.view = next; paintSideNo();
+  }
+  function paintSideNo() {
+    var s = S.study;
+    if (!s || !s.cur) return;
+    var on = s.cur.mid || s.cur.revealed, n = sideCount(s), v = s.cur.view || 1;
+    $$('.side-no').forEach(function (e) { e.textContent = on ? 'Side ' + v + '/' + n : ''; });
   }
   function showMid(instant) {
     var s = S.study, x = qa(s.cur.item), back = $('[data-back]'), fl = $('[data-flip]');
     if (!back || !fl) return;
     back.innerHTML = '<div class="q-small"></div>' + textHtml(x.m) + '<div class="tap-hint">Tap for the answer</div>';
     $('.q-small', back).textContent = x.q;
-    $('.face.back .face-label', fl).textContent = 'Side 2 of 3';
+    $('[data-blab]', fl).textContent = 'Middle';
     if (instant) { $('.inner', fl).style.transition = 'none'; fl.classList.add('flipped'); fl.offsetWidth; $('.inner', fl).style.transition = ''; }
     else fl.classList.add('flipped');
   }
@@ -4037,7 +4060,7 @@ var TextUtil = (function () {
     var was = $('.typed-was s', back); if (was) was.textContent = s.cur.typed;
     hydrate(back);
     var flip = $('[data-flip]');
-    $('.face.back .face-label', flip).textContent = 'Answer';
+    $('[data-blab]', flip).textContent = 'Answer';
     if (second) { back.classList.remove('turn-in'); back.offsetWidth; back.classList.add('turn-in'); }
     if (instant) { $('.inner', flip).style.transition = 'none'; flip.classList.add('flipped'); flip.offsetWidth; $('.inner', flip).style.transition = ''; }
     else flip.classList.add('flipped');
@@ -4091,7 +4114,7 @@ var TextUtil = (function () {
     var ch = dockChoices(s);
     dock.innerHTML = '<div class="grades two' + (ch.length === 1 ? ' one' : '') + '">' + ch.map(function (o) {
       return '<div class="grade-wrap"><button class="grade ' + o.cls + (o.sug ? ' suggest' : '') + '" data-g="' + o.g + '">' + o.label + '</button>' + (s.simple ? '' : '<span class="grade-hint">' + dockHint(s, o.g) + '</span>') + '</div>';
-    }).join('') + '</div>' + dockFoot(s) + '<div class="keys">' + (ch.length === 1 ? '<kbd>Enter</kbd> next' : '<kbd>1</kbd> or <kbd>&larr;</kbd> ' + ch[0].label.toLowerCase() + ' &middot; <kbd>2</kbd> or <kbd>&rarr;</kbd> ' + ch[1].label.toLowerCase()) + ' &middot; <kbd>Space</kbd> flip back</div>';
+    }).join('') + '</div>' + dockFoot(s) + '<div class="keys">' + (ch.length === 1 ? '<kbd>Enter</kbd> next' : '<kbd>1</kbd> or <kbd>&larr;</kbd> ' + ch[0].label.toLowerCase() + ' &middot; <kbd>2</kbd> or <kbd>&rarr;</kbd> ' + ch[1].label.toLowerCase()) + ' &middot; <kbd>Space</kbd> next side</div>';
     $$('[data-g]', dock).forEach(function (b) { b.addEventListener('click', function () { grade(b.getAttribute('data-g')); }); });
     var sk = $('[data-skip]', dock); if (sk) sk.addEventListener('click', skipCard);
   }
@@ -4274,7 +4297,7 @@ var TextUtil = (function () {
       if (!moved) {
         if (wandered) return;
         if (!s.cur.revealed && kind === 'basic') turn();
-        else if (s.cur.revealed) flip.classList.toggle('flipped');
+        else if (s.cur.revealed) cycleSide();
         return;
       }
       var far = Math.abs(dx);
@@ -4343,7 +4366,7 @@ var TextUtil = (function () {
       var ch = dockChoices(s);
       var idx = e.key === '1' || e.key === 'ArrowLeft' ? 0 : e.key === '2' || e.key === 'ArrowRight' ? 1 : -1;
       if (idx >= 0) { e.preventDefault(); grade(ch[ch.length === 2 ? idx : 0].g); return; }
-      if (e.key === ' ') { e.preventDefault(); var fl = $('[data-flip]'); if (fl) fl.classList.toggle('flipped'); return; }
+      if (e.key === ' ') { e.preventDefault(); cycleSide(); return; }
       if (e.key === 'Enter') {
         e.preventDefault();
         var sg = ch.filter(function (o) { return o.sug; })[0];
