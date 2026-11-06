@@ -383,7 +383,10 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .disc-cats + .disc-cats.sub:empty + .disc-grid, .disc-cats.sub + .disc-grid { margin-top: 16px; }
 .cat-chip { width: 100%; justify-content: space-between; }
 .cat-chip select { flex: 1; }
-.sh-pubcat { display: grid; gap: 8px; margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface-2); font-size: 13.5px; font-weight: 600; }
+.sh-pubcat { display: grid; gap: 8px; margin: 14px 0 0 48px; font-size: 13.5px; font-weight: 600; }
+.sh-pubcat .hint { font-weight: 500; }
+.switch input:disabled + i { opacity: .45; }
+.switch:has(input:disabled) { cursor: not-allowed; }
 .sh-pubcat .ce-chip { justify-content: space-between; }
 .sh-pubcat .ce-chip select { flex: 1; }
 .set-lang .ce-chip { width: 100%; justify-content: space-between; }
@@ -3759,7 +3762,9 @@ var TextUtil = (function () {
       '<button class="sh-mode" data-m="collab"' + (own.length ? '' : ' disabled') + '><b>' + I.edit + 'Invite to edit</b><span>' + (own.length ? 'You edit ' + (single ? 'this deck' : 'these decks') + ' together. Everyone keeps their own progress.' : 'Only the owner can invite people to edit.') + '</span></button></div>' +
       '<div class="row" style="justify-content:flex-end;margin-top:12px"><span class="error" data-err style="flex:1"></span><button class="btn primary" data-go>Send copy</button></div>' +
       (single && single.mine ? '<div class="sh-sec"><div class="sh-h">People who can edit</div><div data-people><span class="hint">Loading...</span></div></div>' +
-        '<div class="sh-sec sh-pub"><label class="switch"><input type="checkbox" data-public' + (single.public ? ' checked' : '') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your first name is shown.</small></span></label><div class="sh-pubcat" data-pubcat hidden><span>Pick a category so people can find it in Discover</span><span class="ce-chip">' + I.folder + '<select data-pubcat-sel aria-label="Category">' + catOptions('', 'Choose a category') + '</select>' + I.chev + '</span></div></div>' : '') +
+        '<div class="sh-sec sh-pub"><label class="switch" data-pub-sw><input type="checkbox" data-public' + (single.public ? ' checked' : '') + (single.category ? '' : ' disabled') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your first name is shown.</small></span></label>' +
+        '<div class="sh-pubcat"><span>Category in Discover</span><span class="ce-chip">' + I.folder + '<select data-pubcat-sel aria-label="Category">' + catOptions(single.category || '', 'Choose a category') + '</select>' + I.chev + '</span>' +
+        '<small class="hint" data-pubcat-hint' + (single.category ? ' hidden' : '') + '>Pick a category first, then switch Public on.</small></div></div>' : '') +
       (!single && own.length ? '<p class="hint" style="margin:14px 0 0">To make decks public or remove people, use Share on a single deck.</p>' : ''),
       '', { wide: false });
     var E = m.el, email = $('[data-email]', E);
@@ -3790,20 +3795,25 @@ var TextUtil = (function () {
       }, function (e) { box.textContent = e.message; });
     }
     loadPeople();
-    var pub = $('[data-public]', E), pubCat = $('[data-pubcat]', E);
-    function goPublic(to, cat) {
-      var args = { deckId: single.id, public: to };
-      if (cat) args.category = cat;
-      api('setPublic', args).then(function (d) { single.public = d.public; single.category = d.category; pub.checked = d.public; if (pubCat) pubCat.hidden = true; cacheNow(); render(); toast(to ? 'Public: anyone can find it in Discover.' : 'Private again.'); }, function (e) { pub.checked = !to; $('[data-err]', E).textContent = e.message; });
-    }
-    if (pubCat) {
-      $('[data-pubcat-sel]', E).addEventListener('change', function () { var v = this.value; if (v) goPublic(true, v); });
-    }
+    /* Public: the category is picked right here (needed to go public); the switch waits until there is one. */
+    var pub = $('[data-public]', E), catSel = $('[data-pubcat-sel]', E);
     if (pub) pub.addEventListener('change', function () {
       var to = pub.checked;
-      if (to && !single.category) { pub.checked = false; pubCat.hidden = false; $('[data-pubcat-sel]', E).focus(); return; }
-      if (pubCat) pubCat.hidden = true;
-      goPublic(to);
+      pub.disabled = true;
+      api('setPublic', { deckId: single.id, public: to, category: catSel.value || undefined }).then(function (d) {
+        single.public = d.public; single.category = d.category; pub.checked = d.public; pub.disabled = false;
+        cacheNow(); render(); toast(to ? 'Public: anyone can find it in Discover.' : 'Private again.');
+      }, function (e) { pub.checked = !to; pub.disabled = !single.category; $('[data-err]', E).textContent = e.message; });
+    });
+    if (catSel) catSel.addEventListener('change', function () {
+      var v = catSel.value;
+      if (!v) { catSel.value = single.category || ''; return; }
+      catSel.disabled = true;
+      api('saveDeck', { id: single.id, name: single.name, color: single.color, category: v }).then(function (d) {
+        single.category = d.category; catSel.disabled = false; pub.disabled = false;
+        $('[data-pubcat-hint]', E).hidden = true; $('[data-err]', E).textContent = '';
+        cacheNow(); toast('Category: ' + catLabel(v) + '.');
+      }, function (e) { catSel.disabled = false; $('[data-err]', E).textContent = e.message; });
     });
     $('[data-go]', E).addEventListener('click', function () {
       var btn = this, who = email.value.trim(), err = $('[data-err]', E);
