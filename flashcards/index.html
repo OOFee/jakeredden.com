@@ -339,6 +339,7 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .btn.ce-mic.rec, .btn.ce-mic.rec:hover { color: #fff; background: var(--again); animation: recPulse 1.2s ease-in-out infinite; }
 @keyframes recPulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--again) 30%, transparent); } }
 .say-btn { margin-left: 8px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; color: inherit; display: grid; place-items: center; cursor: pointer; flex: none; }
+.preview-tag { align-self: center; margin-bottom: 14px; padding: 6px 14px; border-radius: 99px; font-size: 13px; font-weight: 650; color: var(--text); background: color-mix(in srgb, var(--text) 10%, transparent); border: 1px solid var(--line-strong); }
 .say-btn svg { width: 16px; height: 16px; }
 .face-label .side-no + .say-btn, .face-label .side-no:empty + .say-btn { margin-left: auto; }
 .face-label .side-no:not(:empty) + .say-btn { margin-left: 10px; }
@@ -3235,7 +3236,8 @@ var TextUtil = (function () {
       '<p class="hint ce-keys">Enter goes to the next box and adds the card from the last one. Shift+Enter starts a new line. Paste an image straight into a box.</p>' +
       '<div class="error" data-err></div>' +
       '<input type="file" data-file hidden accept="image/*,audio/*">',
-      (card ? '<button class="btn ghost danger" data-del>' + I.trash + 'Delete</button>' : '') +
+      (card ? '<button class="btn ghost danger" data-del>' + I.trash + '<span class="hide-sm">Delete</span></button>' : '') +
+      '<button class="btn" data-test title="Try this card as you would study it. Nothing is saved.">' + I.play + 'Test card</button>' +
       '<span class="spacer"></span><button class="btn" data-close>' + (card ? 'Cancel' : 'Done') + '</button><button class="btn primary" data-save>' + (card ? 'Save' : 'Add card') + '</button>', { wide: true });
     var E = m.el;
     var tf = $('[data-text="f"]', E), tb = $('[data-text="b"]', E), th = $('[data-hint-text]', E);
@@ -3375,6 +3377,25 @@ var TextUtil = (function () {
     }
     [tf, tb, th].forEach(wireBox);
     paintExtras();
+    function problem(payload) {
+      if (!payload.front.trim() && !st.fm.img && !st.fm.audio) { tf.focus(); return 'Add something to the front.'; }
+      if (st.type !== 'basic' && !payload.back.trim()) { tb.focus(); return 'This card type needs text on the back.'; }
+      if (st.type === 'tf' && tfAnswer({ back: payload.back }) == null) { tb.focus(); return 'Start the back with O (true) or X (false).'; }
+      return '';
+    }
+    function draft() {
+      readExtras();
+      return {
+        id: card && card.id, deckId: currentDeck(),
+        type: st.type, reverse: rev.checked, front: tf.value, back: tb.value, extras: st.extras, speak: !!(sp && sp.checked), hint: st.hint ? th.value : '', frontMedia: st.fm, backMedia: st.bm
+      };
+    }
+    $('[data-test]', E).addEventListener('click', function () {
+      var d = draft(), err = $('[data-err]', E), why = problem(d);
+      err.textContent = why;
+      if (why) return;
+      testCard(d, m);
+    });
     function save() {
       var btn = $('[data-save]', E), err = $('[data-err]', E);
       err.textContent = '';
@@ -3948,6 +3969,33 @@ var TextUtil = (function () {
     nextItem();
     go('study');
   }
+  /* Test card: study the card being edited, without saving anything, then return to the editor. */
+  var previewBack = null;
+  function testCard(d, editor) {
+    var c = { id: 'preview-card', deckId: d.deckId, type: d.type, reverse: !!d.reverse, front: d.front, back: d.back, extras: JSON.parse(JSON.stringify(d.extras || [])), hint: d.hint, speak: d.speak,
+      frontMedia: Object.assign({}, d.frontMedia), backMedia: Object.assign({}, d.backMedia), srs: {} };
+    var items = [{ card: c, dir: 'f' }].concat(c.reverse ? [{ card: c, dir: 'r' }] : []);
+    previewBack = { view: S.view, study: S.study, deckId: S.deckId, editor: editor, scroll: window.scrollY };
+    editor.el.style.display = 'none';
+    openModals.splice(openModals.indexOf(editor), 1);
+    var deck = deckById(d.deckId);
+    S.study = { preview: true, free: true, simple: true, done: 0, skipped: 0, firstTry: 0, label: 'Test card', learn: [], review: items, later: [], fresh: [], n: 0, correct: 0, rested: 0, doneToday: 0,
+      started: Date.now(), from: 'home', color: deck ? deck.color : DEFAULT_ACCENT, title: 'Test card', total: items.length, cur: null };
+    nextItem();
+    S.view = 'study'; render(); window.scrollTo(0, 0);
+  }
+  function endPreview() {
+    var b = previewBack;
+    if (!b) return;
+    previewBack = null;
+    stopSpeaking();
+    S.study = b.study; S.deckId = b.deckId; S.view = b.view;
+    render();
+    window.scrollTo(0, b.scroll || 0);
+    b.editor.el.style.display = '';
+    openModals.push(b.editor);
+    var f = $('[data-text="f"]', b.editor.el); if (f) f.focus();
+  }
   function nextItem() {
     var s = S.study, now = Date.now();
     if (s.free && !s.review.length && s.later.length) { s.review = shuffle(s.later); s.later = []; }
@@ -3958,7 +4006,7 @@ var TextUtil = (function () {
     else if (s.review.length) item = s.review.shift();
     else if (s.fresh.length) item = s.fresh.shift();
     else if (s.learn.length && prog(s.learn[0].card, s.learn[0].dir).due <= now + 20 * SRS.MIN) item = s.learn.shift();
-    if (item && !cardById(item.card.id)) return nextItem();
+    if (item && !s.preview && !cardById(item.card.id)) return nextItem();
     s.cur = item ? { item: item, revealed: false, verdict: null, typed: '', picked: null, options: null } : null;
     if (item && item.card.type === 'choice') s.cur.options = choiceOptions(item);
     if (s.cur) preload();
@@ -3997,6 +4045,7 @@ var TextUtil = (function () {
   function renderStudy(app) {
     var s = S.study;
     if (!s) { go('home'); return; }
+    if (!s.cur && s.preview) { endPreview(); return; }
     if (!s.cur) return renderDone(app);
     var rem = remaining(), done = s.n, total = done + rem.n + rem.l + rem.r + 1;
     var item = s.cur.item, x = qa(item), c = item.card, p = prog(c, item.dir);
@@ -4016,7 +4065,7 @@ var TextUtil = (function () {
       (s.free ? '<div class="qcounts"><span style="color:var(--muted)">' + s.label + ' &middot; ' + (rem.r + 1) + ' left</span></div>' : '') +
       (s.free ? '' : '<div class="qcounts"><span class="n' + (curKey === 'n' ? ' cur' : '') + '">' + (rem.n + (curKey === 'n' ? 1 : 0)) + '</span><span class="l' + (curKey === 'l' ? ' cur' : '') + '">' + (rem.l + (curKey === 'l' ? 1 : 0)) + '</span><span class="r' + (curKey === 'r' ? ' cur' : '') + '">' + (rem.r + (curKey === 'r' ? 1 : 0)) + '</span></div>') +
       '<button class="btn ghost icon-btn" data-edit aria-label="Edit card" title="Edit card (E)">' + I.edit + '</button></div>' +
-      '<div class="stage">' + pointsRow(c, item.dir, s) + '<div class="flip" data-flip><span class="swipe-hint l' + (kind === 'tf' ? ' neutral">True' : '">Wrong') + '</span><span class="swipe-hint r' + (kind === 'tf' ? ' neutral">False' : '">Right') + '</span><div class="inner">' +
+      '<div class="stage">' + (s.preview ? '<div class="preview-tag">Testing this card. Nothing is saved.</div>' : pointsRow(c, item.dir, s)) + '<div class="flip" data-flip><span class="swipe-hint l' + (kind === 'tf' ? ' neutral">True' : '">Wrong') + '</span><span class="swipe-hint r' + (kind === 'tf' ? ' neutral">False' : '">Right') + '</span><div class="inner">' +
       '<div class="face front"><div class="face-label"><span>' + label + '</span><span class="side-no"></span>' + sayBtn + '</div>' + frontBody + '</div>' +
       '<div class="face back"><div class="face-label"><span data-blab>Answer</span><span class="side-no"></span>' + sayBtn + '</div><div class="face-body" data-back></div></div>' +
       '</div></div><div class="dock" data-dock></div></div></div></div>';
@@ -4265,6 +4314,7 @@ var TextUtil = (function () {
     var item = s.cur.item, c = item.card, now = Date.now();
     var right = g === 'right' ? true : g === 'wrong' ? false : null;
     if (!s.cur.verdict && right !== null) resultRing(right ? 'exact' : 'wrong');
+    if (s.preview) { s.n++; return animateOut(right === false ? 'again' : right === null ? 'hard' : 'good', dirOut); }
     c.srs = c.srs || {};
     if (s.simple) {
       s.n++;
@@ -4435,6 +4485,7 @@ var TextUtil = (function () {
   }
   function editCurrent() {
     var s = S.study;
+    if (s && s.preview) { endPreview(); return; }
     if (!s || !s.cur) return;
     var item = s.cur.item;
     openCardEditor(item.card, item.card.deckId, function (card) {
@@ -4445,6 +4496,7 @@ var TextUtil = (function () {
   }
   function endStudy() {
     stopSpeaking();
+    if (S.study && S.study.preview) { endPreview(); return; }
     var s = S.study;
     var back = s && s.from === 'deck' && deckById(S.deckId) ? 'deck' : 'home';
     S.study = null;
