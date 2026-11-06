@@ -2678,7 +2678,7 @@ var TextUtil = (function () {
       '<section class="hero' + (solo ? ' solo' : '') + '">' +
       '<div class="hero-main m-' + mode + '"><div>' +
       '<div class="seg mode" role="tablist" aria-label="Study mode">' + Object.keys(MODES).map(function (k) { return '<button role="tab" data-mode="' + k + '" class="' + (mode === k ? 'on' : '') + '" aria-selected="' + (mode === k) + '" title="' + MODE_DESC[k] + '">' + MODES[k] + '</button>'; }).join('') + '</div>' +
-      '<p class="mode-desc">' + MODE_DESC[mode].replace(/ (\S+)$/, ' <span class="nw">$1 <button class="hero-i" data-mode-info aria-label="How ' + MODES[mode] + ' works">i</button></span>') + '</p>' +
+      '<p class="mode-desc">' + infoAfter(tr(MODE_DESC[mode]), '<button class="hero-i" data-mode-info aria-label="How ' + MODES[mode] + ' works">i</button>') + '</p>' +
       '<div class="eyebrow">' + hello + '</div>' +
       '<div class="big">' + big + '</div>' +
       '<div class="sub">' + sub + '</div></div>' +
@@ -2951,7 +2951,7 @@ var TextUtil = (function () {
         '<div class="wtop"><b><span class="dk-name">' + esc(d.name) + '</span>' + shareMarks(d) + '</b><span>' + (kl === 'New' || kl === 'Empty' ? kl : kl + ' known') + '</span></div>' +
         '<div class="wbot"><small>' + plural(dl.total, 'card') + '</small>' + lvBar(dl) + '</div>' +
         '<label class="pick wpick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
-        '<button class="wgo" aria-label="Study ' + esc(d.name) + '" title="Study this deck">' + I.play + '</button></div>';
+        '<button class="wgo" aria-label="Study &quot;' + esc(d.name) + '&quot;" title="Study this deck">' + I.play + '</button></div>';
     }).join('');
     return '<div class="wallet-tile' + (open ? ' open' : '') + (on ? ' picked' : '') + '" role="button" tabindex="0" aria-expanded="' + open + '" data-folder="' + esc(f) + '" data-n="' + xs.length + '" style="--fc:' + esc(xs[0] ? xs[0].deck.color : DEFAULT_ACCENT) + '">' +
       '<div class="whead"><label class="pick" title="Choose every deck in this folder"><input type="checkbox" data-fpick' + (on === xs.length ? ' checked' : '') + (on && on < xs.length ? ' data-some' : '') + '><i></i></label>' +
@@ -3062,7 +3062,7 @@ var TextUtil = (function () {
         var f = t.getAttribute('data-folder'), name = (deckById(id) || {}).name;
         setFolder(id, f); toast('Moved ' + (name ? '"' + name + '" ' : '') + 'to "' + f + '".'); offerFolderPublic(id, f);
       } else {
-        var from = folderOf(id); setFolder(id, ''); toast('Taken out of ' + from + '.');
+        var from = folderOf(id); setFolder(id, ''); toast('Taken out of "' + from + '".');
       }
     }
     function swallowClick() {
@@ -3094,7 +3094,7 @@ var TextUtil = (function () {
   }
   /* Small marks next to a deck name: shared with other people, and public in Discover. */
   function shareMarks(d) {
-    var shared = !d.mine ? 'Shared with you by ' + (d.ownerName || 'someone') : d.members ? 'Shared with ' + plural(d.members, 'person', 'people') : '';
+    var shared = !d.mine ? 'Shared with you by "' + (d.ownerName || 'someone') + '"' : d.members ? 'Shared with ' + plural(d.members, 'person', 'people') : '';
     return (shared ? '<i class="share-mark" title="' + esc(shared) + '" aria-label="' + esc(shared) + '">' + I.people + '</i>' : '') +
       (d.public ? '<i class="share-mark" title="Public in Discover" aria-label="Public in Discover">' + I.globe + '</i>' : '');
   }
@@ -3120,6 +3120,8 @@ var TextUtil = (function () {
       }, fail);
     });
   }
+  /* Put a small button after the last word so it never wraps onto a line by itself (languages without spaces just get it at the end). */
+  function infoAfter(text, btn) { return / \S+$/.test(text) ? text.replace(/ (\S+)$/, ' <span class="nw">$1 ' + btn + '</span>') : text + '<span class="nw">' + btn + '</span>'; }
   function deckTile(x) {
     var d = x.deck, st = x.st, fs = x.fs, mode = studyMode(), free = mode !== 'mission';
     var chips = !st.total ? '<span class="chip">Empty</span>' : free
@@ -3131,7 +3133,7 @@ var TextUtil = (function () {
       '<span class="dot"></span><h3><span class="dk-name">' + esc(d.name) + '</span>' + shareMarks(d) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
       '<div class="counts">' + chips + deckBadges(d) + '</div>' +
       (st.total ? '<div class="deck-bar">' + lvBar(levelsOf([d.id])) + '</div>' : '') +
-      '<button class="go" aria-label="Study ' + esc(d.name) + '">' + (canGo ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
+      '<button class="go" aria-label="Study &quot;' + esc(d.name) + '&quot;">' + (canGo ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
   }
   function folderMenu(f, ids, anchor, pt) {
     var mode = studyMode();
@@ -3604,7 +3606,7 @@ var TextUtil = (function () {
       var key = TextUtil.fold(tf.value), box = $('[data-dup]', E);
       var same = key ? cardsOf(currentDeck()).filter(function (c) { return (!card || c.id !== card.id) && TextUtil.fold(c.front) === key; })[0] : null;
       box.hidden = !same;
-      if (same) box.textContent = 'Already in this deck: ' + same.front + (same.back ? ' / ' + same.back : '');
+      if (same) box.innerHTML = 'Already in this deck: <span data-nt>' + esc(same.front + (same.back ? ' / ' + same.back : '')) + '</span>';
     }
     tf.addEventListener('input', checkDup);
     var dsel = $('[data-deck]', E); if (dsel) dsel.addEventListener('change', checkDup);
@@ -3810,7 +3812,7 @@ var TextUtil = (function () {
 
   /* ================= send a copy ================= */
   function deckBadges(d) {
-    return (!d.mine ? '<span class="chip shared">Shared by ' + esc(d.ownerName || 'someone') + '</span>' : d.members ? '<span class="chip shared">' + plural(d.members, 'collaborator') + '</span>' : '') +
+    return (!d.mine ? '<span class="chip shared">Shared by <span data-nt>' + esc(d.ownerName || 'someone') + '</span></span>' : d.members ? '<span class="chip shared">' + plural(d.members, 'collaborator') + '</span>' : '') +
       (d.public && d.mine ? '<span class="chip pub">Public</span>' : '');
   }
 
@@ -3851,7 +3853,7 @@ var TextUtil = (function () {
     sel.addEventListener('change', function () {
       if (!sel.value) { sel.value = folderCat(own); return; }
       $('[data-fcat-hint]', E).hidden = true; sw.disabled = false;
-      if (sw.checked) send(true).then(function () { toast('Category: ' + catLabel(sel.value) + '.'); }, function () {});
+      if (sw.checked) send(true).then(function () { toast('Category saved.'); }, function () {});
     });
   }
   function openShare(deckIds, title, folderName) {
@@ -3922,7 +3924,7 @@ var TextUtil = (function () {
       api('saveDeck', { id: single.id, name: single.name, color: single.color, category: v }).then(function (d) {
         single.category = d.category; catSel.disabled = false; pub.disabled = false;
         $('[data-pubcat-hint]', E).hidden = true; $('[data-err]', E).textContent = '';
-        cacheNow(); toast('Category: ' + catLabel(v) + '.');
+        cacheNow(); toast('Category saved.');
       }, function (e) { catSel.disabled = false; $('[data-err]', E).textContent = e.message; });
     });
     $('[data-go]', E).addEventListener('click', function () {
@@ -4018,7 +4020,7 @@ var TextUtil = (function () {
           e.stopPropagation();
           var f = d.friends[Number(b.getAttribute('data-fmenu'))];
           menu(b, [{ label: 'Remove friend', icon: 'trash', danger: true, run: function () {
-            confirmBox('Remove ' + f.name + '?', 'You will stop seeing each other\'s numbers. Shared decks stay as they are.', 'Remove', true).then(function (ok) {
+            confirmBox('Remove "' + f.name + '"?', 'You will stop seeing each other\'s numbers. Shared decks stay as they are.', 'Remove', true).then(function (ok) {
               if (ok) api('friendRemove', { id: f.id }).then(function () { toast('Removed.'); load(); }, fail);
             });
           } }]);
@@ -4100,12 +4102,12 @@ var TextUtil = (function () {
           var g = t.group, n = g.decks.reduce(function (s, x) { return s + x.cards; }, 0);
           g.decks.sort(function (a, b) { return a.order - b.order; });
           return '<button class="disc-card disc-folder" data-fold="' + esc(g.key) + '" style="--c:' + esc(g.decks[0].color) + '"><span class="disc-top"></span><b>' + esc(g.name) + '</b>' +
-            '<span class="disc-meta">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(n, 'card') + (g.by ? ' &middot; by ' + esc(g.by) : '') + '</span>' +
+            '<span class="disc-meta">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(n, 'card') + (g.by ? ' &middot; by <span data-nt>' + esc(g.by) + '</span>' : '') + '</span>' +
             '<span class="disc-foot">' + (g.by ? '<span class="chip">' + I.folder + 'Folder</span>' : '<span class="chip picked">' + I.check + 'Picked by us</span>') + '<span class="disc-open">Open ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</span></span></button>';
         }
         var d = t.deck, i = d.at;
         return '<button class="disc-card" data-i="' + i + '" style="--c:' + esc(d.color) + '"><span class="disc-top"></span><b></b>' +
-          '<span class="disc-meta">' + plural(d.cards, 'card') + (d.by ? ' &middot; by ' + esc(d.by) : '') + '</span>' +
+          '<span class="disc-meta">' + plural(d.cards, 'card') + (d.by ? ' &middot; by <span data-nt>' + esc(d.by) + '</span>' : '') + '</span>' +
           '<span class="disc-foot">' + (d.mine ? '<span class="chip pub">Yours</span>' : d.copies ? '<span class="chip">' + plural(d.copies, 'copy', 'copies') + '</span>' : '<span class="chip">New</span>') + '<span class="disc-open">Preview ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</span></span></button>';
       }).join('');
       $$('.disc-card[data-i]', box).forEach(function (c) {
@@ -4124,7 +4126,7 @@ var TextUtil = (function () {
   /* A ready-made folder: look inside, preview a deck, or add the lot. */
   function openPublicFolder(g) {
     var total = g.decks.reduce(function (s, x) { return s + x.cards; }, 0);
-    var m = modal(g.name, '<p class="hint" style="margin:-4px 0 12px">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(total, 'card') + (g.by ? ' &middot; by ' + esc(g.by) : '') + '</p>' +
+    var m = modal(g.name, '<p class="hint" style="margin:-4px 0 12px">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(total, 'card') + (g.by ? ' &middot; by <span data-nt>' + esc(g.by) + '</span>' : '') + '</p>' +
       '<div class="pub-list">' + g.decks.map(function (d, i) {
         return '<button class="pub-row" data-pd="' + i + '" style="--c:' + esc(d.color) + '"><i></i><span><b></b><small>' + plural(d.cards, 'card') + '</small></span>' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</button>';
       }).join('') + '</div>' + (isGuest() ? guestLockNote() : '') + '<div class="error" data-err></div>',
@@ -4167,7 +4169,7 @@ var TextUtil = (function () {
       $('[data-make]', gm.el).addEventListener('click', function () { gm.close(); guestToAccount(); });
       return;
     }
-    var m = modal(d.name, '<p class="hint" style="margin:-4px 0 12px">' + (d.cards ? plural(d.cards, 'card') : 'Public deck') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.copies ? ' &middot; copied ' + plural(d.copies, 'time') : '') + '</p>' +
+    var m = modal(d.name, '<p class="hint" style="margin:-4px 0 12px">' + (d.cards ? plural(d.cards, 'card') : 'Public deck') + (d.by ? ' &middot; by <span data-nt>' + esc(d.by) + '</span>' : '') + (d.copies ? ' &middot; copied ' + plural(d.copies, 'time') : '') + '</p>' +
       '<div data-prev class="preview-list" style="max-height:320px"><div class="spinner"></div></div>' +
       (d.mine ? '' : '<div style="margin-top:14px">' + folderField('Put it in a folder (optional)', '', d.folder || '') + '</div>') +
       '<div class="error" data-err></div>',
@@ -4188,13 +4190,13 @@ var TextUtil = (function () {
         if (f) { var fm = Object.assign({}, folders()); fm[r.deck.id] = f; S.user.settings.folders = fm; }
         saveSettingsSoon();
         d.copies = (d.copies || 0) + 1;
-        m.close(); toast('"' + r.deck.name + '" added to your decks' + (f ? ' in ' + f : '') + '.');
+        m.close(); toast('"' + r.deck.name + '" added to your decks' + (f ? ' in "' + f + '"' : '') + '.');
       }, function (e) { busy(add, false); $('[data-err]', E).textContent = e.message; });
     });
   }
 
   function leaveDeck(deck) {
-    confirmBox('Leave this deck?', 'You will stop seeing "' + deck.name + '". ' + (deck.ownerName || 'The owner') + ' can add you back.', 'Leave', true).then(function (ok) {
+    confirmBox('Leave this deck?', 'You will stop seeing "' + deck.name + '". ' + (deck.ownerName ? '"' + deck.ownerName + '"' : 'The owner') + ' can add you back.', 'Leave', true).then(function (ok) {
       if (!ok) return;
       api('leaveDeck', { deckId: deck.id }).then(function () {
         S.decks = S.decks.filter(function (d) { return d.id !== deck.id; });
@@ -4462,7 +4464,7 @@ var TextUtil = (function () {
     var item = s.cur.item, x = qa(item), c = item.card, p = prog(c, item.dir);
     var kind = cardKind(c, s);
     var curKey = p.s === 'new' ? 'n' : p.s === 'learn' ? 'l' : 'r';
-    var label = (item.show === 'r' ? 'Back first' : 'Front') + (S.decks.length > 1 && s.title === 'All decks' ? ' &middot; ' + esc((deckById(c.deckId) || {}).name || '') : '');
+    var label = (item.show === 'r' ? 'Back first' : 'Front') + (S.decks.length > 1 && s.title === 'All decks' ? ' &middot; <span data-nt>' + esc((deckById(c.deckId) || {}).name || '') + '</span>' : '');
 
     var sayBtn = c.speak && canSpeak() ? '<button class="say-btn" data-say title="Say it again" aria-label="Say it again">' + I.audio + '</button>' : '';
     var frontBody = '<div class="face-body">' + mediaHtml(x.qm) + textHtml(x.q) + (x.hint ? '<button class="hint-btn" data-hint-show>Show hint</button>' : '');
@@ -4984,8 +4986,10 @@ var TextUtil = (function () {
   function uiKey(text) {
     var vals = { n: [], q: [] };
     var k = String(text).replace(/\s+/g, ' ').trim();
-    k = k.replace(/"([^"]*)"/g, function (m, inner) { vals.q.push(inner); return '"{q' + vals.q.length + '}"'; });
+    k = k.replace(/"([^"]*)"/g, function (m, inner) { vals.q.push(inner); return '"\u0001"'; });
     k = k.replace(/\d+(?:[.,:]\d+)*/g, function (m) { vals.n.push(m); return '{n' + vals.n.length + '}'; });
+    var qi = 0;
+    k = k.replace(/\u0001/g, function () { qi++; return '{q' + qi + '}'; });
     return { key: k, vals: vals };
   }
   function tr(text) {
@@ -5033,9 +5037,11 @@ var TextUtil = (function () {
   function setUiLang(lang) {
     lang = TextUtil.lang(lang) ? lang : 'en';
     document.documentElement.lang = lang;
-    if (lang === 'en') { if (UI.lang !== 'en') { UI.lang = 'en'; UI.dict = null; render(); } return; }
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    if (lang === 'en') { if (UI.lang !== 'en') { UI.lang = 'en'; UI.dict = null; render(); $$('.toast').forEach(function (t) { t.parentNode.removeChild(t); }); } return; }
     var cached = ls('fc.i18n.' + lang);
     var had = UI.lang === lang && UI.dict;
+    if (UI.lang !== lang) UI.dict = null;
     UI.lang = lang;
     if (cached && cached.strings) { UI.dict = cached.strings; if (!had) { render(); trTree(document.body); } }
     api('strings', { lang: lang, v: cached && cached.v }).then(function (r) {
