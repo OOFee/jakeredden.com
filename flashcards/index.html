@@ -335,7 +335,16 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .ce-extras:empty { display: none; }
 .ce-extra-note { font-size: 12.5px; margin: 0; }
 .ce-lab .icon-btn:disabled { opacity: .3; }
+.ce-sep { width: 1px; height: 18px; background: var(--line-strong); margin: 0 4px; }
+.btn.ce-mic.rec, .btn.ce-mic.rec:hover { color: #fff; background: var(--again); animation: recPulse 1.2s ease-in-out infinite; }
+@keyframes recPulse { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--again) 30%, transparent); } }
+.say-btn { margin-left: 8px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; color: inherit; display: grid; place-items: center; cursor: pointer; flex: none; }
+.say-btn svg { width: 16px; height: 16px; }
+.face-label .side-no + .say-btn, .face-label .side-no:empty + .say-btn { margin-left: auto; }
+.face-label .side-no:not(:empty) + .say-btn { margin-left: 10px; }
+html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 @media (hover: none) { .ce-keys { display: none; } }
+@media (max-width: 600px) { .ce-opts .switch { flex: 1 1 100%; } }
 .answer-in { width: 100%; max-width: 420px; display: flex; gap: 8px; }
 .answer-in .input { height: 50px; font-size: 17px; text-align: center; }
 .verdict { font-weight: 700; font-size: 14px; padding: 6px 12px; border-radius: 99px; }
@@ -1418,6 +1427,7 @@ var TextUtil = (function () {
     folder: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
     chev: svg('<path d="m6 9 6 6 6-6"/>'),
     up: svg('<path d="m18 15-6-6-6 6"/>'),
+    mic: svg('<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
     swap: svg('<path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/>'),
     lock: svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
     cards: svg('<rect x="2" y="6" width="15" height="14" rx="2"/><path d="M7 2h13a2 2 0 0 1 2 2v13"/>')
@@ -1974,6 +1984,39 @@ var TextUtil = (function () {
       img.src = dataUrl;
     });
   }
+  /* Extra sides as {t, m}; older cards stored plain text (or one middle side). */
+  function exItems(c) {
+    var a = Array.isArray(c.extras) ? c.extras : c.middle ? [c.middle] : [];
+    return a.map(function (x) { return x && typeof x === 'object' ? { t: String(x.t || ''), m: Object.assign({}, x.m || {}) } : { t: String(x || ''), m: {} }; });
+  }
+  /* Read aloud with the device voice. The language is guessed from the writing. */
+  function speechLang(t, card) {
+    if (/[\u3040-\u30ff]/.test(t)) return 'ja-JP';
+    if (/[\uac00-\ud7af]/.test(t)) return 'ko-KR';
+    if (/[\u4e00-\u9fff]/.test(t)) {
+      var all = card ? [card.front, card.back].concat(exItems(card).map(function (x) { return x.t; })).join(' ') : '';
+      return /[\u3040-\u30ff]/.test(all) ? 'ja-JP' : 'zh-CN';
+    }
+    if (/[\u0400-\u04ff]/.test(t)) return 'ru-RU';
+    if (/[\u0e00-\u0e7f]/.test(t)) return 'th-TH';
+    if (/[\u00f1\u00bf\u00a1]/i.test(t)) return 'es-ES';
+    if (/[\u00e4\u00f6\u00fc\u00df]/i.test(t)) return 'de-DE';
+    if (/[\u00e7\u0153\u00e0\u00e8\u00ea\u00eb\u00ee\u00ef\u00f4\u00fb\u00f9]/i.test(t)) return 'fr-FR';
+    return 'en-US';
+  }
+  function canSpeak() { return !!(window.speechSynthesis && window.SpeechSynthesisUtterance); }
+  function stopSpeaking() { try { if (canSpeak()) speechSynthesis.cancel(); } catch (e) { } }
+  function speakText(t, card) {
+    t = String(t || '').trim();
+    if (!t || !canSpeak()) return;
+    stopSpeaking();
+    var u = new SpeechSynthesisUtterance(t.slice(0, 400)), lang = speechLang(t, card);
+    u.lang = lang;
+    var v = speechSynthesis.getVoices().filter(function (x) { return String(x.lang).replace('_', '-').toLowerCase().indexOf(lang.slice(0, 2).toLowerCase()) === 0; })[0];
+    if (v) u.voice = v;
+    u.rate = 0.95;
+    speechSynthesis.speak(u);
+  }
   function uploadFile(file) {
     var isImg = file.type.indexOf('image/') === 0, isAudio = file.type.indexOf('audio/') === 0;
     if (!isImg && !isAudio) return Promise.reject(new Error('Pick an image or audio file.'));
@@ -2044,17 +2087,17 @@ var TextUtil = (function () {
     },
     saveCard: function (d, a) {
       var type = ['basic', 'typed', 'choice', 'tf'].indexOf(a.type) >= 0 ? a.type : 'basic';
-      var front = guestText(a.front, 5000, 'Front'), back = guestText(a.back, 5000, 'Back'), extras = (Array.isArray(a.extras) ? a.extras : []).slice(0, 20).map(function (t, i) { return guestText(t, 5000, 'Side ' + (i + 3)); }).filter(function (t) { return String(t).trim(); }), hint = guestText(a.hint, 500, 'Hint');
+      var front = guestText(a.front, 5000, 'Front'), back = guestText(a.back, 5000, 'Back'), extras = exItems({ extras: (Array.isArray(a.extras) ? a.extras : []).slice(0, 20) }).map(function (x, i) { return { t: guestText(x.t, 5000, 'Side ' + (i + 3)), m: {} }; }).filter(function (x) { return x.t.trim(); }), hint = guestText(a.hint, 500, 'Hint'), speak = !!a.speak;
       if (!front.trim()) throw new Error('The front of the card is empty.');
       guestDeck(d, a.deckId);
       if (a.id) {
         var c = d.cards.filter(function (x) { return x.id === a.id; })[0];
         if (!c) throw new Error('Card not found.');
-        c.type = type; c.reverse = !!a.reverse; c.front = front; c.back = back; c.extras = extras; delete c.middle; c.hint = hint; c.deckId = a.deckId; c.updated = Date.now();
+        c.type = type; c.reverse = !!a.reverse; c.front = front; c.back = back; c.extras = extras; delete c.middle; c.hint = hint; c.speak = speak; c.deckId = a.deckId; c.updated = Date.now();
         if (!c.reverse) delete c.srs.r;
         return c;
       }
-      var card = { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: front, back: back, extras: extras, hint: hint, frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
+      var card = { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: front, back: back, extras: extras, hint: hint, speak: speak, frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
       d.cards.push(card);
       return card;
     },
@@ -2067,7 +2110,7 @@ var TextUtil = (function () {
       guestDeck(d, a.deckId);
       var type = ['basic', 'typed', 'choice', 'tf'].indexOf(a.type) >= 0 ? a.type : 'basic';
       var cards = (a.pairs || []).filter(function (p) { return Array.isArray(p) && String(p[0] || '').trim(); }).map(function (p) {
-        return { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: guestText(p[0], 5000, 'Front'), back: guestText(p[1], 5000, 'Back'), extras: p.slice(2, 22).map(function (t) { return guestText(t, 5000, 'Side'); }).filter(function (t) { return String(t).trim(); }), hint: '', frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
+        return { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: guestText(p[0], 5000, 'Front'), back: guestText(p[1], 5000, 'Back'), extras: p.slice(2, 22).map(function (t) { return { t: guestText(t, 5000, 'Side'), m: {} }; }).filter(function (x) { return x.t.trim(); }), hint: '', frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
       });
       d.cards = d.cards.concat(cards);
       return { cards: cards };
@@ -2142,7 +2185,7 @@ var TextUtil = (function () {
     if (!g.decks || !g.decks.length) { ls('fc.guest', null); return; }
     var folders = (g.user && g.user.settings && g.user.settings.folders) || {};
     var decks = g.decks.map(function (d) {
-      return { name: d.name, color: d.color, streak: d.streak, image: d.image, folder: folders[d.id] || '', cards: g.cards.filter(function (c) { return c.deckId === d.id; }).map(function (c) { return { type: c.type, reverse: c.reverse, front: c.front, back: c.back, extras: c.extras || (c.middle ? [c.middle] : []), hint: c.hint || '', srs: c.srs }; }) };
+      return { name: d.name, color: d.color, streak: d.streak, image: d.image, folder: folders[d.id] || '', cards: g.cards.filter(function (c) { return c.deckId === d.id; }).map(function (c) { return { type: c.type, reverse: c.reverse, front: c.front, back: c.back, extras: exItems(c), hint: c.hint || '', speak: !!c.speak, srs: c.srs }; }) };
     });
     S.migrating = true;
     api('importGuest', { decks: decks, daily: g.daily || [] }).then(function (r) {
@@ -3032,7 +3075,7 @@ var TextUtil = (function () {
       var types = (c.type === 'typed' ? '<span class="tag">Typed</span>' : c.type === 'choice' ? '<span class="tag">Choice</span>' : '') +
         (c.reverse ? '<span class="tag" title="Also tested back to front">Both ways</span>' : '') +
         ((c.frontMedia && (c.frontMedia.img || c.frontMedia.audio)) || (c.backMedia && (c.backMedia.img || c.backMedia.audio)) ? '<span class="tag">Media</span>' : '');
-      return '<div class="crow" data-id="' + esc(c.id) + '"><div class="f">' + (esc(c.front) || '<span class="hint">(media)</span>') + ((c.extras && c.extras.length) || c.middle ? ' <span class="crow-mid">+' + plural((c.extras || [c.middle]).length, 'side') + '</span>' : '') + '</div><div class="b">' + esc(c.back) + '</div><div class="tags">' + types + statusTag(c) + fbadge(cardLevel(c), 'sm') + '</div></div>';
+      return '<div class="crow" data-id="' + esc(c.id) + '"><div class="f">' + (esc(c.front) || '<span class="hint">(media)</span>') + (exItems(c).length ? ' <span class="crow-mid">+' + plural(exItems(c).length, 'side') + '</span>' : '') + '</div><div class="b">' + esc(c.back) + '</div><div class="tags">' + types + statusTag(c) + fbadge(cardLevel(c), 'sm') + '</div></div>';
     }).join('') + (list.length > shown.length ? '<div class="more"><button class="btn sm" data-more-cards>Show ' + Math.min(200, list.length - shown.length) + ' more</button></div>' : '') + '</div>';
     $$('.crow', box).forEach(function (r) { r.addEventListener('click', function () { openCardEditor(cardById(r.getAttribute('data-id')), deck.id); }); });
     var more = $('[data-more-cards]', box);
@@ -3159,13 +3202,15 @@ var TextUtil = (function () {
       reverse: card ? card.reverse : !!ls('fc.lastReverse'),
       fm: card ? Object.assign({}, card.frontMedia) : {},
       bm: card ? Object.assign({}, card.backMedia) : {},
-      extras: card ? (card.extras || (card.middle ? [card.middle] : [])).slice() : Array(Math.min(20, Number(ls('fc.lastExtras')) || 0)).fill(''),
+      extras: card ? exItems(card) : Array(Math.min(20, Number(ls('fc.lastExtras')) || 0)).fill(0).map(function () { return { t: '', m: {} }; }),
+      speak: card ? !!card.speak : !!ls('fc.lastSpeak'),
       hint: card ? !!card.hint : false
     };
     var deckOpts = S.decks.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === (card ? card.deckId : deckId) ? ' selected' : '') + '>' + esc(d.name) + '</option>'; }).join('');
     function mediaBtns(key) {
       return '<span class="row" style="gap:2px"><button class="btn ghost icon-btn sm" data-addimg="' + key + '" title="Add image" aria-label="Add image">' + I.image + '</button>' +
-        '<button class="btn ghost icon-btn sm" data-addaudio="' + key + '" title="Add audio" aria-label="Add audio">' + I.audio + '</button></span>';
+        '<button class="btn ghost icon-btn sm" data-addaudio="' + key + '" title="Add a sound file" aria-label="Add a sound file">' + I.audio + '</button>' +
+        '<button class="btn ghost icon-btn sm ce-mic" data-rec="' + key + '" title="Record a sound" aria-label="Record a sound">' + I.mic + '</button></span>';
     }
     var m = modal(card ? 'Edit card' : 'New card',
       '<div class="ce-top">' +
@@ -3184,6 +3229,7 @@ var TextUtil = (function () {
       '<input class="input" data-hint-text maxlength="500" enterkeyhint="done"></div>' +
       '</div>' +
       '<div class="ce-opts"><label class="switch sw-2"><input type="checkbox" data-rev><i></i><span>Test both ways<small>Also shows the back and asks you for the front</small></span></label>' +
+      (canSpeak() ? '<label class="switch sw-2"><input type="checkbox" data-speak><i></i><span>Read aloud<small>The device voice reads each side</small></span></label>' : '') +
       '<button class="ce-link" data-hint-on' + (st.hint ? ' hidden' : '') + '>' + I.plus + 'Add a hint</button><span class="spacer"></span>' +
       (card ? '' : '<button class="ce-link" data-paste-list>' + I.upload + 'Paste a list</button>') + '</div>' +
       '<p class="hint ce-keys">Enter goes to the next box and adds the card from the last one. Shift+Enter starts a new line. Paste an image straight into a box.</p>' +
@@ -3196,18 +3242,20 @@ var TextUtil = (function () {
     tf.value = card ? card.front : ''; tb.value = card ? card.back : ''; th.value = card ? card.hint || '' : '';
     var exBox = $('[data-extras]', E);
     function exAreas() { return $$('[data-text="x"]', exBox); }
-    function readExtras() { st.extras = exAreas().map(function (t) { return t.value; }); }
+    function readExtras() { exAreas().forEach(function (t, i) { if (st.extras[i]) st.extras[i].t = t.value; }); }
+    var sp = $('[data-speak]', E); if (sp) sp.checked = st.speak;
     /* Extra sides: Side 3, 4, ... with move up, move down and remove. */
     function paintExtras(focusAt) {
       var n = st.extras.length;
       exBox.innerHTML = st.extras.map(function (t, i) {
-        return '<div class="ce-field ce-extra"><div class="ce-lab"><span>Side ' + (i + 3) + '</span><span class="row" style="gap:2px">' +
+        return '<div class="ce-field ce-extra"><div class="ce-lab"><span>Side ' + (i + 3) + '</span><span class="row" style="gap:2px">' + mediaBtns('x' + i) + '<i class="ce-sep"></i>' +
           '<button class="btn ghost icon-btn sm" data-x-up="' + i + '" title="Move up" aria-label="Move side ' + (i + 3) + ' up"' + (i ? '' : ' disabled') + '>' + I.up + '</button>' +
           '<button class="btn ghost icon-btn sm" data-x-down="' + i + '" title="Move down" aria-label="Move side ' + (i + 3) + ' down"' + (i < n - 1 ? '' : ' disabled') + '>' + I.chev + '</button>' +
           '<button class="btn ghost icon-btn sm" data-x-rm="' + i + '" title="Remove this side" aria-label="Remove side ' + (i + 3) + '">' + I.x + '</button></span></div>' +
-          '<textarea class="textarea ce-text" data-text="x" rows="1" maxlength="5000"></textarea></div>';
+          '<textarea class="textarea ce-text" data-text="x" data-key="x' + i + '" rows="2" maxlength="5000"></textarea><div class="media-row" data-media-row="x' + i + '"></div></div>';
       }).join('');
-      exAreas().forEach(function (ta, i) { ta.value = st.extras[i]; wireBox(ta); setTimeout(function () { grow(ta); }, 0); });
+      exAreas().forEach(function (ta, i) { ta.value = st.extras[i].t; wireBox(ta); setTimeout(function () { grow(ta); }, 0); });
+      wireMediaBtns(exBox); paintMedia();
       function move(i, j) { readExtras(); var t = st.extras[i]; st.extras[i] = st.extras[j]; st.extras[j] = t; paintExtras(j); }
       $$('[data-x-up]', exBox).forEach(function (b) { b.addEventListener('click', function () { var i = Number(b.getAttribute('data-x-up')); move(i, i - 1); }); });
       $$('[data-x-down]', exBox).forEach(function (b) { b.addEventListener('click', function () { var i = Number(b.getAttribute('data-x-down')); move(i, i + 1); }); });
@@ -3215,7 +3263,7 @@ var TextUtil = (function () {
       if (focusAt != null && exAreas()[focusAt]) exAreas()[focusAt].focus();
       $('[data-extra-add]', E).hidden = n >= 20;
     }
-    $('[data-extra-add]', E).addEventListener('click', function () { readExtras(); st.extras.push(''); paintExtras(st.extras.length - 1); });
+    $('[data-extra-add]', E).addEventListener('click', function () { readExtras(); st.extras.push({ t: '', m: {} }); paintExtras(st.extras.length - 1); });
     var rev = $('[data-rev]', E); rev.checked = st.reverse;
     function grow(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(220, ta.scrollHeight + 2) + 'px'; }
     [tf, tb].forEach(function (ta) { ta.addEventListener('input', function () { grow(ta); }); setTimeout(function () { grow(ta); }, 0); });
@@ -3248,14 +3296,16 @@ var TextUtil = (function () {
     tf.addEventListener('input', checkDup);
     var dsel = $('[data-deck]', E); if (dsel) dsel.addEventListener('change', checkDup);
     checkDup();
+    function mediaOf(k) { return k === 'f' ? st.fm : k === 'b' ? st.bm : (st.extras[Number(k.slice(1))] || { m: {} }).m; }
     function paintMedia() {
-      ['f', 'b'].forEach(function (k) {
-        var md = k === 'f' ? st.fm : st.bm, row = $('[data-media-row="' + k + '"]', E);
+      ['f', 'b'].concat(st.extras.map(function (x, i) { return 'x' + i; })).forEach(function (k) {
+        var md = mediaOf(k), row = $('[data-media-row="' + k + '"]', E);
+        if (!row) return;
         row.innerHTML = (md.img ? '<div class="thumb"><img data-media="' + esc(md.img) + '" alt=""><button data-rm="' + k + ':img" aria-label="Remove image">' + I.x + '</button></div>' : '') +
           (md.audio ? '<div class="thumb"><span class="row" style="gap:6px">' + I.audio.replace('<svg', '<svg width="16" height="16"') + 'Audio</span><button data-rm="' + k + ':audio" aria-label="Remove audio">' + I.x + '</button></div>' : '');
         hydrate(row);
         $$('[data-rm]', row).forEach(function (b) {
-          b.addEventListener('click', function () { var p = b.getAttribute('data-rm').split(':'); delete (p[0] === 'f' ? st.fm : st.bm)[p[1]]; paintMedia(); });
+          b.addEventListener('click', function () { var p = b.getAttribute('data-rm').split(':'); delete mediaOf(p[0])[p[1]]; paintMedia(); });
         });
       });
     }
@@ -3265,24 +3315,51 @@ var TextUtil = (function () {
       var row = $('[data-media-row="' + k + '"]', E);
       var spin = el('<div class="thumb"><span class="spinner"></span></div>');
       row.appendChild(spin);
-      uploadFile(file).then(function (r) { (k === 'f' ? st.fm : st.bm)[r.kind] = r.id; paintMedia(); }, function (e) { spin.remove(); $('[data-err]', E).textContent = e.message; });
+      uploadFile(file).then(function (r) { mediaOf(k)[r.kind] = r.id; paintMedia(); }, function (e) { spin.remove(); $('[data-err]', E).textContent = e.message; });
     }
-    $$('[data-addimg],[data-addaudio]', E).forEach(function (b) {
-      b.addEventListener('click', function () {
-        target = b.getAttribute('data-addimg') || b.getAttribute('data-addaudio');
-        fileInput.accept = b.hasAttribute('data-addimg') ? 'image/*' : 'audio/*';
-        fileInput.click();
+    /* Record a sound with the microphone (up to a minute); it is saved like an added sound file. */
+    var rec = null;
+    function toggleRec(k, btn) {
+      var err = $('[data-err]', E);
+      if (rec) { rec.stop(); return; }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { err.textContent = 'Recording is not available in this browser.'; return; }
+      err.textContent = '';
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        var chunks = [], mr = new MediaRecorder(stream), began = Date.now();
+        rec = mr; btn.classList.add('rec'); btn.title = 'Stop recording';
+        var watch = setInterval(function () { if ((Date.now() - began > 60000 || !document.body.contains(btn)) && mr.state === 'recording') mr.stop(); }, 400);
+        mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+        mr.onstop = function () {
+          clearInterval(watch); stream.getTracks().forEach(function (t) { t.stop(); });
+          rec = null; btn.classList.remove('rec'); btn.title = 'Record a sound';
+          if (!document.body.contains(btn) || !chunks.length) return;
+          var type = String(mr.mimeType || chunks[0].type || 'audio/webm').split(';')[0];
+          attach(new File(chunks, 'recording', { type: type }), k);
+        };
+        mr.start();
+      }, function () { err.textContent = 'Allow the microphone to record a sound.'; });
+    }
+    function wireMediaBtns(root) {
+      $$('[data-addimg],[data-addaudio]', root).forEach(function (b) {
+        b.addEventListener('click', function () {
+          target = b.getAttribute('data-addimg') || b.getAttribute('data-addaudio');
+          fileInput.accept = b.hasAttribute('data-addimg') ? 'image/*' : 'audio/*';
+          fileInput.click();
+        });
       });
-    });
+      $$('[data-rec]', root).forEach(function (b) { b.addEventListener('click', function () { toggleRec(b.getAttribute('data-rec'), b); }); });
+    }
+    wireMediaBtns($('.ce-fields', E).querySelectorAll('.ce-field:not(.ce-extra)')[0]);
+    wireMediaBtns($('.ce-fields', E).querySelectorAll('.ce-field:not(.ce-extra)')[1]);
     fileInput.addEventListener('change', function () { if (fileInput.files[0]) attach(fileInput.files[0], target); fileInput.value = ''; });
     /* Quick add: Enter moves on, the last box adds the card. Shift+Enter is a new line. */
     function order() { return [tf, tb].concat(exAreas(), st.hint ? [th] : []); }
     function wireBox(box) {
       if (box.tagName === 'TEXTAREA') box.addEventListener('input', function () { grow(box); });
-      if (box === tf || box === tb) box.addEventListener('paste', function (e) {
+      if (box !== th) box.addEventListener('paste', function (e) {
         var items = (e.clipboardData && e.clipboardData.files) || [];
         for (var i = 0; i < items.length; i++) {
-          if (/^image/.test(items[i].type)) { e.preventDefault(); attach(items[i], box.getAttribute('data-text')); return; }
+          if (/^image/.test(items[i].type)) { e.preventDefault(); attach(items[i], box.getAttribute('data-key') || box.getAttribute('data-text')); return; }
         }
       });
       box.addEventListener('keydown', function (e) {
@@ -3304,7 +3381,7 @@ var TextUtil = (function () {
       readExtras();
       var payload = {
         id: card && card.id, deckId: currentDeck(),
-        type: st.type, reverse: rev.checked, front: tf.value, back: tb.value, extras: st.extras, hint: st.hint ? th.value : '', frontMedia: st.fm, backMedia: st.bm
+        type: st.type, reverse: rev.checked, front: tf.value, back: tb.value, extras: st.extras, speak: !!(sp && sp.checked), hint: st.hint ? th.value : '', frontMedia: st.fm, backMedia: st.bm
       };
       if (!payload.front.trim() && !st.fm.img && !st.fm.audio) { err.textContent = 'Add something to the front.'; tf.focus(); return; }
       if (st.type !== 'basic' && !payload.back.trim()) { err.textContent = 'This card type needs text on the back.'; tb.focus(); return; }
@@ -3312,7 +3389,7 @@ var TextUtil = (function () {
       busy(btn, true);
       api('saveCard', payload).then(function (c) {
         busy(btn, false);
-        ls('fc.lastType', st.type); ls('fc.lastReverse', rev.checked); ls('fc.lastExtras', st.extras.length);
+        ls('fc.lastType', st.type); ls('fc.lastReverse', rev.checked); ls('fc.lastExtras', st.extras.length); ls('fc.lastSpeak', !!(sp && sp.checked));
         if (card) {
           Object.assign(card, c); cacheNow(); m.close(); toast('Saved.');
           if (onSaved) onSaved(card); else render();
@@ -3320,7 +3397,7 @@ var TextUtil = (function () {
         }
         S.cards.push(c); cacheNow();
         toast('Card added.');
-        tf.value = ''; tb.value = ''; th.value = ''; st.fm = {}; st.bm = {}; st.extras = st.extras.map(function () { return ''; }); paintExtras(); paintMedia(); checkDup();
+        tf.value = ''; tb.value = ''; th.value = ''; st.fm = {}; st.bm = {}; st.extras = st.extras.map(function () { return { t: '', m: {} }; }); paintExtras(); paintMedia(); checkDup();
         [tf, tb].forEach(grow); tf.focus();
         if (S.view === 'deck') render();
       }, function (e) { busy(btn, false); err.textContent = e.message; });
@@ -3889,12 +3966,12 @@ var TextUtil = (function () {
   function preload() {
     var s = S.study, list = [s.cur.item].concat(s.learn.slice(0, 2), s.review.slice(0, 2), s.fresh.slice(0, 2));
     list.forEach(function (it) {
-      [it.card.frontMedia, it.card.backMedia].forEach(function (m) { if (m && m.img) mediaUrl(m.img); if (m && m.audio) mediaUrl(m.audio); });
+      [it.card.frontMedia, it.card.backMedia].concat(exItems(it.card).map(function (x) { return x.m; })).forEach(function (m) { if (m && m.img) mediaUrl(m.img); if (m && m.audio) mediaUrl(m.audio); });
     });
   }
   function qa(item) {
     var c = item.card, f = item.dir === 'f';
-    return { q: f ? c.front : c.back, a: f ? c.back : c.front, ex: (Array.isArray(c.extras) ? c.extras : c.middle ? [c.middle] : []).map(function (t) { return String(t || '').trim(); }).filter(Boolean), hint: f ? String(c.hint || '').trim() : '', qm: (f ? c.frontMedia : c.backMedia) || {}, am: (f ? c.backMedia : c.frontMedia) || {} };
+    return { q: f ? c.front : c.back, a: f ? c.back : c.front, ex: exItems(c).filter(function (x) { return x.t.trim() || x.m.img || x.m.audio; }), hint: f ? String(c.hint || '').trim() : '', qm: (f ? c.frontMedia : c.backMedia) || {}, am: (f ? c.backMedia : c.frontMedia) || {} };
   }
   function choiceOptions(item) {
     var x = qa(item), right = x.a;
@@ -3927,6 +4004,7 @@ var TextUtil = (function () {
     var curKey = p.s === 'new' ? 'n' : p.s === 'learn' ? 'l' : 'r';
     var label = (item.dir === 'r' ? 'Reverse' : 'Front') + (S.decks.length > 1 && s.title === 'All decks' ? ' &middot; ' + esc((deckById(c.deckId) || {}).name || '') : '');
 
+    var sayBtn = c.speak && canSpeak() ? '<button class="say-btn" data-say title="Say it again" aria-label="Say it again">' + I.audio + '</button>' : '';
     var frontBody = '<div class="face-body">' + mediaHtml(x.qm) + textHtml(x.q) + (x.hint ? '<button class="hint-btn" data-hint-show>Show hint</button>' : '');
     if (kind === 'typed') frontBody += '<form class="answer-in" data-typed><input class="input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the answer" data-answer></form>';
     if (kind === 'choice') frontBody += '<div class="choices">' + s.cur.options.map(function (o, i) { return '<button class="choice" data-opt="' + i + '"><kbd>' + (i + 1) + '</kbd><span></span></button>'; }).join('') + '</div>';
@@ -3939,12 +4017,13 @@ var TextUtil = (function () {
       (s.free ? '' : '<div class="qcounts"><span class="n' + (curKey === 'n' ? ' cur' : '') + '">' + (rem.n + (curKey === 'n' ? 1 : 0)) + '</span><span class="l' + (curKey === 'l' ? ' cur' : '') + '">' + (rem.l + (curKey === 'l' ? 1 : 0)) + '</span><span class="r' + (curKey === 'r' ? ' cur' : '') + '">' + (rem.r + (curKey === 'r' ? 1 : 0)) + '</span></div>') +
       '<button class="btn ghost icon-btn" data-edit aria-label="Edit card" title="Edit card (E)">' + I.edit + '</button></div>' +
       '<div class="stage">' + pointsRow(c, item.dir, s) + '<div class="flip" data-flip><span class="swipe-hint l' + (kind === 'tf' ? ' neutral">True' : '">Wrong') + '</span><span class="swipe-hint r' + (kind === 'tf' ? ' neutral">False' : '">Right') + '</span><div class="inner">' +
-      '<div class="face front"><div class="face-label"><span>' + label + '</span><span class="side-no"></span></div>' + frontBody + '</div>' +
-      '<div class="face back"><div class="face-label"><span data-blab>Answer</span><span class="side-no"></span></div><div class="face-body" data-back></div></div>' +
+      '<div class="face front"><div class="face-label"><span>' + label + '</span><span class="side-no"></span>' + sayBtn + '</div>' + frontBody + '</div>' +
+      '<div class="face back"><div class="face-label"><span data-blab>Answer</span><span class="side-no"></span>' + sayBtn + '</div><div class="face-body" data-back></div></div>' +
       '</div></div><div class="dock" data-dock></div></div></div></div>';
     $$('.choice span', app).forEach(function (sp, i) { sp.textContent = s.cur.options[i].text; });
     hydrate($('.face.front', app));
-    if (x.qm.audio && !s.cur.autoplayed) { s.cur.autoplayed = true; playAudio(x.qm.audio); }
+    if (!s.cur.autoplayed) { s.cur.autoplayed = true; if (x.qm.audio) playAudio(x.qm.audio); else if (c.speak) speakText(x.q, c); }
+    $$('[data-say]', app).forEach(function (b) { b.addEventListener('click', function (e) { e.stopPropagation(); sayCurrent(); }); });
 
     $('[data-exit]', app).addEventListener('click', endStudy);
     $('[data-edit]', app).addEventListener('click', editCurrent);
@@ -4022,6 +4101,27 @@ var TextUtil = (function () {
     paintSideNo();
   }
   function turn() { reveal(); }
+  /* Say the side that is showing: its recorded sound if it has one, otherwise the device voice. */
+  function sideSound(s, k) {
+    var x = qa(s.cur.item), c = s.cur.item.card;
+    if (k === 1) return { audio: x.qm.audio, text: x.q };
+    if (k === 2) return { audio: x.am.audio, text: cardKind(c, s) === 'tf' ? (tfAnswer(c) ? 'True. ' : 'False. ') + (tfExplain(c) || '') : x.a };
+    var it = x.ex[k - 3] || { t: '', m: {} };
+    return { audio: it.m.audio, text: it.t };
+  }
+  function sayCurrent() {
+    var s = S.study, fl = $('[data-flip]');
+    if (!s || !s.cur || !fl) return;
+    var k = fl.classList.contains('flipped') ? (s.cur.view || 2) : 1;
+    var snd = sideSound(s, k);
+    if (snd.audio) playAudio(snd.audio); else speakText(snd.text, s.cur.item.card);
+  }
+  function autoSay(k) {
+    var s = S.study;
+    if (!s || !s.cur) return;
+    var snd = sideSound(s, k);
+    if (snd.audio) playAudio(snd.audio); else if (s.cur.item.card.speak) speakText(snd.text, s.cur.item.card);
+  }
   function sideCount(s) { return 2 + qa(s.cur.item).ex.length; }
   /* After the answer, each tap moves on: the answer, then any extra sides, then back round to the question. */
   function cycleSide() {
@@ -4029,7 +4129,7 @@ var TextUtil = (function () {
     if (!s || !s.cur || !fl) return;
     var n = sideCount(s), v = s.cur.view || 1, next = v >= n ? 1 : v + 1;
     s.cur.view = next;
-    if (next === 1) fl.classList.remove('flipped');
+    if (next === 1) { fl.classList.remove('flipped'); autoSay(1); }
     else if (next === 2) showBack(false, fl.classList.contains('flipped'));
     else showExtra(next, false);
     paintSideNo();
@@ -4044,10 +4144,13 @@ var TextUtil = (function () {
     var s = S.study, x = qa(s.cur.item), back = $('[data-back]'), fl = $('[data-flip]');
     if (!back || !fl || !x.ex[k - 3]) return;
     var n = sideCount(s), was = fl.classList.contains('flipped');
-    back.innerHTML = '<div class="q-small"></div>' + textHtml(x.ex[k - 3]) + '<div class="tap-hint">' + (k < n ? 'Tap for side ' + (k + 1) : 'Tap to go back to the front') + '</div>';
+    var it = x.ex[k - 3];
+    back.innerHTML = '<div class="q-small"></div>' + mediaHtml(it.m) + textHtml(it.t) + '<div class="tap-hint">' + (k < n ? 'Tap for side ' + (k + 1) : 'Tap to go back to the front') + '</div>';
     $('.q-small', back).textContent = x.q;
+    hydrate(back);
     $('[data-blab]', fl).textContent = 'Extra side';
     if (instant) { $('.inner', fl).style.transition = 'none'; fl.classList.add('flipped'); fl.offsetWidth; $('.inner', fl).style.transition = ''; return; }
+    autoSay(k);
     if (was) { back.classList.remove('turn-in'); back.offsetWidth; back.classList.add('turn-in'); }
     else fl.classList.add('flipped');
   }
@@ -4067,7 +4170,7 @@ var TextUtil = (function () {
       $('[data-blab]', fl).textContent = 'Answer';
       if (anim) { back.classList.remove('turn-in'); back.offsetWidth; back.classList.add('turn-in'); }
       if (instant) { $('.inner', fl).style.transition = 'none'; fl.classList.add('flipped'); fl.offsetWidth; $('.inner', fl).style.transition = ''; }
-      else fl.classList.add('flipped');
+      else { fl.classList.add('flipped'); autoSay(2); }
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       return;
     }
@@ -4083,7 +4186,7 @@ var TextUtil = (function () {
     if (anim) { back.classList.remove('turn-in'); back.offsetWidth; back.classList.add('turn-in'); }
     if (instant) { $('.inner', flip).style.transition = 'none'; flip.classList.add('flipped'); flip.offsetWidth; $('.inner', flip).style.transition = ''; }
     else flip.classList.add('flipped');
-    if (x.am.audio) playAudio(x.am.audio);
+    if (!instant) autoSay(2);
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
   /* Two buttons. A = wrong, B = right. Cards the app can mark itself never ask: multiple choice and true/false
@@ -4341,6 +4444,7 @@ var TextUtil = (function () {
     });
   }
   function endStudy() {
+    stopSpeaking();
     var s = S.study;
     var back = s && s.from === 'deck' && deckById(S.deckId) ? 'deck' : 'home';
     S.study = null;
