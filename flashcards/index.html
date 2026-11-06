@@ -896,10 +896,11 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 .fr-streak.big { font-size: 22px; } .fr-streak.big svg { width: 20px; height: 20px; }
 .fr-wk { font-weight: 650; font-size: 13px; min-width: 90px; text-align: right; }
 .fr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
-.fr-card { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); padding: 16px; display: grid; gap: 14px; }
+.fr-card { border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.fr-card > * { min-width: 0; }
 .fr-top { display: flex; align-items: center; gap: 12px; }
 .fr-top div { display: grid; } .fr-top small { color: var(--muted); font-size: 12.5px; }
-.fr-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.fr-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .fr-stats > div { display: grid; align-content: end; gap: 4px; padding: 10px; border-radius: 12px; background: var(--surface-2); }
 .fr-stats small { color: var(--muted); font-size: 11.5px; }
 .fr-bars { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
@@ -910,11 +911,17 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 .fr-goal span { font-size: 12px; color: var(--muted); } .fr-goal span b { font-size: 17px; color: var(--text); }
 .fr-ring { width: 32px; height: 32px; transform: rotate(-90deg); }
 .fr-ring circle { fill: none; stroke-width: 4; } .fr-ring .bg { stroke: var(--surface-3); } .fr-ring .fg { stroke: var(--good); stroke-linecap: round; }
-.fr-shared { display: grid; gap: 6px; } .fr-shared > small { color: var(--muted); font-size: 12px; font-weight: 650; }
-.fr-deck { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.fr-shared { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; } .fr-shared > small { color: var(--muted); font-size: 12px; font-weight: 650; }
+.fr-deck { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .fr-deck:hover { border-color: var(--line-strong); background: var(--surface-2); }
 .fr-deck b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
-.fr-dir { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.fr-dir { font-size: 11.5px; color: var(--muted); white-space: nowrap; flex: none; }
+.fr-deck > svg { width: 15px; height: 15px; flex: none; color: var(--muted); }
+.fr-group { display: grid; gap: 6px; }
+.fr-gh { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 650; color: var(--muted); }
+.fr-gn { font-size: 11px; padding: 1px 7px; border-radius: 99px; background: var(--surface-2); }
+.fr-showmore { justify-self: start; border: 0; background: none; padding: 2px 0; color: var(--accent); font: 600 13px var(--font); cursor: pointer; }
+.fr-showmore:hover { text-decoration: underline; }
 @media (max-width: 420px) { .fr-stats { grid-template-columns: 1fr 1fr; } .fr-goal { grid-column: 1 / -1; } }
 
 /* batch: focus buttons without boxes */
@@ -3974,6 +3981,24 @@ var TextUtil = (function () {
     var C = 2 * Math.PI * 15, pct = Math.min(1, today / (goal || 50));
     return '<svg class="fr-ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" class="bg"/><circle cx="18" cy="18" r="15" class="fg" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct)) + '"/></svg>';
   }
+  /* Decks shared with a friend, grouped (edit together, copies, their public decks). Each group shows a few rows
+     and a "Show more" button, so a friend with many public decks does not fill the page. */
+  var FR_SHOW = 3;
+  function sharedGroups(f, i) {
+    var groups = [
+      { title: 'You edit together', test: function (sh) { return sh.kind === 'edit'; } },
+      { title: 'Copies', test: function (sh) { return sh.kind === 'copy'; } },
+      { title: 'Their public decks', test: function (sh) { return sh.kind === 'public'; } }
+    ];
+    return groups.map(function (g, gi) {
+      var rows = f.shared.map(function (sh, j) { return { sh: sh, j: j }; }).filter(function (x) { return g.test(x.sh); });
+      if (!rows.length) return '';
+      return '<div class="fr-group"><div class="fr-gh"><span>' + g.title + '</span><span class="fr-gn">' + rows.length + '</span></div>' + rows.map(function (x, k) {
+        var sh = x.sh, dir = sh.kind === 'public' ? '' : '<span class="fr-dir">' + (sh.dir === 'out' ? 'You &rarr;' : '&larr; <span data-nt>' + esc(f.name) + '</span>') + '</span>';
+        return '<button class="fr-deck' + (k >= FR_SHOW ? ' fr-more-row' : '') + '" data-open="' + i + ':' + x.j + '"' + (k >= FR_SHOW ? ' hidden' : '') + '>' + dir + '<b></b>' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</button>';
+      }).join('') + (rows.length > FR_SHOW ? '<button class="fr-showmore" data-showmore>Show ' + (rows.length - FR_SHOW) + ' more</button>' : '') + '</div>';
+    }).join('');
+  }
   function renderFriends(app) {
     var st = S.fr || (S.fr = { data: null });
     app.innerHTML = topbar() + '<main class="wrap friends"><div class="appear">' +
@@ -4018,10 +4043,7 @@ var TextUtil = (function () {
           '<div class="fr-stats"><div><span class="fr-streak big">' + I.flame + x.streak + '</span><small>day streak</small></div>' +
           '<div>' + weekBars(x.week) + '<small>' + plural(x.weekTotal, 'review') + ' this week</small></div>' +
           '<div class="fr-goal">' + goalRing(x.today, x.goal) + '<span><b>' + x.today + '</b>/' + x.goal + '</span><small>today</small></div></div>' +
-          '<div class="fr-shared"><small>Shared between you</small>' + (f.shared.length ? f.shared.map(function (sh, j) {
-            var tag = sh.kind === 'edit' ? 'can edit' : sh.kind === 'copy' ? 'copy' : 'public';
-            return '<button class="fr-deck" data-open="' + i + ':' + j + '"><span class="fr-dir">' + (sh.dir === 'out' ? 'You &rarr;' : '&larr; ' + esc(f.name)) + '</span><b></b><span class="chip">' + tag + '</span></button>';
-          }).join('') : '<span class="hint">Nothing yet. Use Share on a deck to send them one.</span>') + '</div></div>';
+          '<div class="fr-shared"><small>Shared between you</small>' + (f.shared.length ? sharedGroups(f, i) : '<span class="hint">Nothing yet. Use Share on a deck to send them one.</span>') + '</div></div>';
       }).join('') + '</div>' : '<p class="hint">Add someone by email above. They will get a request to accept.</p>') + '</section>';
       if (d.outgoing.length) html += '<section class="fr-sec"><h2>Waiting for them</h2>' + d.outgoing.map(function (r) {
         return '<div class="fr-req"><span class="fr-av">' + esc((r.name || '?').charAt(0)) + '</span><b>' + esc(r.name) + '</b><span class="hint">request sent</span><span class="spacer"></span><button class="btn sm ghost" data-cancel="' + esc(r.id) + '">Cancel</button></div>';
@@ -4030,6 +4052,16 @@ var TextUtil = (function () {
         return '<button class="sh-chip" data-sugg="' + esc(sg.email) + '">' + I.plus.replace('<svg', '<svg width="12" height="12"') + ' ' + esc(sg.name || sg.email) + '</button>';
       }).join('') + '</div></section>';
       box.innerHTML = html;
+      $$('[data-showmore]', box).forEach(function (b) {
+        b.addEventListener('click', function () {
+          var grp = b.parentNode, open = !grp.classList.contains('open');
+          grp.classList.toggle('open', open);
+          $$('.fr-more-row', grp).forEach(function (r) { r.hidden = !open; });
+          var n = $$('.fr-more-row', grp).length;
+          b.textContent = open ? 'Show less' : 'Show ' + n + ' more';
+          trTree(b);
+        });
+      });
       $$('.fr-deck b', box).forEach(function (b) {
         var ij = b.parentNode.getAttribute('data-open').split(':');
         b.textContent = d.friends[ij[0]].shared[ij[1]].name;
