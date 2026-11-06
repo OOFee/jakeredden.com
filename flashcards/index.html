@@ -400,6 +400,8 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .set-lang { margin-top: 18px; }
 .set-lang .ce-chip { width: 100%; justify-content: space-between; }
 .set-lang .ce-chip select { flex: 1; }
+.imp-how { margin: 0 0 12px; display: grid; gap: 4px; }
+.imp-how p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
 .imp-paste { min-height: 140px; font-family: ui-monospace, monospace; font-size: 13px; }
 .imp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 12px 0; }
 .imp-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
@@ -1468,8 +1470,21 @@ var TextUtil = (function () {
      (Anki exports put settings there). */
   var SEPS = { tab: '\t', comma: ',', semicolon: ';', pipe: '|', dash: ' - ' };
   var HEADS = ['front', 'back', 'term', 'definition', 'question', 'answer', 'word', 'meaning', 'side 1', 'side 2', 'reading', 'notes', 'english'];
+  /* "One side per line": each card is a group of lines, with a blank line between cards. */
+  function blocksOf(text) {
+    return String(text || '').replace(/\r\n?/g, '\n').split(/\n[ \t]*\n/).map(function (b) {
+      return b.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    }).filter(function (b) { return b.length; });
+  }
   function detectSep(text) {
-    var sample = String(text || '').replace(/\r\n?/g, '\n').split('\n').filter(function (l) { return l.trim() && l.charAt(0) !== '#'; }).slice(0, 12);
+    var t = String(text || '');
+    var lines = t.replace(/\r\n?/g, '\n').split('\n').filter(function (l) { return l.trim(); });
+    /* Spreadsheets paste with tabs; otherwise blank lines between groups of lines mean one side per line. */
+    if (!lines.some(function (l) { return l.indexOf('\t') >= 0 || l.indexOf('|') >= 0; })) {
+      var blocks = blocksOf(t);
+      if (blocks.length > 1 && blocks.some(function (b) { return b.length > 1; })) return 'lines';
+    }
+    var sample = t.replace(/\r\n?/g, '\n').split('\n').filter(function (l) { return l.trim() && l.charAt(0) !== '#'; }).slice(0, 12);
     var order = ['tab', 'pipe', 'semicolon', 'comma', 'dash'];
     for (var i = 0; i < order.length; i++) {
       var c = SEPS[order[i]];
@@ -1500,6 +1515,7 @@ var TextUtil = (function () {
   function parsePairs(text, opts) {
     opts = opts || {};
     var mode = opts.sep && opts.sep !== 'auto' ? opts.sep : detectSep(text);
+    if (mode === 'lines') return blocksOf(text).map(function (b) { return b.length < 2 ? [b[0], ''] : b; });
     var auto = !opts.sep || opts.sep === 'auto';
     var keepTwo = auto && (mode === 'comma' || mode === 'semicolon' || mode === 'dash');
     var sep = SEPS[mode] || '\t';
@@ -3789,10 +3805,12 @@ var TextUtil = (function () {
     var st = { type: ls('fc.lastType') || 'basic', pairs: [] };
     var deck = deckById(deckId);
     var m = modal('Import cards',
-      '<p class="hint" style="margin:0 0 12px">One card per line: front, then back, then any extra sides. Paste from Google Sheets, Excel, Quizlet or an Anki text export, or choose a file.</p>' +
+      '<div class="imp-how"><p>Paste rows from Google Sheets or Excel: each cell in a row is a side (front, back, then extra sides).</p>' +
+      '<p>Or type one card per line with | between sides, or put each side on its own line with a blank line between cards.</p>' +
+      '<p>Quizlet and Anki text exports work too, or choose a file.</p></div>' +
       '<textarea class="textarea imp-paste" data-paste placeholder="hola&#9;hello&#10;gato&#9;cat" autofocus></textarea>' +
       '<div class="imp-bar"><button class="btn sm" data-csv>' + I.upload + 'Choose a file</button><input type="file" data-file hidden accept=".csv,.tsv,.txt,text/*">' +
-      '<label class="ce-chip" title="What separates the columns">' + I.cards + '<select data-sep aria-label="Columns separated by"><option value="auto">Columns: detect</option><option value="tab">Tab (Sheets, Excel, Anki)</option><option value="comma">Comma (CSV)</option><option value="semicolon">Semicolon</option><option value="pipe">Bar  |</option><option value="dash">Dash  -  (Quizlet)</option></select>' + I.chev + '</label>' +
+      '<label class="ce-chip" title="What separates the columns">' + I.cards + '<select data-sep aria-label="Columns separated by"><option value="auto">Columns: detect</option><option value="lines">One side per line</option><option value="tab">Tab (Sheets, Excel, Anki)</option><option value="comma">Comma (CSV)</option><option value="semicolon">Semicolon</option><option value="pipe">Bar  |</option><option value="dash">Dash  -  (Quizlet)</option></select>' + I.chev + '</label>' +
       '<label class="imp-check"><input type="checkbox" data-head> First row is headings</label></div>' +
       '<div data-preview class="imp-prev"></div>' +
       '<div class="imp-opts"><div class="imp-opt-h">For every card</div>' +
@@ -3823,9 +3841,9 @@ var TextUtil = (function () {
       go.disabled = !st.pairs.length;
       go.textContent = st.pairs.length ? 'Import ' + plural(st.pairs.length, 'card') : 'Import';
       var extra = st.pairs.reduce(function (n, p) { return Math.max(n, p.length - 2); }, 0);
-      var found = sepSel.value === 'auto' && ta.value.trim() ? { tab: 'tabs', comma: 'commas', semicolon: 'semicolons', pipe: 'bars', dash: 'dashes' }[TextUtil.detectSep(ta.value)] : '';
+      var found = sepSel.value === 'auto' && ta.value.trim() ? { tab: 'Spreadsheet cells, one per side', comma: 'Split by commas', semicolon: 'Split by semicolons', pipe: 'Split by bars', dash: 'Split by dashes', lines: 'One side per line' }[TextUtil.detectSep(ta.value)] : '';
       $('[data-preview]', E).innerHTML = st.pairs.length ?
-        '<div class="imp-sum">' + plural(st.pairs.length, 'card') + (extra ? ', up to ' + plural(extra, 'extra side') : '') + (found ? ' &middot; split by ' + found : '') + '</div>' +
+        '<div class="imp-sum"><span>' + plural(st.pairs.length, 'card') + '</span>' + (extra ? ' &middot; <span>' + (extra === 1 ? 'Up to 1 extra side' : 'Up to ' + extra + ' extra sides') + '</span>' : '') + (found ? ' &middot; <span>' + found + '</span>' : '') + '</div>' +
         '<div class="imp-table"><table><thead><tr><th>Front</th><th>Back</th>' + (extra ? '<th>Extra sides</th>' : '') + '</tr></thead><tbody>' +
         st.pairs.slice(0, 30).map(function (p) { return '<tr><td>' + esc(p[0]) + '</td><td>' + esc(p[1]) + '</td>' + (extra ? '<td>' + esc(p.slice(2).filter(Boolean).join(' / ')) + '</td>' : '') + '</tr>'; }).join('') +
         '</tbody></table></div>' + (st.pairs.length > 30 ? '<p class="hint" style="margin:6px 0 0">and ' + (st.pairs.length - 30) + ' more</p>' : '') : '';
