@@ -363,6 +363,14 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .ce-speak { display: grid; gap: 10px; }
 .ce-speak-when { justify-self: start; margin-left: 48px; }
 .bulk-t { display: inline-flex; align-items: center; gap: 6px; }
+.ce-box { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+.ce-side-opts { display: grid; gap: 2px; align-content: start; }
+.ce-opt { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: 600 13px var(--font); cursor: pointer; white-space: nowrap; text-align: left; }
+.ce-opt:hover { background: var(--surface-2); color: var(--text); }
+.ce-opt svg { width: 16px; height: 16px; flex: none; }
+@media (max-width: 600px) { .ce-opt span { display: none; } .ce-opt { width: 36px; height: 32px; justify-content: center; padding: 0; } }
+.ce-url { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.ce-url .input { flex: 1; min-width: 0; height: 38px; }
 .ce-more-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .ce-extras { display: grid; gap: 12px; }
 .ce-extras:empty { display: none; }
@@ -1461,6 +1469,7 @@ var TextUtil = (function () {
     folder: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
     chev: svg('<path d="m6 9 6 6 6-6"/>'),
     up: svg('<path d="m18 15-6-6-6 6"/>'),
+    link: svg('<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'),
     mic: svg('<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
     swap: svg('<path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/>'),
     lock: svg('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
@@ -1665,7 +1674,9 @@ var TextUtil = (function () {
   function cardById(id) { return S.cards.filter(function (c) { return c.id === id; })[0] || null; }
   function cardsOf(deckId) { return S.cards.filter(function (c) { return c.deckId === deckId; }); }
   function prog(card, dir) { return SRS.normalize(card.srs && card.srs[dir]); }
-  function dirsOf(card) { return card.reverse && card.type !== 'tf' ? ['f', 'r'] : ['f']; }
+  /* One score per card. "Test both ways" only changes which side is asked: it alternates each time the card comes up. */
+  function dirsOf(card) { return ['f']; }
+  function bothWays(card) { return !!card.reverse && card.type !== 'tf'; }
   function newLimit() { var n = S.user ? Number(S.user.settings.newPerDay) : 20; return isNaN(n) ? 20 : n; }
 
   var DEFAULT_FACES = { 1: '🤩', 2: '😐', 3: '😓', 4: '🥶' };
@@ -2093,6 +2104,8 @@ var TextUtil = (function () {
     catalog: 'Make an account to browse public decks.', catalogPreview: 'Make an account to browse public decks.', copyPublic: 'Make an account to copy public decks.',
     sendDecks: 'Make an account to share decks.', inviteCollaborator: 'Make an account to share decks.', setPublic: 'Make an account to share decks.', deckMembers: 'Make an account to share decks.'
   };
+  /* Without an account only image links can be kept (files need the server). */
+  function guestMedia(m) { return m && typeof m.url === 'string' && /^https:[/][/]\S{3,1000}$/i.test(m.url) ? { url: m.url } : {}; }
   var GUEST_API = {
     bootstrap: function (d) { return d; },
     logout: function () { return { ok: true }; },
@@ -2121,17 +2134,18 @@ var TextUtil = (function () {
     },
     saveCard: function (d, a) {
       var type = ['basic', 'typed', 'choice', 'tf'].indexOf(a.type) >= 0 ? a.type : 'basic';
-      var front = guestText(a.front, 5000, 'Front'), back = guestText(a.back, 5000, 'Back'), extras = exItems({ extras: (Array.isArray(a.extras) ? a.extras : []).slice(0, 20) }).map(function (x, i) { return { t: guestText(x.t, 5000, 'Side ' + (i + 3)), m: {} }; }).filter(function (x) { return x.t.trim(); }), hint = guestText(a.hint, 500, 'Hint'), speak = a.speak === 'flip' ? 'flip' : a.speak ? 'all' : '';
+      var front = guestText(a.front, 5000, 'Front'), back = guestText(a.back, 5000, 'Back'), extras = exItems({ extras: (Array.isArray(a.extras) ? a.extras : []).slice(0, 20) }).map(function (x, i) { return { t: guestText(x.t, 5000, 'Side ' + (i + 3)), m: guestMedia(x.m) }; }).filter(function (x) { return x.t.trim() || x.m.url; }), hint = guestText(a.hint, 500, 'Hint'), speak = a.speak === 'flip' ? 'flip' : a.speak ? 'all' : '';
       if (!front.trim()) throw new Error('The front of the card is empty.');
       guestDeck(d, a.deckId);
       if (a.id) {
         var c = d.cards.filter(function (x) { return x.id === a.id; })[0];
         if (!c) throw new Error('Card not found.');
+        c.frontMedia = guestMedia(a.frontMedia); c.backMedia = guestMedia(a.backMedia);
         c.type = type; c.reverse = !!a.reverse; c.front = front; c.back = back; c.extras = extras; delete c.middle; c.hint = hint; c.speak = speak; c.deckId = a.deckId; c.updated = Date.now();
         if (!c.reverse) delete c.srs.r;
         return c;
       }
-      var card = { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: front, back: back, extras: extras, hint: hint, speak: speak, frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
+      var card = { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: front, back: back, extras: extras, hint: hint, speak: speak, frontMedia: guestMedia(a.frontMedia), backMedia: guestMedia(a.backMedia), srs: {}, updated: Date.now() };
       d.cards.push(card);
       return card;
     },
@@ -3267,10 +3281,13 @@ var TextUtil = (function () {
       hint: card ? !!card.hint : false
     };
     var deckOpts = S.decks.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === (card ? card.deckId : deckId) ? ' selected' : '') + '>' + esc(d.name) + '</option>'; }).join('');
-    function mediaBtns(key) {
-      return '<span class="row" style="gap:2px"><button class="btn ghost icon-btn sm" data-addimg="' + key + '" title="Add image" aria-label="Add image">' + I.image + '</button>' +
-        '<button class="btn ghost icon-btn sm" data-addaudio="' + key + '" title="Add a sound file" aria-label="Add a sound file">' + I.audio + '</button>' +
-        '<button class="btn ghost icon-btn sm ce-mic" data-rec="' + key + '" title="Record a sound" aria-label="Record a sound">' + I.mic + '</button></span>';
+    /* The text box with its options beside it: Image, Sound, Image link. */
+    function sideBox(key, attrs) {
+      return '<div class="ce-box"><textarea class="textarea ce-text" ' + attrs + ' rows="2" maxlength="5000"></textarea><div class="ce-side-opts">' +
+        '<button class="ce-opt" data-addimg="' + key + '" title="Add an image from this device" aria-label="Add image">' + I.image + '<span>Image</span></button>' +
+        '<button class="ce-opt" data-addaudio="' + key + '" title="Add a sound file" aria-label="Add sound">' + I.audio + '<span>Sound</span></button>' +
+        '<button class="ce-opt" data-addurl="' + key + '" title="Use an image from a web link" aria-label="Image link">' + I.link + '<span>Image link</span></button></div></div>' +
+        '<div class="ce-url" data-url-row="' + key + '" hidden><input class="input" type="url" inputmode="url" placeholder="Paste an image link" data-url-in><button class="btn sm primary" data-url-ok>Add</button><button class="btn sm ghost" data-url-x>Cancel</button></div>';
     }
     var m = modal(card ? 'Edit card' : 'New card',
       '<div class="ce-top">' +
@@ -3279,11 +3296,11 @@ var TextUtil = (function () {
       '<button class="info-btn ce-info" data-type-info aria-label="About this card type" title="About this card type">i</button></div>' +
       '<p class="hint ce-type-hint" data-type-hint hidden></p>' +
       '<div class="ce-fields">' +
-      '<div class="ce-field"><div class="ce-lab"><span>Front</span>' + mediaBtns('f') + '</div>' +
-      '<textarea class="textarea ce-text" data-text="f" rows="2" maxlength="5000" enterkeyhint="next" autofocus></textarea><div class="ce-dup" data-dup hidden></div><div class="media-row" data-media-row="f"></div></div>' +
+      '<div class="ce-field"><div class="ce-lab"><span>Front</span></div>' +
+      sideBox('f', 'data-text="f" enterkeyhint="next" autofocus') + '<div class="ce-dup" data-dup hidden></div><div class="media-row" data-media-row="f"></div></div>' +
       '<div class="ce-swap-row"><button class="ce-swap" data-swap title="Swap front and back" aria-label="Swap front and back">' + I.swap + '</button></div>' +
-      '<div class="ce-field"><div class="ce-lab"><span>Back</span>' + mediaBtns('b') + '</div>' +
-      '<textarea class="textarea ce-text" data-text="b" rows="2" maxlength="5000"></textarea><div class="media-row" data-media-row="b"></div></div>' +
+      '<div class="ce-field"><div class="ce-lab"><span>Back</span></div>' +
+      sideBox('b', 'data-text="b"') + '<div class="media-row" data-media-row="b"></div></div>' +
       '<div class="ce-extras" data-extras></div>' +
       '<div><button class="ce-link" data-extra-add title="Extra sides show after the answer, for notes or more information">' + I.plus + 'Add side</button></div>' +
       '<div class="ce-field" data-hint-field' + (st.hint ? '' : ' hidden') + '><div class="ce-lab"><span>Hint <small>shown only if they ask, before flipping</small></span><button class="btn ghost icon-btn sm" data-hint-off title="Remove the hint" aria-label="Remove the hint">' + I.x + '</button></div>' +
@@ -3317,11 +3334,11 @@ var TextUtil = (function () {
     function paintExtras(focusAt) {
       var n = st.extras.length;
       exBox.innerHTML = st.extras.map(function (t, i) {
-        return '<div class="ce-field ce-extra"><div class="ce-lab"><span>Side ' + (i + 3) + '</span><span class="row" style="gap:2px">' + mediaBtns('x' + i) + '<i class="ce-sep"></i>' +
+        return '<div class="ce-field ce-extra"><div class="ce-lab"><span>Side ' + (i + 3) + '</span><span class="row" style="gap:2px">' +
           '<button class="btn ghost icon-btn sm" data-x-up="' + i + '" title="Move up" aria-label="Move side ' + (i + 3) + ' up"' + (i ? '' : ' disabled') + '>' + I.up + '</button>' +
           '<button class="btn ghost icon-btn sm" data-x-down="' + i + '" title="Move down" aria-label="Move side ' + (i + 3) + ' down"' + (i < n - 1 ? '' : ' disabled') + '>' + I.chev + '</button>' +
           '<button class="btn ghost icon-btn sm" data-x-rm="' + i + '" title="Remove this side" aria-label="Remove side ' + (i + 3) + '">' + I.x + '</button></span></div>' +
-          '<textarea class="textarea ce-text" data-text="x" data-key="x' + i + '" rows="2" maxlength="5000"></textarea><div class="media-row" data-media-row="x' + i + '"></div></div>';
+          sideBox('x' + i, 'data-text="x" data-key="x' + i + '"') + '<div class="media-row" data-media-row="x' + i + '"></div></div>';
       }).join('');
       exAreas().forEach(function (ta, i) { ta.value = st.extras[i].t; wireBox(ta); setTimeout(function () { grow(ta); }, 0); });
       wireMediaBtns(exBox); paintMedia();
@@ -3384,6 +3401,7 @@ var TextUtil = (function () {
         var md = mediaOf(k), row = $('[data-media-row="' + k + '"]', E);
         if (!row) return;
         row.innerHTML = (md.img ? '<div class="thumb"><img data-media="' + esc(md.img) + '" alt=""><button data-rm="' + k + ':img" aria-label="Remove image">' + I.x + '</button></div>' : '') +
+          (md.url ? '<div class="thumb"><img src="' + esc(md.url) + '" alt="" referrerpolicy="no-referrer"><button data-rm="' + k + ':url" aria-label="Remove image">' + I.x + '</button></div>' : '') +
           (md.audio ? '<div class="thumb"><span class="row" style="gap:6px">' + I.audio.replace('<svg', '<svg width="16" height="16"') + 'Audio</span><button data-rm="' + k + ':audio" aria-label="Remove audio">' + I.x + '</button></div>' : '');
         hydrate(row);
         $$('[data-rm]', row).forEach(function (b) {
@@ -3397,29 +3415,7 @@ var TextUtil = (function () {
       var row = $('[data-media-row="' + k + '"]', E);
       var spin = el('<div class="thumb"><span class="spinner"></span></div>');
       row.appendChild(spin);
-      uploadFile(file).then(function (r) { mediaOf(k)[r.kind] = r.id; paintMedia(); }, function (e) { spin.remove(); $('[data-err]', E).textContent = e.message; });
-    }
-    /* Record a sound with the microphone (up to a minute); it is saved like an added sound file. */
-    var rec = null;
-    function toggleRec(k, btn) {
-      var err = $('[data-err]', E);
-      if (rec) { rec.stop(); return; }
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { err.textContent = 'Recording is not available in this browser.'; return; }
-      err.textContent = '';
-      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-        var chunks = [], mr = new MediaRecorder(stream), began = Date.now();
-        rec = mr; btn.classList.add('rec'); btn.title = 'Stop recording';
-        var watch = setInterval(function () { if ((Date.now() - began > 60000 || !document.body.contains(btn)) && mr.state === 'recording') mr.stop(); }, 400);
-        mr.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
-        mr.onstop = function () {
-          clearInterval(watch); stream.getTracks().forEach(function (t) { t.stop(); });
-          rec = null; btn.classList.remove('rec'); btn.title = 'Record a sound';
-          if (!document.body.contains(btn) || !chunks.length) return;
-          var type = String(mr.mimeType || chunks[0].type || 'audio/webm').split(';')[0];
-          attach(new File(chunks, 'recording', { type: type }), k);
-        };
-        mr.start();
-      }, function () { err.textContent = 'Allow the microphone to record a sound.'; });
+      uploadFile(file).then(function (r) { var md = mediaOf(k); md[r.kind] = r.id; if (r.kind === 'img') delete md.url; paintMedia(); }, function (e) { spin.remove(); $('[data-err]', E).textContent = e.message; });
     }
     function wireMediaBtns(root) {
       $$('[data-addimg],[data-addaudio]', root).forEach(function (b) {
@@ -3429,7 +3425,25 @@ var TextUtil = (function () {
           fileInput.click();
         });
       });
-      $$('[data-rec]', root).forEach(function (b) { b.addEventListener('click', function () { toggleRec(b.getAttribute('data-rec'), b); }); });
+      $$('[data-addurl]', root).forEach(function (b) {
+        b.addEventListener('click', function () {
+          var k = b.getAttribute('data-addurl'), row = $('[data-url-row="' + k + '"]', E);
+          row.hidden = !row.hidden;
+          if (!row.hidden) { var inp = $('[data-url-in]', row); inp.value = mediaOf(k).url || ''; inp.focus(); }
+        });
+      });
+      $$('[data-url-row]', root).forEach(function (row) {
+        var k = row.getAttribute('data-url-row'), inp = $('[data-url-in]', row);
+        function addUrl() {
+          var u = inp.value.trim(), err = $('[data-err]', E);
+          if (!/^https:[/][/][^\s"'<>]{3,1000}$/i.test(u)) { err.textContent = 'Use a secure web link, one that starts with https'; inp.focus(); return; }
+          err.textContent = '';
+          var md = mediaOf(k); md.url = u; delete md.img; row.hidden = true; paintMedia();
+        }
+        $('[data-url-ok]', row).addEventListener('click', addUrl);
+        $('[data-url-x]', row).addEventListener('click', function () { row.hidden = true; });
+        inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } });
+      });
     }
     wireMediaBtns($('.ce-fields', E).querySelectorAll('.ce-field:not(.ce-extra)')[0]);
     wireMediaBtns($('.ce-fields', E).querySelectorAll('.ce-field:not(.ce-extra)')[1]);
@@ -4054,7 +4068,7 @@ var TextUtil = (function () {
   function testCard(d, editor) {
     var c = { id: 'preview-card', deckId: d.deckId, type: d.type, reverse: !!d.reverse, front: d.front, back: d.back, extras: JSON.parse(JSON.stringify(d.extras || [])), hint: d.hint, speak: d.speak,
       frontMedia: Object.assign({}, d.frontMedia), backMedia: Object.assign({}, d.backMedia), srs: {} };
-    var items = [{ card: c, dir: 'f' }].concat(c.reverse ? [{ card: c, dir: 'r' }] : []);
+    var items = [{ card: c, dir: 'f', show: 'f', fixed: true }].concat(bothWays(c) ? [{ card: c, dir: 'f', show: 'r', fixed: true }] : []);
     previewBack = { view: S.view, study: S.study, deckId: S.deckId, editor: editor, scroll: window.scrollY };
     editor.el.style.display = 'none';
     openModals.splice(openModals.indexOf(editor), 1);
@@ -4087,6 +4101,7 @@ var TextUtil = (function () {
     else if (s.fresh.length) item = s.fresh.shift();
     else if (s.learn.length && prog(s.learn[0].card, s.learn[0].dir).due <= now + 20 * SRS.MIN) item = s.learn.shift();
     if (item && !s.preview && !cardById(item.card.id)) return nextItem();
+    if (item && !item.fixed) item.show = !bothWays(item.card) ? 'f' : item.show === 'f' ? 'r' : item.show === 'r' ? 'f' : (Math.random() < 0.5 ? 'f' : 'r');
     s.cur = item ? { item: item, revealed: false, verdict: null, typed: '', picked: null, options: null } : null;
     if (item && item.card.type === 'choice') s.cur.options = choiceOptions(item);
     if (s.cur) preload();
@@ -4098,13 +4113,13 @@ var TextUtil = (function () {
     });
   }
   function qa(item) {
-    var c = item.card, f = item.dir === 'f';
+    var c = item.card, f = (item.show || 'f') === 'f';
     return { q: f ? c.front : c.back, a: f ? c.back : c.front, ex: exItems(c).filter(function (x) { return x.t.trim() || x.m.img || x.m.audio; }), hint: f ? String(c.hint || '').trim() : '', qm: (f ? c.frontMedia : c.backMedia) || {}, am: (f ? c.backMedia : c.frontMedia) || {} };
   }
   function choiceOptions(item) {
     var x = qa(item), right = x.a;
     var seen = {}; seen[TextUtil.fold(right)] = 1;
-    var pool = shuffle(cardsOf(item.card.deckId).filter(function (c) { return c.id !== item.card.id; }).map(function (c) { return item.dir === 'f' ? c.back : c.front; }))
+    var pool = shuffle(cardsOf(item.card.deckId).filter(function (c) { return c.id !== item.card.id; }).map(function (c) { return (item.show || 'f') === 'f' ? c.back : c.front; }))
       .filter(function (t) { var k = TextUtil.fold(t); if (!k || seen[k]) return false; seen[k] = 1; return true; }).slice(0, 3);
     if (pool.length < 1) return null;
     return shuffle(pool.concat([right])).map(function (t) { return { text: t, right: t === right }; });
@@ -4114,7 +4129,7 @@ var TextUtil = (function () {
     return { n: s.fresh.length, l: s.learn.length, r: s.review.length + (s.later ? s.later.length : 0) };
   }
   function mediaHtml(m) {
-    return (m.img ? '<img class="face-img" data-media="' + esc(m.img) + '" alt="">' : '') +
+    return (m.img ? '<img class="face-img" data-media="' + esc(m.img) + '" alt="">' : m.url ? '<img class="face-img" src="' + esc(m.url) + '" alt="" referrerpolicy="no-referrer">' : '') +
       (m.audio ? '<button class="audio-btn" data-audio="' + esc(m.audio) + '" aria-label="Play audio">' + I.audio + '</button>' : '');
   }
   function textHtml(t) {
@@ -4131,7 +4146,7 @@ var TextUtil = (function () {
     var item = s.cur.item, x = qa(item), c = item.card, p = prog(c, item.dir);
     var kind = cardKind(c, s);
     var curKey = p.s === 'new' ? 'n' : p.s === 'learn' ? 'l' : 'r';
-    var label = (item.dir === 'r' ? 'Reverse' : 'Front') + (S.decks.length > 1 && s.title === 'All decks' ? ' &middot; ' + esc((deckById(c.deckId) || {}).name || '') : '');
+    var label = (item.show === 'r' ? 'Back first' : 'Front') + (S.decks.length > 1 && s.title === 'All decks' ? ' &middot; ' + esc((deckById(c.deckId) || {}).name || '') : '');
 
     var sayBtn = c.speak && canSpeak() ? '<button class="say-btn" data-say title="Say it again" aria-label="Say it again">' + I.audio + '</button>' : '';
     var frontBody = '<div class="face-body">' + mediaHtml(x.qm) + textHtml(x.q) + (x.hint ? '<button class="hint-btn" data-hint-show>Show hint</button>' : '');
