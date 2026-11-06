@@ -222,6 +222,8 @@ img { max-width: 100%; }
 .deck::before { content: ''; position: absolute; left: 0; top: 0; right: 0; height: 3px; background: var(--c); opacity: .9; }
 .deck:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--c) 35%, var(--line)); }
 .deck .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 20%, transparent); }
+.share-mark { display: inline-grid; place-items: center; width: 1.15em; height: 1.15em; margin-left: 6px; vertical-align: -0.15em; opacity: .85; }
+.share-mark svg { width: 100%; height: 100%; }
 .deck h3 { margin: 14px 0 2px; font-size: 16.5px; font-weight: 650; letter-spacing: -.01em; overflow-wrap: anywhere; }
 .deck .meta { color: var(--muted); font-size: 13px; }
 .deck .counts { display: flex; gap: 6px; margin-top: auto; padding-top: 16px; flex-wrap: wrap; }
@@ -1548,6 +1550,7 @@ var TextUtil = (function () {
     folder: svg('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
     chev: svg('<path d="m6 9 6 6 6-6"/>'),
     up: svg('<path d="m18 15-6-6-6 6"/>'),
+    globe: svg('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
     link: svg('<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'),
     mic: svg('<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
     swap: svg('<path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4"/>'),
@@ -2937,7 +2940,7 @@ var TextUtil = (function () {
     var cards = xs.map(function (x, i) {
       var d = x.deck, dl = levelsOf([d.id]), kl = knownLabel(dl);
       return '<div class="wc' + (i >= WC_MAX ? ' extra' : '') + (safeImg(d.image) ? ' has-img' : '') + '" data-wdeck="' + esc(d.id) + '" style="--dc:' + esc(d.color) + coverStyle(d) + ';--i:' + i + ';--ci:' + Math.min(i, WC_MAX - 1) + ';z-index:' + (i + 1) + '">' +
-        '<div class="wtop"><b>' + esc(d.name) + '</b><span>' + (kl === 'New' || kl === 'Empty' ? kl : kl + ' known') + '</span></div>' +
+        '<div class="wtop"><b>' + esc(d.name) + shareMarks(d) + '</b><span>' + (kl === 'New' || kl === 'Empty' ? kl : kl + ' known') + '</span></div>' +
         '<div class="wbot"><small>' + plural(dl.total, 'card') + '</small>' + lvBar(dl) + '</div>' +
         '<label class="pick wpick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
         '<button class="wgo" aria-label="Study ' + esc(d.name) + '" title="Study this deck">' + I.play + '</button></div>';
@@ -3081,6 +3084,12 @@ var TextUtil = (function () {
     box.setAttribute('aria-expanded', open);
     $('.wstack', box).style.height = walletH(Number(box.getAttribute('data-n')), open) + 'px';
   }
+  /* Small marks next to a deck name: shared with other people, and public in Discover. */
+  function shareMarks(d) {
+    var shared = !d.mine ? 'Shared with you by ' + (d.ownerName || 'someone') : d.members ? 'Shared with ' + plural(d.members, 'person', 'people') : '';
+    return (shared ? '<i class="share-mark" title="' + esc(shared) + '" aria-label="' + esc(shared) + '">' + I.people + '</i>' : '') +
+      (d.public ? '<i class="share-mark" title="Public in Discover" aria-label="Public in Discover">' + I.globe + '</i>' : '');
+  }
   function deckTile(x) {
     var d = x.deck, st = x.st, fs = x.fs, mode = studyMode(), free = mode !== 'mission';
     var chips = !st.total ? '<span class="chip">Empty</span>' : free
@@ -3089,7 +3098,7 @@ var TextUtil = (function () {
     var canGo = free ? st.total > 0 : st.ready > 0;
     return '<div class="deck solid' + (safeImg(d.image) ? ' has-img' : '') + (x.on ? ' picked' : '') + '" role="button" tabindex="0" data-id="' + esc(d.id) + '" style="--c:' + esc(d.color) + coverStyle(d) + '">' +
       '<label class="pick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
-      '<span class="dot"></span><h3>' + esc(d.name) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
+      '<span class="dot"></span><h3>' + esc(d.name) + shareMarks(d) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
       '<div class="counts">' + chips + deckBadges(d) + '</div>' +
       (st.total ? '<div class="deck-bar">' + lvBar(levelsOf([d.id])) + '</div>' : '') +
       '<button class="go" aria-label="Study ' + esc(d.name) + '">' + (canGo ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
