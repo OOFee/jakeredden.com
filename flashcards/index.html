@@ -602,6 +602,7 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 
 /* folders: a wallet of deck cards that fans open in place */
 .decks { align-items: start; }
+.decks.packed { grid-auto-rows: 1px; row-gap: 0; }
 .wallet-tile { --fc: var(--accent); position: relative; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 14px 14px 16px; cursor: pointer; transition: border-color .3s, box-shadow .3s, transform .25s var(--ease); }
 .wallet-tile:hover { box-shadow: var(--shadow-lg); border-color: color-mix(in srgb, var(--fc) 35%, var(--line)); }
 .wallet-tile.open { border-color: color-mix(in srgb, var(--fc) 55%, var(--line)); cursor: default; }
@@ -2721,6 +2722,7 @@ var TextUtil = (function () {
       });
     });
     wireDrag(app);
+    packDecks(app);
     $$('.wallet-tile', app).forEach(function (box) {
       var f = box.getAttribute('data-folder');
       var ids = S.decks.filter(function (d) { return folderOf(d.id) === f; }).map(function (d) { return d.id; });
@@ -2976,6 +2978,24 @@ var TextUtil = (function () {
     if (!ghost) return;
     cancelAnimationFrame(ghost.frame);
     ghost.el.remove(); ghost = null;
+  }
+  /* Masonry: each tile takes only the height it needs, so a short tile sits right under the one above it
+     instead of waiting for the tallest tile in its row. Tiles keep their order; heights are watched, so an
+     opening folder pushes only its own column down. */
+  var packWatch = null;
+  function packDecks(app) {
+    var grid = $('.decks', app);
+    if (packWatch) { packWatch.disconnect(); packWatch = null; }
+    if (!grid) return;
+    var gap = 14;
+    function fit(el) { el.style.gridRowEnd = 'span ' + Math.max(1, Math.round(el.offsetHeight + gap)); }
+    var tiles = Array.prototype.slice.call(grid.children);
+    tiles.forEach(fit);
+    grid.classList.add('packed');
+    if (window.ResizeObserver) {
+      packWatch = new ResizeObserver(function (list) { list.forEach(function (e) { fit(e.target); }); });
+      tiles.forEach(function (t) { packWatch.observe(t); });
+    }
   }
   /* Drag a deck onto a folder to move it there; drop it on the open grid to take it out of its folder. */
   function wireDrag(app) {
