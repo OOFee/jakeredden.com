@@ -386,6 +386,17 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .sh-pubcat .ce-chip select { flex: 1; }
 .set-lang .ce-chip { width: 100%; justify-content: space-between; }
 .set-lang .ce-chip select { flex: 1; }
+.imp-paste { min-height: 140px; font-family: ui-monospace, monospace; font-size: 13px; }
+.imp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 12px 0; }
+.imp-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.imp-sum { font-size: 13px; font-weight: 650; color: var(--muted); margin-bottom: 8px; }
+.imp-table { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+.imp-table table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.imp-table th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-size: 12px; font-weight: 700; color: var(--muted); padding: 8px 12px; }
+.imp-table td { padding: 8px 12px; border-top: 1px solid var(--line); vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; }
+.imp-opts { display: grid; gap: 14px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.imp-opt-h { font-size: 14px; font-weight: 650; }
+.imp-opts .ce-speak-when { margin-left: 48px; }
 .ce-more-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .ce-extras { display: grid; gap: 12px; }
 .ce-extras:empty { display: none; }
@@ -1415,30 +1426,62 @@ var TextUtil = (function () {
   }
 
   /* Parse pasted text into [front, back] pairs. Accepts tab, then ";" then "," as separators. */
-  function parsePairs(text) {
-    var lines = String(text || '').replace(/\r\n?/g, '\n').split('\n');
-    var sep = null;
-    var sample = lines.filter(function (l) { return l.trim(); }).slice(0, 10);
-    [ '\t', ';', ',' ].some(function (c) {
-      if (sample.length && sample.every(function (l) { return l.indexOf(c) >= 0; })) { sep = c; return true; }
-      return false;
-    });
-    if (!sep) sep = '\t';
-    var out = [];
-    lines.forEach(function (l) {
-      if (!l.trim()) return;
-      var i = l.indexOf(sep);
-      var front = i < 0 ? l : l.slice(0, i);
-      var back = i < 0 ? '' : l.slice(i + 1);
-      front = front.trim(); back = back.trim();
-      /* More tab columns (from a spreadsheet): front, back, then extra sides. */
-      if (sep === '\t' && i >= 0 && back.indexOf('\t') >= 0) {
-        var cols = back.split('\t').map(function (x) { return x.trim(); });
-        if (front || cols[0]) out.push([front].concat(cols));
-        return;
+  /* Read pasted or uploaded cards. One card per line (quoted cells may run over lines).
+     opts.sep: 'auto' | 'tab' | 'comma' | 'semicolon' | 'pipe' | 'dash'. opts.header: true, false, or leave out to guess.
+     Returns rows of [front, back, extra side, ...]. Auto keeps commas, semicolons and dashes to two columns,
+     because answers often contain them; tabs and | split every column. Lines starting with # are skipped
+     (Anki exports put settings there). */
+  var SEPS = { tab: '\t', comma: ',', semicolon: ';', pipe: '|', dash: ' - ' };
+  var HEADS = ['front', 'back', 'term', 'definition', 'question', 'answer', 'word', 'meaning', 'side 1', 'side 2', 'reading', 'notes', 'english'];
+  function detectSep(text) {
+    var sample = String(text || '').replace(/\r\n?/g, '\n').split('\n').filter(function (l) { return l.trim() && l.charAt(0) !== '#'; }).slice(0, 12);
+    var order = ['tab', 'pipe', 'semicolon', 'comma', 'dash'];
+    for (var i = 0; i < order.length; i++) {
+      var c = SEPS[order[i]];
+      if (sample.length && sample.every(function (l) { return l.indexOf(c) >= 0; })) return order[i];
+    }
+    return 'tab';
+  }
+  function splitRows(text, sep) {
+    var rows = [], row = [], cell = '', q = false, i = 0, t = String(text || '').replace(/\r\n?/g, '\n');
+    var n = t.length, atStart = true;
+    function endCell() { row.push(cell); cell = ''; atStart = true; }
+    function endRow() { endCell(); rows.push(row); row = []; }
+    while (i < n) {
+      var ch = t.charAt(i);
+      if (q) {
+        if (ch === '"' && t.charAt(i + 1) === '"') { cell += '"'; i += 2; continue; }
+        if (ch === '"') { q = false; i++; continue; }
+        cell += ch; i++; continue;
       }
-      if (front || back) out.push([front, back]);
+      if (ch === '"' && atStart && sep !== ' - ') { q = true; atStart = false; i++; continue; }
+      if (t.substr(i, sep.length) === sep) { endCell(); i += sep.length; continue; }
+      if (ch === '\n') { endRow(); i++; continue; }
+      cell += ch; if (ch !== ' ') atStart = false; i++;
+    }
+    if (cell || row.length) endRow();
+    return rows;
+  }
+  function parsePairs(text, opts) {
+    opts = opts || {};
+    var mode = opts.sep && opts.sep !== 'auto' ? opts.sep : detectSep(text);
+    var auto = !opts.sep || opts.sep === 'auto';
+    var keepTwo = auto && (mode === 'comma' || mode === 'semicolon' || mode === 'dash');
+    var sep = SEPS[mode] || '\t';
+    var out = [];
+    splitRows(text, sep).forEach(function (cells) {
+      if (cells.length === 1 && !cells[0].trim()) return;
+      if (String(cells[0]).replace(/^\s+/, '').charAt(0) === '#' && cells.length === 1) return;
+      if (/^#(separator|html|tags|columns|notetype|deck)/i.test(String(cells[0]).trim())) return;
+      if (keepTwo && cells.length > 2) cells = [cells[0], cells.slice(1).join(sep)];
+      cells = cells.map(function (x) { return String(x).trim(); });
+      while (cells.length > 2 && !cells[cells.length - 1]) cells.pop();
+      if (cells.length < 2) cells.push('');
+      if (cells[0] || cells[1]) out.push(cells);
     });
+    var head = opts.header;
+    if (head == null && out.length > 1) head = HEADS.indexOf(fold(out[0][0])) >= 0 && HEADS.indexOf(fold(String(out[0][1]).split(sep)[0])) >= 0;
+    if (head) out.shift();
     return out;
   }
 
@@ -1462,7 +1505,7 @@ var TextUtil = (function () {
     return null;
   }
 
-  return { fold: fold, lev: lev, check: check, parsePairs: parsePairs, guard: guard, LANGS: LANGS, SUBJECTS: SUBJECTS, lang: lang, category: category };
+  return { fold: fold, lev: lev, check: check, parsePairs: parsePairs, detectSep: detectSep, guard: guard, LANGS: LANGS, SUBJECTS: SUBJECTS, lang: lang, category: category };
 })();
 
 /* Flash Cards client. Plain JS, no build-time framework.
@@ -2238,7 +2281,7 @@ var TextUtil = (function () {
       guestDeck(d, a.deckId);
       var type = ['basic', 'typed', 'choice', 'tf'].indexOf(a.type) >= 0 ? a.type : 'basic';
       var cards = (a.pairs || []).filter(function (p) { return Array.isArray(p) && String(p[0] || '').trim(); }).map(function (p) {
-        return { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, front: guestText(p[0], 5000, 'Front'), back: guestText(p[1], 5000, 'Back'), extras: p.slice(2, 22).map(function (t) { return { t: guestText(t, 5000, 'Side'), m: {} }; }).filter(function (x) { return x.t.trim(); }), hint: '', frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
+        return { id: guestId(), deckId: a.deckId, type: type, reverse: !!a.reverse, speak: a.speak === 'flip' ? 'flip' : a.speak ? 'all' : '', front: guestText(p[0], 5000, 'Front'), back: guestText(p[1], 5000, 'Back'), extras: p.slice(2, 22).map(function (t) { return { t: guestText(t, 5000, 'Side'), m: {} }; }).filter(function (x) { return x.t.trim(); }), hint: '', frontMedia: {}, backMedia: {}, srs: {}, updated: Date.now() };
       });
       d.cards = d.cards.concat(cards);
       return { cards: cards };
@@ -3614,33 +3657,66 @@ var TextUtil = (function () {
 
   /* ================= import ================= */
   function openImport(deckId) {
-    var st = { type: 'basic', reverse: false, pairs: [] };
+    var st = { type: ls('fc.lastType') || 'basic', pairs: [] };
+    var deck = deckById(deckId);
     var m = modal('Import cards',
-      '<p class="hint" style="margin:0 0 12px">Paste two columns, front then back, one card per line. Copying from Google Sheets or Excel works, as do commas or semicolons. From Sheets or Excel, any columns after the back become extra sides (for example kanji, English, reading).</p>' +
-      '<textarea class="textarea" data-paste style="min-height:160px;font-family:ui-monospace,monospace;font-size:13px" placeholder="hola\thello&#10;gato\tcat" autofocus></textarea>' +
-      '<div class="row" style="margin:12px 0"><button class="btn sm" data-csv>' + I.upload + 'Choose a CSV file</button><input type="file" data-file hidden accept=".csv,.tsv,.txt,text/*"></div>' +
-      '<div class="row" style="justify-content:space-between;margin-bottom:12px"><div class="seg" data-type><button data-t="basic" class="on">Flip</button><button data-t="typed">Type answer</button><button data-t="choice">Multiple choice</button><button data-t="tf">True / false</button></div>' +
-      '<label class="switch sw-2"><input type="checkbox" data-rev><i></i><span>Test both ways<small>Also shows the back and asks you for the front</small></span></label></div>' +
-      '<div data-preview></div><div class="error" data-err></div>',
+      '<p class="hint" style="margin:0 0 12px">One card per line: front, then back, then any extra sides. Paste from Google Sheets, Excel, Quizlet or an Anki text export, or choose a file.</p>' +
+      '<textarea class="textarea imp-paste" data-paste placeholder="hola&#9;hello&#10;gato&#9;cat" autofocus></textarea>' +
+      '<div class="imp-bar"><button class="btn sm" data-csv>' + I.upload + 'Choose a file</button><input type="file" data-file hidden accept=".csv,.tsv,.txt,text/*">' +
+      '<label class="ce-chip" title="What separates the columns">' + I.cards + '<select data-sep aria-label="Columns separated by"><option value="auto">Columns: detect</option><option value="tab">Tab (Sheets, Excel, Anki)</option><option value="comma">Comma (CSV)</option><option value="semicolon">Semicolon</option><option value="pipe">Bar  |</option><option value="dash">Dash  -  (Quizlet)</option></select>' + I.chev + '</label>' +
+      '<label class="imp-check"><input type="checkbox" data-head> First row is headings</label></div>' +
+      '<div data-preview class="imp-prev"></div>' +
+      '<div class="imp-opts"><div class="imp-opt-h">For every card</div>' +
+      '<div class="bulk-row"><span><span class="bulk-t">Card type <button class="info-btn" data-type-info aria-label="About card types" title="About card types">i</button></span></span><label class="ce-chip">' + I.cards + '<select data-type-sel aria-label="Card type"><option value="basic">Flip</option><option value="typed">Type the answer</option><option value="choice">Multiple choice</option><option value="tf">True or false</option></select>' + I.chev + '</label></div>' +
+      '<p class="hint" data-type-hint hidden style="margin:-4px 0 0"></p>' +
+      '<label class="switch sw-2"><input type="checkbox" data-rev><i></i><span>Test both ways<small>Also shows the back and asks you for the front</small></span></label>' +
+      (canSpeak() ? '<div class="ce-speak"><label class="switch sw-2"><input type="checkbox" data-speak><i></i><span>Read aloud<small>The device voice reads the card</small></span></label>' +
+        '<label class="ce-chip ce-speak-when" data-speak-when-box hidden>' + I.audio + '<select data-speak-when aria-label="When to read aloud"><option value="all">Every side, from the start</option><option value="flip">Only after the flip</option></select>' + I.chev + '</label></div>' : '') +
+      (deck && deck.mine && !deck.category ? '<div class="bulk-row"><span>Deck category<small>Optional. A language picks the right voice.</small></span><label class="ce-chip">' + I.folder + '<select data-imp-cat aria-label="Deck category">' + catOptions('', 'No category') + '</select>' + I.chev + '</label></div>' : '') +
+      '</div><div class="error" data-err></div>',
       '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-go disabled>Import</button>', { wide: true });
-    var E = m.el, ta = $('[data-paste]', E), go = $('[data-go]', E);
+    var E = m.el, ta = $('[data-paste]', E), go = $('[data-go]', E), sepSel = $('[data-sep]', E), head = $('[data-head]', E), headTouched = false;
+    var typeSel = $('[data-type-sel]', E); typeSel.value = st.type;
+    var sp = $('[data-speak]', E), spWhen = $('[data-speak-when]', E);
+    if (sp) sp.addEventListener('change', function () { $('[data-speak-when-box]', E).hidden = !sp.checked; });
+    function paintType() { $('[data-type-hint]', E).textContent = TYPE_HINTS[typeSel.value]; }
+    typeSel.addEventListener('change', function () { st.type = typeSel.value; paintType(); });
+    $('[data-type-info]', E).addEventListener('click', function () { var h = $('[data-type-hint]', E); h.hidden = !h.hidden; });
+    paintType();
     function update() {
-      st.pairs = TextUtil.parsePairs(ta.value);
+      var opts = { sep: sepSel.value };
+      if (headTouched) opts.header = head.checked;
+      st.pairs = TextUtil.parsePairs(ta.value, opts);
+      if (!headTouched) {
+        var all = TextUtil.parsePairs(ta.value, { sep: sepSel.value, header: false });
+        head.checked = all.length > st.pairs.length;
+      }
       go.disabled = !st.pairs.length;
       go.textContent = st.pairs.length ? 'Import ' + plural(st.pairs.length, 'card') : 'Import';
-      $('[data-preview]', E).innerHTML = st.pairs.length ? '<div class="preview-list">' + st.pairs.slice(0, 50).map(function (p) { return '<div><span>' + esc(p[0]) + (p.length > 2 ? ' <small style="color:var(--muted)">' + esc(p.slice(2).filter(Boolean).join(', ')) + '</small>' : '') + '</span><span style="color:var(--muted)">' + esc(p[1]) + '</span></div>'; }).join('') + '</div>' +
-        (st.pairs.length > 50 ? '<p class="hint">and ' + (st.pairs.length - 50) + ' more</p>' : '') : '';
+      var extra = st.pairs.reduce(function (n, p) { return Math.max(n, p.length - 2); }, 0);
+      var found = sepSel.value === 'auto' && ta.value.trim() ? { tab: 'tabs', comma: 'commas', semicolon: 'semicolons', pipe: 'bars', dash: 'dashes' }[TextUtil.detectSep(ta.value)] : '';
+      $('[data-preview]', E).innerHTML = st.pairs.length ?
+        '<div class="imp-sum">' + plural(st.pairs.length, 'card') + (extra ? ', up to ' + plural(extra, 'extra side') : '') + (found ? ' &middot; split by ' + found : '') + '</div>' +
+        '<div class="imp-table"><table><thead><tr><th>Front</th><th>Back</th>' + (extra ? '<th>Extra sides</th>' : '') + '</tr></thead><tbody>' +
+        st.pairs.slice(0, 30).map(function (p) { return '<tr><td>' + esc(p[0]) + '</td><td>' + esc(p[1]) + '</td>' + (extra ? '<td>' + esc(p.slice(2).filter(Boolean).join(' / ')) + '</td>' : '') + '</tr>'; }).join('') +
+        '</tbody></table></div>' + (st.pairs.length > 30 ? '<p class="hint" style="margin:6px 0 0">and ' + (st.pairs.length - 30) + ' more</p>' : '') : '';
     }
     ta.addEventListener('input', update);
+    sepSel.addEventListener('change', update);
+    head.addEventListener('change', function () { headTouched = true; update(); });
     $('[data-csv]', E).addEventListener('click', function () { $('[data-file]', E).click(); });
     $('[data-file]', E).addEventListener('change', function (e) {
       var f = e.target.files[0]; if (!f) return;
-      var r = new FileReader(); r.onload = function () { ta.value = String(r.result); update(); }; r.readAsText(f);
+      if (/\.csv$/i.test(f.name) && sepSel.value === 'auto') sepSel.value = 'comma';
+      var r = new FileReader(); r.onload = function () { ta.value = String(r.result); headTouched = false; update(); }; r.readAsText(f);
     });
-    $$('[data-t]', E).forEach(function (b) { b.addEventListener('click', function () { st.type = b.getAttribute('data-t'); $$('[data-t]', E).forEach(function (x) { x.classList.toggle('on', x === b); }); }); });
     go.addEventListener('click', function () {
       busy(go, true);
-      api('importCards', { deckId: deckId, pairs: st.pairs, type: st.type, reverse: $('[data-rev]', E).checked }).then(function (r) {
+      var catSel = $('[data-imp-cat]', E);
+      var before = catSel && catSel.value ? api('saveDeck', { id: deck.id, name: deck.name, color: deck.color, category: catSel.value }).then(function (d) { Object.assign(deck, d); }) : Promise.resolve();
+      before.then(function () {
+        return api('importCards', { deckId: deckId, pairs: st.pairs, type: st.type, reverse: $('[data-rev]', E).checked, speak: sp && sp.checked ? spWhen.value : '' });
+      }).then(function (r) {
         S.cards = S.cards.concat(r.cards); cacheNow(); m.close(); render();
         toast(plural(r.cards.length, 'card') + ' imported.');
       }, function (e) { busy(go, false); $('[data-err]', E).textContent = e.message; });
