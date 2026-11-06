@@ -383,7 +383,9 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .disc-chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 .disc-cats.sub .disc-chip { height: 30px; font-size: 13px; }
 .disc-cats + .disc-cats.sub:empty + .disc-grid, .disc-cats.sub + .disc-grid { margin-top: 16px; }
-.cat-chip { width: 100%; justify-content: space-between; }
+.cat-chip, .folder-chip { width: 100%; justify-content: space-between; }
+.folder-chip select { flex: 1; }
+[data-folder-new] { margin-top: 8px; }
 .cat-chip select { flex: 1; }
 .sh-pubcat { display: grid; gap: 8px; margin: 14px 0 0 48px; font-size: 13.5px; font-weight: 600; }
 .sh-pubcat .hint { font-weight: 500; }
@@ -3381,6 +3383,24 @@ var TextUtil = (function () {
       '</optgroup><optgroup label="Subjects">' + TextUtil.SUBJECTS.map(function (x) { return '<option value="' + x[0] + '"' + (sel === x[0] ? ' selected' : '') + '>' + esc(x[1]) + '</option>'; }).join('') + '</optgroup>';
   }
   function catLabel(id) { var c = TextUtil.category(id); return c ? (c.group === 'Languages' ? c.label : c.label) : ''; }
+  /* Folder picker: a dropdown of your folders, No folder, or New folder (then type a name).
+     A hidden [data-folder] input always holds the chosen name, so callers just read its value. */
+  function folderField(label, current) {
+    var names = folderNames().slice();
+    if (current && names.indexOf(current) < 0) names.push(current);
+    return '<div class="field"><span>' + esc(label) + '</span><input type="hidden" data-folder value="' + esc(current || '') + '">' +
+      '<span class="ce-chip folder-chip">' + I.folder + '<select data-folder-sel aria-label="' + esc(label) + '"><option value="">No folder</option>' +
+      names.map(function (f) { return '<option value="' + esc(f) + '"' + (f === current ? ' selected' : '') + '>' + esc(f) + '</option>'; }).join('') +
+      '<option value="__new">New folder...</option></select>' + I.chev + '</span>' +
+      '<input class="input" data-folder-new maxlength="40" placeholder="New folder name" hidden></div>';
+  }
+  function wireFolderField(root) {
+    var sel = $('[data-folder-sel]', root), nw = $('[data-folder-new]', root), out = $('[data-folder]', root);
+    if (!sel) return;
+    function sync() { out.value = sel.value === '__new' ? nw.value.replace(/\s+/g, ' ').trim() : sel.value; }
+    sel.addEventListener('change', function () { nw.hidden = sel.value !== '__new'; if (!nw.hidden) nw.focus(); sync(); });
+    nw.addEventListener('input', sync);
+  }
   function openDeckEditor(deck, presetFolder) {
     var color = deck ? deck.color : COLORS[S.decks.length % COLORS.length];
     var m = modal(deck ? 'Edit deck' : 'New deck',
@@ -3388,7 +3408,7 @@ var TextUtil = (function () {
       '<label class="field"><span>Category (optional)</span><span class="ce-chip cat-chip">' + I.folder + '<select data-cat aria-label="Category">' + catOptions(deck ? deck.category || '' : '', 'No category') + '</select>' + I.chev + '</span>' +
       '<span class="hint" style="font-size:12px">Setting the language helps pick the right voice for reading aloud. Public decks need a category.</span></label>' +
       '<label class="field"><span>Right in a row to finish a card for the day</span><input class="input" type="number" inputmode="numeric" min="1" max="999" step="1" data-streak></label>' +
-      '<label class="field"><span>Folder</span><input class="input" data-folder maxlength="40" list="fc-folders" placeholder="None"><datalist id="fc-folders">' + folderNames().map(function (f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist></label>' +
+      folderField('Folder', deck ? folderOf(deck.id) : (presetFolder || '')) +
       '<div class="field"><span>Colour</span><div class="swatches">' + COLORS.map(function (c) { return '<button class="swatch" data-c="' + c + '" style="background:' + c + '" aria-label="' + c + '"></button>'; }).join('') +
       '<label class="swatch" style="background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);cursor:pointer" title="Custom"><input type="color" data-custom style="opacity:0;width:100%;height:100%;cursor:pointer"></label></div></div>' +
       '<label class="field"><span>Cover image link (optional)</span><input class="input" data-image placeholder="https:&#47;&#47;..." autocomplete="off"><span class="hint" style="font-size:12px">Paste a link to a picture. It shows behind the deck name, tinted with the colour.</span></label>' +
@@ -3397,7 +3417,7 @@ var TextUtil = (function () {
       '<span class="spacer"></span><button class="btn" data-close>Cancel</button><button class="btn primary" data-save>' + (deck ? 'Save' : 'Create deck') + '</button>');
     var name = $('[data-name]', m.el);
     name.value = deck ? deck.name : '';
-    $('[data-folder]', m.el).value = deck ? folderOf(deck.id) : (presetFolder || '');
+    wireFolderField(m.el);
     $('[data-streak]', m.el).value = String(deck ? deckGoal(deck.id) : 5);
     var imgIn = $('[data-image]', m.el), imgPrev = $('[data-img-prev]', m.el);
     imgIn.value = deck && deck.image || '';
@@ -4083,11 +4103,11 @@ var TextUtil = (function () {
     }
     var m = modal(d.name, '<p class="hint" style="margin:-4px 0 12px">' + (d.cards ? plural(d.cards, 'card') : 'Public deck') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.copies ? ' &middot; copied ' + plural(d.copies, 'time') : '') + '</p>' +
       '<div data-prev class="preview-list" style="max-height:320px"><div class="spinner"></div></div>' +
-      (d.mine ? '' : '<label class="field" style="margin-top:14px"><span>Put it in a folder (optional)</span><input class="input" data-folder list="fc-folders2" placeholder="None"><datalist id="fc-folders2">' + folderNames().map(function (f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist></label>') +
+      (d.mine ? '' : '<div style="margin-top:14px">' + folderField('Put it in a folder (optional)', d.folder || '') + '</div>') +
       '<div class="error" data-err></div>',
       '<span class="spacer"></span><button class="btn" data-close>Close</button>' + (d.mine ? '' : '<button class="btn primary" data-add>' + I.plus + 'Add to my decks</button>'), { wide: true });
     var E = m.el;
-    var pf = $('[data-folder]', E); if (pf && d.folder) pf.value = d.folder;
+    if (!d.mine) wireFolderField(E);
     api('catalogPreview', { deckId: d.id }).then(function (cards) {
       $('[data-prev]', E).innerHTML = cards.map(function () { return '<div><span></span><span style="color:var(--muted)"></span></div>'; }).join('') + (d.cards && d.cards > cards.length ? '<div><span class="hint">and ' + plural(d.cards - cards.length, 'more card') + '</span></div>' : '');
       $$('[data-prev] > div', E).forEach(function (row, i) { if (!cards[i]) return; var sp = $$('span', row); sp[0].textContent = cards[i].front; sp[1].textContent = cards[i].back; });
