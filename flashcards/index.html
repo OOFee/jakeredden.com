@@ -341,8 +341,10 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .ce-info { margin-left: 2px; }
 .ce-type-hint { margin: 10px 0 0; }
 .ce-top + .ce-type-hint[hidden] + .ce-fields, .ce-top + .ce-type-hint + .ce-fields { margin-top: 18px; }
-.ce-swap-row { display: flex; justify-content: center; margin: -6px 0 -8px; }
-.ce-swap { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+.ce-swap-row { margin: -4px 0 -6px; }
+.ce-swap-cell { display: flex; justify-content: center; }
+.ce-ghost { visibility: hidden; height: 0; overflow: hidden; }
+.ce-swap { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--muted); font: 600 13px var(--font); cursor: pointer; }
 .ce-swap:hover { color: var(--text); }
 .ce-swap svg { width: 16px; height: 16px; }
 .ce-more { margin-top: 16px; border-top: 1px solid var(--line); }
@@ -364,7 +366,7 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .ce-speak-when { justify-self: start; margin-left: 48px; }
 .bulk-t { display: inline-flex; align-items: center; gap: 6px; }
 .ce-box { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
-.ce-side-opts { display: grid; gap: 2px; align-content: start; }
+.ce-side-opts { display: grid; gap: 2px; align-content: center; }
 .ce-opt { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: 600 13px var(--font); cursor: pointer; white-space: nowrap; text-align: left; }
 .ce-opt:hover { background: var(--surface-2); color: var(--text); }
 .ce-opt svg { width: 16px; height: 16px; flex: none; }
@@ -3427,7 +3429,8 @@ var TextUtil = (function () {
       '<div class="ce-fields">' +
       '<div class="ce-field"><div class="ce-lab"><span>Front</span></div>' +
       sideBox('f', 'data-text="f" enterkeyhint="next" autofocus') + '<div class="ce-dup" data-dup hidden></div><div class="media-row" data-media-row="f"></div></div>' +
-      '<div class="ce-swap-row"><button class="ce-swap" data-swap title="Swap front and back" aria-label="Swap front and back">' + I.swap + '</button></div>' +
+      '<div class="ce-box ce-swap-row"><div class="ce-swap-cell"><button class="ce-swap" data-swap title="Swap what is on the front and back">' + I.swap + '<span>Swap front and back</span></button></div>' +
+      '<div class="ce-side-opts ce-ghost" aria-hidden="true"><span class="ce-opt">' + I.link + '<span>Image link</span></span></div></div>' +
       '<div class="ce-field"><div class="ce-lab"><span>Back</span></div>' +
       sideBox('b', 'data-text="b"') + '<div class="media-row" data-media-row="b"></div></div>' +
       '<div class="ce-extras" data-extras></div>' +
