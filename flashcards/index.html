@@ -411,6 +411,15 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .imp-opts { display: grid; gap: 14px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
 .imp-opt-h { font-size: 14px; font-weight: 650; }
 .imp-opts .ce-speak-when { margin-left: 48px; }
+.nb-wrap { position: relative; }
+.nb-dot { position: absolute; top: 2px; right: 0; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 99px; background: var(--again); color: #fff; font: 700 10.5px/17px var(--font); font-style: normal; text-align: center; box-shadow: 0 0 0 2px var(--bg); }
+.sh-state { display: block; font-style: normal; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.fr-inv { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); margin-bottom: 10px; }
+.fr-inv-top { display: flex; align-items: center; gap: 10px; }
+.fr-inv-decks { display: flex; flex-wrap: wrap; gap: 6px; }
+.fr-inv-decks .chip { display: inline-flex; align-items: center; gap: 6px; }
+.fr-dotc { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.fr-inv-act { display: flex; justify-content: flex-end; gap: 8px; }
 .ce-more-links { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .ce-extras { display: grid; gap: 12px; }
 .ce-extras:empty { display: none; }
@@ -649,6 +658,9 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 .wextra { margin-top: 10px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .wallet-tile.open .wextra { display: none; }
 .wallet-tile:not(.picked) .wstack { opacity: .55; }
+/* Some decks ticked: the unticked ones in the folder fade, like an unticked folder. */
+.wallet-tile.picked .wc:not(.picked):not(.extra), .wallet-tile.open.picked .wc:not(.picked) { opacity: .55; }
+.wallet-tile.picked .wc:not(.picked):hover { opacity: .85; }
 .pick input[data-some] + i { background: var(--c); border-color: var(--c); }
 .pick input[data-some] + i::after { content: ''; width: 10px; height: 2.5px; background: #fff; border-radius: 2px; }
 .folder-picks { display: grid; gap: 6px; max-height: 320px; overflow: auto; }
@@ -2407,6 +2419,7 @@ var TextUtil = (function () {
     else render();
     load();
   }
+  function loadAll() { return load(); }
   function load() {
     return api('bootstrap').then(function (d) {
       setData(d);
@@ -2422,6 +2435,7 @@ var TextUtil = (function () {
   }
   function setData(d) {
     S.user = d.user; S.decks = d.decks || []; S.daily = d.daily || []; S.quotes = d.quotes || [];
+    S.notices = d.notices || { invites: [], requests: 0 };
     S.cards = d.cards || [];
     loadPending();
     S.pending.forEach(function (p) { var c = cardById(p.id); if (c) { c.srs = c.srs || {}; c.srs[p.dir] = p.srs; } });
@@ -2482,10 +2496,13 @@ var TextUtil = (function () {
     if (S.view === 'friends') return renderFriends(app);
   }
 
+  function reloadAll() { return loadAll(); }
+  /* Things waiting for this person: invites to edit and friend requests. Shown as a dot on the Friends button. */
+  function noticeCount() { var n = S.notices || {}; return (n.invites ? n.invites.length : 0) + (Number(n.requests) || 0); }
   function topbar(extra) {
     return '<header class="topbar"><div class="wrap"><button class="brand" data-home><span class="mark"></span>Flash Cards</button>' +
       '<span class="tb-quote" aria-live="off"><span></span></span><span class="spacer"></span><span class="sync hide-sm"><i></i><span>' + (isGuest() ? 'On this device only' : 'Saved') + '</span></span>' + (extra || '') +
-      '<button class="btn ghost icon-btn" data-friends aria-label="Friends" title="Friends">' + I.people + '</button>' +
+      '<button class="btn ghost icon-btn nb-wrap" data-friends aria-label="Friends" title="Friends">' + I.people + '' + (noticeCount() ? '<i class="nb-dot" title="Waiting for you">' + noticeCount() + '</i>' : '') + '</button>' +
       '<button class="btn ghost icon-btn" data-theme-toggle aria-label="Switch light or dark" title="Light / dark">' + (isDark() ? I.sun : I.moon) + '</button>' +
       '<button class="btn ghost icon-btn" data-settings aria-label="Settings">' + I.gear + '</button></div></header>';
   }
@@ -2947,7 +2964,7 @@ var TextUtil = (function () {
     var k = knownLabel(lv), extra = Math.max(0, xs.length - WC_MAX);
     var cards = xs.map(function (x, i) {
       var d = x.deck, dl = levelsOf([d.id]), kl = knownLabel(dl);
-      return '<div class="wc' + (i >= WC_MAX ? ' extra' : '') + (safeImg(d.image) ? ' has-img' : '') + '" data-wdeck="' + esc(d.id) + '" style="--dc:' + esc(d.color) + coverStyle(d) + ';--i:' + i + ';--ci:' + Math.min(i, WC_MAX - 1) + ';z-index:' + (i + 1) + '">' +
+      return '<div class="wc' + (i >= WC_MAX ? ' extra' : '') + (x.on ? ' picked' : '') + (safeImg(d.image) ? ' has-img' : '') + '" data-wdeck="' + esc(d.id) + '" style="--dc:' + esc(d.color) + coverStyle(d) + ';--i:' + i + ';--ci:' + Math.min(i, WC_MAX - 1) + ';z-index:' + (i + 1) + '">' +
         '<div class="wtop"><b><span class="dk-name">' + esc(d.name) + '</span>' + shareMarks(d) + '</b><span>' + (kl === 'New' || kl === 'Empty' ? kl : kl + ' known') + '</span></div>' +
         '<div class="wbot"><small>' + plural(dl.total, 'card') + '</small>' + lvBar(dl) + '</div>' +
         '<label class="pick wpick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
@@ -3872,11 +3889,12 @@ var TextUtil = (function () {
       '<div class="sh-modes"><button class="sh-mode on" data-m="copy"><b>' + I.upload + 'Send a copy</b><span>They get their own copy with fresh progress. Your deck is not changed.</span></button>' +
       '<button class="sh-mode" data-m="collab"' + (own.length ? '' : ' disabled') + '><b>' + I.edit + 'Invite to edit</b><span>' + (own.length ? 'You edit ' + (single ? 'this deck' : 'these decks') + ' together. Everyone keeps their own progress.' : 'Only the owner can invite people to edit.') + '</span></button></div>' +
       '<div class="row" style="justify-content:flex-end;margin-top:12px"><span class="error" data-err style="flex:1"></span><button class="btn primary" data-go>Send copy</button></div>' +
-      (single && single.mine ? '<div class="sh-sec"><div class="sh-h">People who can edit</div><div data-people><span class="hint">Loading...</span></div></div>' +
+      (own.length ? '<div class="sh-sec"><div class="sh-h">People who can edit</div><div data-people><span class="hint">Loading...</span></div></div>' : '') +
+      (single && single.mine ? '' +
         '<div class="sh-sec sh-pub"><label class="switch" data-pub-sw><input type="checkbox" data-public' + (single.public ? ' checked' : '') + (single.category ? '' : ' disabled') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your username is shown.</small></span></label>' +
         '<div class="sh-pubcat"><span>Category in Discover</span><span class="ce-chip">' + I.folder + '<select data-pubcat-sel aria-label="Category">' + catOptions(single.category || '', 'Choose a category') + '</select>' + I.chev + '</span>' +
         '<small class="hint" data-pubcat-hint' + (single.category ? ' hidden' : '') + '>Pick a category first, then switch Public on.</small></div></div>' : '') +
-      (folderName && own.length ? folderPublicHtml(own, folderName) : !single && own.length ? '<p class="hint" style="margin:14px 0 0">To make decks public or remove people, use Share on a single deck.</p>' : ''),
+      (folderName && own.length ? folderPublicHtml(own, folderName) : !single && own.length ? '<p class="hint" style="margin:14px 0 0">To make decks public, use Share on a single deck or a folder.</p>' : ''),
       '', { wide: false });
     var E = m.el, email = $('[data-email]', E);
     if (folderName && own.length) wireFolderPublic(E, own, folderName);
@@ -3892,16 +3910,18 @@ var TextUtil = (function () {
     function loadPeople() {
       var box = $('[data-people]', E);
       if (!box) return;
-      api('deckMembers', { deckId: single.id }).then(function (list) {
-        single.members = list.length; cacheNow();
+      var ids = own.map(function (d) { return d.id; });
+      api('deckMembers', { deckIds: ids }).then(function (list) {
+        if (single) { single.members = list.filter(function (p) { return p.editing; }).length; cacheNow(); }
         box.innerHTML = list.length ? list.map(function (p) {
-          return '<div class="sh-person"><span><b></b><small></small></span><button class="btn sm ghost danger" data-rm="' + esc(p.email) + '">Remove</button></div>';
+          var state = p.editing ? (ids.length > 1 && p.editing < ids.length ? 'Can edit ' + p.editing + ' of ' + plural(ids.length, 'deck') : 'Can edit') + (p.pending ? ', invited to ' + plural(p.pending, 'more deck') : '') : 'Invited, waiting for them to accept';
+          return '<div class="sh-person"><span><b></b><small></small><em class="sh-state">' + state + '</em></span><button class="btn sm ghost danger" data-rm="' + esc(p.email) + '">' + (p.editing ? 'Remove' : 'Take back') + '</button></div>';
         }).join('') : '<span class="hint">Just you.</span>';
         $$('.sh-person', box).forEach(function (row, i) { $('b', row).textContent = list[i].name || list[i].email; $('small', row).textContent = list[i].email; });
         $$('[data-rm]', box).forEach(function (b) {
           b.addEventListener('click', function () {
             busy(b, true);
-            api('removeMember', { deckId: single.id, email: b.getAttribute('data-rm') }).then(function () { loadPeople(); render(); }, function (e) { busy(b, false); $('[data-err]', E).textContent = e.message; });
+            api('removeMember', { deckIds: ids, email: b.getAttribute('data-rm') }).then(function () { loadPeople(); render(); }, function (e) { busy(b, false); $('[data-err]', E).textContent = e.message; });
           });
         });
       }, function (e) { box.textContent = e.message; });
@@ -3938,9 +3958,8 @@ var TextUtil = (function () {
         busy(btn, false); rememberPerson(who);
         if (mode === 'copy') toast('Sent ' + plural(r.decks, 'deck') + ' (' + plural(r.cards, 'card') + ') to ' + r.to + '.');
         else {
-          toast(r.added ? r.to + ' can now edit ' + plural(r.added, 'deck') + '.' : r.to + ' already had access.');
-          if (r.added) ids.forEach(function (id) { var d = deckById(id); if (d) d.members = (d.members || 0) + 1; });
-          cacheNow(); render(); loadPeople();
+          toast(r.invited ? 'Invite sent to "' + r.to + '". They accept it from their Friends page.' : '"' + r.to + '" is already invited or editing.');
+          cacheNow(); loadPeople();
         }
         email.value = '';
       }, function (e) { busy(btn, false); err.textContent = e.message; });
@@ -3983,6 +4002,11 @@ var TextUtil = (function () {
       var board = [{ name: 'You', me: true, week: d.me.weekTotal, streak: d.me.streak }].concat(d.friends.map(function (f) { return { name: f.name, week: f.stats.weekTotal, streak: f.stats.streak }; }))
         .sort(function (a, b) { return b.week - a.week || b.streak - a.streak; });
       var html = '';
+      if (d.invites && d.invites.length) html += '<section class="fr-sec"><h2>Invitations to edit</h2>' + d.invites.map(function (g, gi) {
+        return '<div class="fr-inv"><div class="fr-inv-top"><span class="fr-av">' + esc((g.from || '?').charAt(0)) + '</span><span><b data-nt>' + esc(g.from) + '</b> <span>invited you to edit</span> <span class="hint">' + plural(g.decks.length, 'deck') + '</span></span></div>' +
+          '<div class="fr-inv-decks">' + g.decks.map(function (dk) { return '<span class="chip" style="--c:' + esc(dk.color) + '"><i class="fr-dotc"></i><span data-nt>' + esc(dk.name) + '</span></span>'; }).join('') + '</div>' +
+          '<div class="fr-inv-act"><button class="btn sm ghost" data-inv-no="' + gi + '">Decline</button><button class="btn sm primary" data-inv-yes="' + gi + '">Accept</button></div></div>';
+      }).join('') + '</section>';
       if (d.incoming.length) html += '<section class="fr-sec"><h2>Requests</h2>' + d.incoming.map(function (r) {
         return '<div class="fr-req"><span class="fr-av">' + esc((r.name || '?').charAt(0)) + '</span><b>' + esc(r.name) + '</b><span class="spacer"></span><button class="btn sm ghost" data-no="' + esc(r.id) + '">Decline</button><button class="btn sm primary" data-yes="' + esc(r.id) + '">Accept</button></div>';
       }).join('') + '</section>';
@@ -4010,6 +4034,17 @@ var TextUtil = (function () {
       $$('.fr-deck b', box).forEach(function (b) {
         var ij = b.parentNode.getAttribute('data-open').split(':');
         b.textContent = d.friends[ij[0]].shared[ij[1]].name;
+      });
+      $$('[data-inv-yes], [data-inv-no]', box).forEach(function (b) {
+        b.addEventListener('click', function () {
+          var yes = b.hasAttribute('data-inv-yes'), g = d.invites[Number(b.getAttribute(yes ? 'data-inv-yes' : 'data-inv-no'))];
+          busy(b, true);
+          api('respondInvite', { deckIds: g.decks.map(function (x) { return x.id; }), accept: yes }).then(function (r) {
+            toast(yes ? 'You can now edit ' + plural(r.count, 'deck') + ' from "' + g.from + '".' : 'Invite declined.');
+            if (S.notices) S.notices.invites = (S.notices.invites || []).filter(function (x) { return x !== g; });
+            load(); reloadAll();
+          }, function (e) { busy(b, false); toast(e.message, true); });
+        });
       });
       $$('[data-yes]', box).forEach(function (b) { b.addEventListener('click', function () { api('friendRespond', { id: b.getAttribute('data-yes'), accept: true }).then(load, fail); }); });
       $$('[data-no]', box).forEach(function (b) { b.addEventListener('click', function () { api('friendRespond', { id: b.getAttribute('data-no'), accept: false }).then(load, fail); }); });
