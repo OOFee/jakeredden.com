@@ -389,6 +389,7 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .switch:has(input:disabled) { cursor: not-allowed; }
 .sh-pubcat .ce-chip { justify-content: space-between; }
 .sh-pubcat .ce-chip select { flex: 1; }
+.set-lang { margin-top: 18px; }
 .set-lang .ce-chip { width: 100%; justify-content: space-between; }
 .set-lang .ce-chip select { flex: 1; }
 .imp-paste { min-height: 140px; font-family: ui-monospace, monospace; font-size: 13px; }
@@ -1805,6 +1806,7 @@ var TextUtil = (function () {
     var saved = Array.isArray(own) ? own : st && st.lastDecks;
     var ids = S.decks.map(function (d) { return d.id; });
     if (!Array.isArray(saved)) return ids;
+    if (!saved.length) return [];
     var keep = saved.filter(function (id) { return ids.indexOf(id) >= 0; });
     return keep.length ? keep : ids;
   }
@@ -2639,7 +2641,7 @@ var TextUtil = (function () {
     var st = streak();
     var hide = {}; (S.user.settings.hide || []).forEach(function (h) { hide[h] = 1; });
     var solo = hide.goal && hide.streak && hide.heat;
-    var empty = !S.cards.length ? (S.decks.length ? 'Add some cards to start studying.' : 'Make your first deck to get started.') : '';
+    var empty = !S.cards.length ? (S.decks.length ? 'Add some cards to start studying.' : 'Make your first deck to get started.') : !sel.length ? 'No decks chosen. Tick the decks below that you want to study.' : '';
 
     var big, sub, buttons;
     var chosenTxt = allOn ? 'All ' + plural(S.decks.length, 'deck') : sel.length + ' of ' + plural(S.decks.length, 'deck');
@@ -2717,7 +2719,6 @@ var TextUtil = (function () {
       cb.addEventListener('change', function () {
         var ids = selectedDecks().filter(function (id) { return id !== cb.getAttribute('data-pick'); });
         if (cb.checked) ids.push(cb.getAttribute('data-pick'));
-        if (!ids.length) { cb.checked = true; toast('Keep at least one deck chosen.'); return; }
         setSelected(ids); render();
       });
     });
@@ -2730,7 +2731,6 @@ var TextUtil = (function () {
       cb.addEventListener('change', function () {
         var cur = selectedDecks().filter(function (id) { return ids.indexOf(id) < 0; });
         if (cb.checked) cur = cur.concat(ids);
-        if (!cur.length) { cb.checked = true; toast('Keep at least one deck chosen.'); return; }
         setSelected(cur); render();
       });
       box.addEventListener('click', function () { toggleWallet(box, f); });
