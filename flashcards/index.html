@@ -3143,7 +3143,7 @@ var TextUtil = (function () {
     basic: 'Flip the card, then grade yourself.',
     typed: 'Type the answer. Small typos, capitals and accents are forgiven. Separate accepted answers with " / ".',
     choice: 'Pick from 4 answers. Wrong options come from other cards in the deck.',
-    tf: 'True or false. Start the back with O (true) or X (false), then an optional explanation on a new line (Shift+Enter).'
+    tf: 'True or false. Start the back with O (true) or X (false), then an optional explanation on a new line.'
   };
   function openCardEditor(card, deckId, onSaved) {
     var st = {
@@ -3172,7 +3172,7 @@ var TextUtil = (function () {
       '<div class="ce-swap-row"><button class="ce-link" data-mid-on' + (st.mid ? ' hidden' : '') + '>' + I.plus + 'Add a middle side</button><span class="spacer"></span>' +
       '<button class="ce-link" data-swap title="Swap front and back">' + I.swap + 'Swap front and back</button></div>' +
       '<div class="ce-field"><div class="ce-lab"><span>Back</span>' + mediaBtns('b') + '</div>' +
-      '<textarea class="textarea ce-text" data-text="b" rows="2" maxlength="5000" enterkeyhint="done"></textarea><div class="media-row" data-media-row="b"></div></div>' +
+      '<textarea class="textarea ce-text" data-text="b" rows="2" maxlength="5000"></textarea><div class="media-row" data-media-row="b"></div></div>' +
       '<div class="ce-field" data-hint-field' + (st.hint ? '' : ' hidden') + '><div class="ce-lab"><span>Hint <small>people can show it before they flip</small></span><button class="btn ghost icon-btn sm" data-hint-off title="Remove the hint" aria-label="Remove the hint">' + I.x + '</button></div>' +
       '<input class="input" data-hint-text maxlength="500" enterkeyhint="done"></div>' +
       '</div>' +
@@ -3265,6 +3265,8 @@ var TextUtil = (function () {
         if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
         if (e.metaKey || e.ctrlKey) { e.preventDefault(); save(); return; }
         if (e.shiftKey) return;
+        /* Phone keyboards have no Shift+Enter, so the back keeps Enter for new lines there; Add card saves. */
+        if (box === tb && window.matchMedia && matchMedia('(hover: none)').matches) return;
         e.preventDefault();
         var list = order(), i = list.indexOf(box);
         if (i >= 0 && i < list.length - 1) list[i + 1].focus(); else save();
