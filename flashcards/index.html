@@ -3955,7 +3955,7 @@ var TextUtil = (function () {
       var call = mode === 'copy' ? api('sendDecks', { email: who, deckIds: ids }) : api('inviteCollaborator', { email: who, deckIds: ids });
       call.then(function (r) {
         busy(btn, false); rememberPerson(who);
-        if (mode === 'copy') toast('Sent ' + plural(r.decks, 'deck') + ' (' + plural(r.cards, 'card') + ') to ' + r.to + '.');
+        if (mode === 'copy') toast('Sent ' + plural(r.decks, 'deck') + ' (' + plural(r.cards, 'card') + ') to "' + r.to + '".');
         else {
           toast(r.invited ? 'Invite sent to "' + r.to + '". They accept it from their Friends page.' : '"' + r.to + '" is already invited or editing.');
           cacheNow(); loadPeople();
@@ -3989,7 +3989,7 @@ var TextUtil = (function () {
       if (!addr) { err.textContent = 'Type their email first.'; email.focus(); return; }
       api('friendRequest', { email: addr }).then(function (r) {
         email.value = '';
-        toast(r.status === 'ok' ? 'You and ' + r.name + ' are now friends.' : 'Request sent to ' + r.name + '. They need to accept it.');
+        toast(r.status === 'ok' ? 'You and "' + r.name + '" are now friends.' : 'Request sent to "' + r.name + '". They need to accept it.');
         load();
       }, function (e) { err.textContent = e.message; });
     }
@@ -4065,7 +4065,7 @@ var TextUtil = (function () {
           var ij = b.getAttribute('data-open').split(':'), f = d.friends[ij[0]], sh = f.shared[ij[1]];
           if (deckById(sh.id)) { go('deck', { deckId: sh.id }); return; }
           if (sh.kind === 'public') { previewPublic({ id: sh.id, name: sh.name, by: f.name, cards: 0, mine: false }); return; }
-          toast(sh.dir === 'out' ? 'That copy is in ' + f.name + '\'s decks.' : 'That copy is no longer in your decks.');
+          toast(sh.dir === 'out' ? 'That copy is in "' + f.name + '"\'s decks.' : 'That copy is no longer in your decks.');
         });
       });
     }
