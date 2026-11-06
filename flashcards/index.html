@@ -380,6 +380,10 @@ html.study-on .hint-text, html.study-on .face .mid-small { color: var(--text); }
 .disc-cats.sub { margin-top: 8px; }
 .disc-chip { height: 34px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--muted); font: 600 13.5px var(--font); cursor: pointer; }
 .disc-chip:hover { color: var(--text); }
+.disc-chip.pick-chip { display: inline-flex; align-items: center; gap: 6px; }
+.disc-chip.pick-chip svg { width: 15px; height: 15px; }
+.chip.picked { color: var(--good); }
+.chip.picked svg { width: 14px; height: 14px; }
 .disc-chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
 .disc-cats.sub .disc-chip { height: 30px; font-size: 13px; }
 .disc-cats + .disc-cats.sub:empty + .disc-grid, .disc-cats.sub + .disc-grid { margin-top: 16px; }
@@ -1632,7 +1636,7 @@ var TextUtil = (function () {
   function api(method, args) {
     return new Promise(function (resolve, reject) {
       if (S.token === GUEST && method === 'catalog') method = 'catalogGuest';
-      if (S.token === GUEST && method !== 'config' && method !== 'catalogGuest') {
+      if (S.token === GUEST && method !== 'config' && method !== 'catalogGuest' && method !== 'strings') {
         try { resolve(guestCall(method, args)); } catch (x) { reject(x); }
         return;
       }
@@ -2393,6 +2397,7 @@ var TextUtil = (function () {
   /* ================= boot ================= */
   function boot() {
     applyTheme();
+    setUiLang(uiLang());
     S.token = ls('fc.token');
     api('config').then(function (c) { S.config = c; addGoogleToAuth(); }, function () {});
     if (!S.token) { go('auth'); return; }
@@ -2427,6 +2432,7 @@ var TextUtil = (function () {
     });
     ls('fc.theme', S.user.settings.theme);
     applyTheme();
+    setUiLang(uiLang());
   }
   function cacheNow() { if (S.user && !isGuest()) ls('fc.cache', { user: S.user, decks: S.decks, cards: S.cards, daily: S.daily, quotes: S.quotes }); }
   function signedIn(token) { S.token = token; ls('fc.token', token); S.view = 'boot'; render(); load(); }
@@ -2640,7 +2646,7 @@ var TextUtil = (function () {
     var pct = Math.min(1, done / goal);
     var C = 2 * Math.PI * 18;
     var hour = new Date().getHours();
-    var hello = (hour < 5 ? 'Late night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening') + (firstName() ? ', ' + esc(firstName()) : '');
+    var hello = (hour < 5 ? 'Late night' : hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening') + (firstName() ? ', <span class="hello-name">' + esc(firstName()) + '</span>' : '');
     if (S.quoteIdx == null) S.quoteIdx = Math.floor(Math.random() * 1000);
     var quote = S.quotes.length ? S.quotes[S.quoteIdx % S.quotes.length] : '';
     var st = streak();
@@ -2942,14 +2948,14 @@ var TextUtil = (function () {
     var cards = xs.map(function (x, i) {
       var d = x.deck, dl = levelsOf([d.id]), kl = knownLabel(dl);
       return '<div class="wc' + (i >= WC_MAX ? ' extra' : '') + (safeImg(d.image) ? ' has-img' : '') + '" data-wdeck="' + esc(d.id) + '" style="--dc:' + esc(d.color) + coverStyle(d) + ';--i:' + i + ';--ci:' + Math.min(i, WC_MAX - 1) + ';z-index:' + (i + 1) + '">' +
-        '<div class="wtop"><b>' + esc(d.name) + shareMarks(d) + '</b><span>' + (kl === 'New' || kl === 'Empty' ? kl : kl + ' known') + '</span></div>' +
+        '<div class="wtop"><b><span class="dk-name">' + esc(d.name) + '</span>' + shareMarks(d) + '</b><span>' + (kl === 'New' || kl === 'Empty' ? kl : kl + ' known') + '</span></div>' +
         '<div class="wbot"><small>' + plural(dl.total, 'card') + '</small>' + lvBar(dl) + '</div>' +
         '<label class="pick wpick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
         '<button class="wgo" aria-label="Study ' + esc(d.name) + '" title="Study this deck">' + I.play + '</button></div>';
     }).join('');
     return '<div class="wallet-tile' + (open ? ' open' : '') + (on ? ' picked' : '') + '" role="button" tabindex="0" aria-expanded="' + open + '" data-folder="' + esc(f) + '" data-n="' + xs.length + '" style="--fc:' + esc(xs[0] ? xs[0].deck.color : DEFAULT_ACCENT) + '">' +
       '<div class="whead"><label class="pick" title="Choose every deck in this folder"><input type="checkbox" data-fpick' + (on === xs.length ? ' checked' : '') + (on && on < xs.length ? ' data-some' : '') + '><i></i></label>' +
-      '<div class="wtitle"><h3>' + esc(f) + '</h3><div class="meta">' + plural(xs.length, 'deck') + ' &middot; ' + plural(lv.total, 'card') + ' &middot; ' + (k === 'New' ? 'not started' : k === 'Empty' ? 'empty' : k + ' known') + '</div></div>' +
+      '<div class="wtitle"><h3><span class="wt-name">' + esc(f) + '</span>' + folderMarks(f, xs) + '</h3><div class="meta">' + plural(xs.length, 'deck') + ' &middot; ' + plural(lv.total, 'card') + ' &middot; ' + (k === 'New' ? 'not started' : k === 'Empty' ? 'empty' : k + ' known') + '</div></div>' +
       '<button class="fmore" data-fedit aria-label="Folder actions" title="Folder actions (or right-click)">' + I.more + '</button></div>' +
       '<div class="wstack" style="height:' + walletH(xs.length, open) + 'px">' + cards + '</div>' +
       (extra ? '<div class="wextra">+' + plural(extra, 'more deck') + '</div>' : '') + '</div>';
@@ -3054,7 +3060,7 @@ var TextUtil = (function () {
       if (!t) return;
       if (t.classList.contains('wallet-tile')) {
         var f = t.getAttribute('data-folder'), name = (deckById(id) || {}).name;
-        setFolder(id, f); toast('Moved ' + (name ? '"' + name + '" ' : '') + 'to ' + f + '.');
+        setFolder(id, f); toast('Moved ' + (name ? '"' + name + '" ' : '') + 'to "' + f + '".'); offerFolderPublic(id, f);
       } else {
         var from = folderOf(id); setFolder(id, ''); toast('Taken out of ' + from + '.');
       }
@@ -3092,6 +3098,28 @@ var TextUtil = (function () {
     return (shared ? '<i class="share-mark" title="' + esc(shared) + '" aria-label="' + esc(shared) + '">' + I.people + '</i>' : '') +
       (d.public ? '<i class="share-mark" title="Public in Discover" aria-label="Public in Discover">' + I.globe + '</i>' : '');
   }
+  function folderIsPublicDecks(f, decks) { var own = decks.filter(function (d) { return d.mine; }); return own.length > 0 && own.every(function (d) { return d.public && d.pubFolder === f; }); }
+  function folderMarks(f, xs) {
+    var decks = xs.map(function (x) { return x.deck; });
+    var shared = decks.some(function (d) { return !d.mine || d.members; });
+    return (shared ? '<i class="share-mark" title="Has shared decks" aria-label="Has shared decks">' + I.people + '</i>' : '') +
+      (folderIsPublicDecks(f, decks) ? '<i class="share-mark" title="Public folder in Discover" aria-label="Public folder in Discover">' + I.globe + '</i>' : '');
+  }
+  /* A deck moved into a public folder: offer to put it in that folder in Discover too. */
+  function offerFolderPublic(id, f) {
+    var d = deckById(id);
+    if (!d || !d.mine || !f || (d.public && d.pubFolder === f)) return;
+    var others = S.decks.filter(function (x) { return x.id !== id && folderOf(x.id) === f; });
+    if (!folderIsPublicDecks(f, others)) return;
+    confirmBox('Make it public too?', '"' + f + '" is a public folder. Show "' + d.name + '" in it in Discover as well?', 'Make public').then(function (ok) {
+      if (!ok) return;
+      var own = others.filter(function (x) { return x.mine; });
+      api('setPublicMany', { deckIds: [id], public: true, folder: f, category: folderCat(own) || d.category || 'other' }).then(function (r) {
+        r.decks.forEach(function (nd) { var x = deckById(nd.id); if (x) Object.assign(x, nd); });
+        cacheNow(); render(); toast('"' + d.name + '" is public in "' + f + '".');
+      }, fail);
+    });
+  }
   function deckTile(x) {
     var d = x.deck, st = x.st, fs = x.fs, mode = studyMode(), free = mode !== 'mission';
     var chips = !st.total ? '<span class="chip">Empty</span>' : free
@@ -3100,7 +3128,7 @@ var TextUtil = (function () {
     var canGo = free ? st.total > 0 : st.ready > 0;
     return '<div class="deck solid' + (safeImg(d.image) ? ' has-img' : '') + (x.on ? ' picked' : '') + '" role="button" tabindex="0" data-id="' + esc(d.id) + '" style="--c:' + esc(d.color) + coverStyle(d) + '">' +
       '<label class="pick" title="Include when studying"><input type="checkbox" data-pick="' + esc(d.id) + '"' + (x.on ? ' checked' : '') + '><i></i></label>' +
-      '<span class="dot"></span><h3>' + esc(d.name) + shareMarks(d) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
+      '<span class="dot"></span><h3><span class="dk-name">' + esc(d.name) + '</span>' + shareMarks(d) + '</h3><div class="meta">' + plural(st.total, 'card') + '</div>' +
       '<div class="counts">' + chips + deckBadges(d) + '</div>' +
       (st.total ? '<div class="deck-bar">' + lvBar(levelsOf([d.id])) + '</div>' : '') +
       '<button class="go" aria-label="Study ' + esc(d.name) + '">' + (canGo ? I.play : I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')) + '</button></div>';
@@ -3440,6 +3468,7 @@ var TextUtil = (function () {
           if (fname) fm[d.id] = fname; else delete fm[d.id];
           S.user.settings.folders = fm;
           saveSettingsSoon();
+          if (fname) setTimeout(function () { offerFolderPublic(d.id, fname); }, 350);
         }
         cacheNow(); m.close();
         if (deck) render(); else go('deck', { deckId: d.id });
@@ -3800,7 +3829,7 @@ var TextUtil = (function () {
   function folderCat(own) { var c = own[0] && own[0].category || ''; return own.every(function (d) { return (d.category || '') === c; }) ? c : ''; }
   function folderPublicHtml(own, f) {
     var on = folderIsPublic(own, f), cat = folderCat(own);
-    return '<div class="sh-sec sh-pub"><label class="switch"><input type="checkbox" data-fpublic' + (on ? ' checked' : '') + (cat ? '' : ' disabled') + '><i></i><span><b>Public folder</b><small>All ' + plural(own.length, 'deck') + ' you own here show in Discover as one folder called "' + esc(f) + '". People can copy them, never change yours, and only your first name is shown.</small></span></label>' +
+    return '<div class="sh-sec sh-pub"><label class="switch"><input type="checkbox" data-fpublic' + (on ? ' checked' : '') + (cat ? '' : ' disabled') + '><i></i><span><b>Public folder</b><small>All ' + plural(own.length, 'deck') + ' you own here show in Discover as one folder called "' + esc(f) + '". People can copy them, never change yours, and only your username is shown.</small></span></label>' +
       '<div class="sh-pubcat"><span>Category in Discover</span><span class="ce-chip">' + I.folder + '<select data-fcat aria-label="Category">' + catOptions(cat, 'Choose a category') + '</select>' + I.chev + '</span>' +
       '<small class="hint" data-fcat-hint' + (cat ? ' hidden' : '') + '>Pick a category first, then switch Public folder on. Every deck in the folder gets it.</small></div></div>';
   }
@@ -3842,7 +3871,7 @@ var TextUtil = (function () {
       '<button class="sh-mode" data-m="collab"' + (own.length ? '' : ' disabled') + '><b>' + I.edit + 'Invite to edit</b><span>' + (own.length ? 'You edit ' + (single ? 'this deck' : 'these decks') + ' together. Everyone keeps their own progress.' : 'Only the owner can invite people to edit.') + '</span></button></div>' +
       '<div class="row" style="justify-content:flex-end;margin-top:12px"><span class="error" data-err style="flex:1"></span><button class="btn primary" data-go>Send copy</button></div>' +
       (single && single.mine ? '<div class="sh-sec"><div class="sh-h">People who can edit</div><div data-people><span class="hint">Loading...</span></div></div>' +
-        '<div class="sh-sec sh-pub"><label class="switch" data-pub-sw><input type="checkbox" data-public' + (single.public ? ' checked' : '') + (single.category ? '' : ' disabled') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your first name is shown.</small></span></label>' +
+        '<div class="sh-sec sh-pub"><label class="switch" data-pub-sw><input type="checkbox" data-public' + (single.public ? ' checked' : '') + (single.category ? '' : ' disabled') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your username is shown.</small></span></label>' +
         '<div class="sh-pubcat"><span>Category in Discover</span><span class="ce-chip">' + I.folder + '<select data-pubcat-sel aria-label="Category">' + catOptions(single.category || '', 'Choose a category') + '</select>' + I.chev + '</span>' +
         '<small class="hint" data-pubcat-hint' + (single.category ? ' hidden' : '') + '>Pick a category first, then switch Public on.</small></div></div>' : '') +
       (folderName && own.length ? folderPublicHtml(own, folderName) : !single && own.length ? '<p class="hint" style="margin:14px 0 0">To make decks public or remove people, use Share on a single deck.</p>' : ''),
@@ -4013,7 +4042,7 @@ var TextUtil = (function () {
 
   /* ================= discover (public decks) ================= */
   function renderDiscover(app) {
-    var st = S.disc || (S.disc = { q: '', sort: 'popular', list: null, cat: '', lang: '' });
+    var st = S.disc || (S.disc = { q: '', sort: 'popular', list: null, cat: '', lang: '', picked: false });
     app.innerHTML = topbar() + '<main class="wrap discover"><div class="appear">' +
       '<button class="btn ghost sm" data-back style="margin-left:-10px">' + I.back + 'Home</button>' +
       '<div class="disc-head"><div><h1>Discover</h1><p class="hint">' + (isGuest() ? 'Ready-made folders of flash cards. Make an account to look inside and add them to your decks.' : 'Ready-made folders, plus decks other people have made public. Add any of them to your own decks.') + '</p></div></div>' +
@@ -4031,6 +4060,7 @@ var TextUtil = (function () {
     q.addEventListener('input', function () { st.q = q.value; clearTimeout(timer); timer = setTimeout(load, 300); });
     /* Category chips: All, each subject that has decks, and under Languages the languages that have decks. */
     function groupOf(d) { var c = TextUtil.category(d.category); return c ? c.group : 'Other'; }
+    function isPicked(d) { return /^house:/.test(d.folderKey || '') || d.by === 'FlashCards'; }
     function paintCats(all) {
       var groups = [], langs = [];
       all.forEach(function (d) {
@@ -4041,7 +4071,10 @@ var TextUtil = (function () {
       groups.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
       if (st.cat && groups.indexOf(st.cat) < 0) st.cat = '';
       var box = $('[data-cats]', app), sub = $('[data-subcats]', app);
-      box.innerHTML = groups.length > 1 ? [''].concat(groups).map(function (g) { return '<button class="disc-chip' + (st.cat === g ? ' on' : '') + '" data-cat="' + esc(g) + '">' + esc(g || 'All') + '</button>'; }).join('') : '';
+      var hasOwn = all.some(function (d) { return !isPicked(d); }), hasPicked = all.some(isPicked);
+      box.innerHTML = (hasOwn && hasPicked ? '<button class="disc-chip pick-chip' + (st.picked ? ' on' : '') + '" data-picked>' + I.check + 'Picked by us</button>' : '') +
+        (groups.length > 1 ? [''].concat(groups).map(function (g) { return '<button class="disc-chip' + (st.cat === g ? ' on' : '') + '" data-cat="' + esc(g) + '">' + esc(g || 'All') + '</button>'; }).join('') : '');
+      var pk = $('[data-picked]', box); if (pk) pk.addEventListener('click', function () { st.picked = !st.picked; paint(st.list); });
       sub.innerHTML = st.cat === 'Languages' && langs.length > 1 ? ['<button class="disc-chip' + (!st.lang ? ' on' : '') + '" data-lang="">All languages</button>'].concat(langs.map(function (id) { return '<button class="disc-chip' + (st.lang === id ? ' on' : '') + '" data-lang="' + esc(id) + '">' + esc(TextUtil.category(id).label) + '</button>'; })).join('') : '';
       $$('[data-cat]', box).forEach(function (b) { b.addEventListener('click', function () { st.cat = b.getAttribute('data-cat'); st.lang = ''; paint(st.list); }); });
       $$('[data-lang]', sub).forEach(function (b) { b.addEventListener('click', function () { st.lang = b.getAttribute('data-lang'); paint(st.list); }); });
@@ -4050,7 +4083,7 @@ var TextUtil = (function () {
       var box = $('[data-list]', app);
       if (!box) return;
       paintCats(all);
-      var list = all.filter(function (d) { return (!st.cat || groupOf(d) === st.cat) && (!st.lang || d.category === st.lang); });
+      var list = all.filter(function (d) { return (!st.cat || groupOf(d) === st.cat) && (!st.lang || d.category === st.lang) && (!st.picked || isPicked(d)); });
       if (!list.length) { box.innerHTML = '<div class="empty" style="grid-column:1/-1">' + (st.q ? 'No public decks match "' + esc(st.q) + '".' : 'No public decks yet. Make one of yours public from its Share button.') + '</div>'; return; }
       var groups = {}, tiles = [];
       list.forEach(function (d, i) {
@@ -4068,7 +4101,7 @@ var TextUtil = (function () {
           g.decks.sort(function (a, b) { return a.order - b.order; });
           return '<button class="disc-card disc-folder" data-fold="' + esc(g.key) + '" style="--c:' + esc(g.decks[0].color) + '"><span class="disc-top"></span><b>' + esc(g.name) + '</b>' +
             '<span class="disc-meta">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(n, 'card') + (g.by ? ' &middot; by ' + esc(g.by) : '') + '</span>' +
-            '<span class="disc-foot"><span class="chip">' + I.folder + 'Folder</span><span class="disc-open">Open ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</span></span></button>';
+            '<span class="disc-foot">' + (g.by ? '<span class="chip">' + I.folder + 'Folder</span>' : '<span class="chip picked">' + I.check + 'Picked by us</span>') + '<span class="disc-open">Open ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</span></span></button>';
         }
         var d = t.deck, i = d.at;
         return '<button class="disc-card" data-i="' + i + '" style="--c:' + esc(d.color) + '"><span class="disc-top"></span><b></b>' +
@@ -4257,7 +4290,7 @@ var TextUtil = (function () {
     $('[data-save]', E).addEventListener('click', function () {
       var btn = this; busy(btn, true);
       api('saveSettings', { name: guest ? '' : $('[data-name]', E).value, settings: Object.assign({}, S.user.settings, { newPerDay: $('[data-new]', E).value, goal: $('[data-goal]', E).value, theme: theme, minimal: $('[data-minimal]', E).checked, lang: $('[data-lang]', E).value }) }).then(function (r) {
-        S.user = r; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow();
+        S.user = r; ls('fc.theme', S.user.settings.theme); applyTheme(); cacheNow(); setUiLang(uiLang());
         m.close(); render(); toast('Settings saved.');
       }, function (e) { busy(btn, false); $('[data-err]', E).textContent = e.message; });
     });
@@ -4935,6 +4968,89 @@ var TextUtil = (function () {
     var t = e.target;
     if (t && t.classList && t.classList.contains('deck') && (t.hasAttribute('data-id') || t.hasAttribute('data-folder'))) { e.preventDefault(); t.click(); }
   });
+
+  /* ================= interface language =================
+     The page is written in English. Text shown on screen is swapped for the person's language (Settings, Your language;
+     the device language by default). Numbers and "quoted names" inside a sentence are kept and put back in place.
+     People's own words (cards, deck, folder and people names, quotes) are never translated. */
+  var UI = { lang: 'en', dict: null, seen: {}, sent: {} };
+  var NT_SEL = '.face-body, .crow .f, .crow .b, .dk-name, .wt-name, .disc-card b, .pub-row b, .preview-list, .imp-table td, .tb-quote, [data-nt], .sh-person, .fr-name, .hello-name, textarea, script, style, .toast-nt';
+  function uiLang() {
+    var l = S.user && S.user.settings && S.user.settings.lang;
+    var nav = String(navigator.language || 'en').slice(0, 2).toLowerCase();
+    var c = l || nav;
+    return TextUtil.lang(c) ? c : 'en';
+  }
+  function uiKey(text) {
+    var vals = { n: [], q: [] };
+    var k = String(text).replace(/\s+/g, ' ').trim();
+    k = k.replace(/"([^"]*)"/g, function (m, inner) { vals.q.push(inner); return '"{q' + vals.q.length + '}"'; });
+    k = k.replace(/\d+(?:[.,:]\d+)*/g, function (m) { vals.n.push(m); return '{n' + vals.n.length + '}'; });
+    return { key: k, vals: vals };
+  }
+  function tr(text) {
+    if (!text || !/[A-Za-z]/.test(text)) return text;
+    var u = uiKey(text);
+    if (!u.key) return text;
+    if (window.FC_HARVEST && !UI.seen[u.key]) UI.seen[u.key] = String(text).replace(/\s+/g, ' ').trim();
+    var out = UI.dict && UI.dict[u.key];
+    if (!out) return text;
+    out = out.replace(/\{([nq])(\d+)\}/g, function (m, t, i) { var v = u.vals[t][Number(i) - 1]; return v == null ? m : v; });
+    var lead = /^\s*/.exec(text)[0], tail = /\s*$/.exec(text)[0];
+    return lead + out + tail;
+  }
+  function skipEl(el) { return !el || (el.closest && el.closest(NT_SEL)); }
+  var UI_ATTRS = ['placeholder', 'title', 'aria-label'];
+  function trAttrs(el) {
+    UI_ATTRS.forEach(function (a) {
+      var v = el.getAttribute && el.getAttribute(a);
+      if (v) { var t = tr(v); if (t !== v) el.setAttribute(a, t); }
+    });
+  }
+  function trTree(root) {
+    if (!UI.dict && !window.FC_HARVEST) return;
+    if (root.nodeType === 3) { if (!skipEl(root.parentNode)) { var t0 = tr(root.data); if (t0 !== root.data) root.data = t0; } return; }
+    if (root.nodeType !== 1 || skipEl(root)) return;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n, list = [];
+    while ((n = w.nextNode())) list.push(n);
+    list.forEach(function (node) {
+      if (skipEl(node.parentNode)) return;
+      var t = tr(node.data); if (t !== node.data) node.data = t;
+    });
+    trAttrs(root);
+    Array.prototype.forEach.call(root.querySelectorAll('[placeholder],[title],[aria-label]'), function (el) { if (!skipEl(el)) trAttrs(el); });
+  }
+  if (window.MutationObserver) {
+    new MutationObserver(function (muts) {
+      if (!UI.dict && !window.FC_HARVEST) return;
+      muts.forEach(function (m) {
+        if (m.type === 'childList') Array.prototype.forEach.call(m.addedNodes, trTree);
+        else if (m.type === 'attributes' && !skipEl(m.target)) trAttrs(m.target);
+      });
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: UI_ATTRS });
+  }
+  /* Load the person's language once, keep it on this device, then redraw. */
+  function setUiLang(lang) {
+    lang = TextUtil.lang(lang) ? lang : 'en';
+    document.documentElement.lang = lang;
+    if (lang === 'en') { if (UI.lang !== 'en') { UI.lang = 'en'; UI.dict = null; render(); } return; }
+    var cached = ls('fc.i18n.' + lang);
+    var had = UI.lang === lang && UI.dict;
+    UI.lang = lang;
+    if (cached && cached.strings) { UI.dict = cached.strings; if (!had) { render(); trTree(document.body); } }
+    api('strings', { lang: lang, v: cached && cached.v }).then(function (r) {
+      if (!r || !r.strings || UI.lang !== lang) return;
+      if (cached && cached.v === r.v) return;
+      ls('fc.i18n.' + lang, r);
+      UI.dict = r.strings; render(); trTree(document.body);
+    }, function () {});
+  }
+  /* Development only: collect every piece of interface text seen, for translating. */
+  if (window.FC_HARVEST) setInterval(function () {
+    var fresh = {};
+    Object.keys(UI.seen).forEach(function (k) { if (!UI.sent[k]) { fresh[k] = UI.seen[k]; UI.sent[k] = 1; } });
+    if (Object.keys(fresh).length) fetch('/__harvest', { method: 'POST', body: JSON.stringify(fresh) }).catch(function () {});
+  }, 700);
 
   window.addEventListener('beforeunload', function () { savePending(); cacheNow(); });
   boot();
