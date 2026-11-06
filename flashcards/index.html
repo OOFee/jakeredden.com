@@ -3369,11 +3369,9 @@ var TextUtil = (function () {
       hint: card ? !!card.hint : false
     };
     var deckOpts = S.decks.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === (card ? card.deckId : deckId) ? ' selected' : '') + '>' + esc(d.name) + '</option>'; }).join('');
-    /* The text box with its options beside it: Image, Sound, Image link. */
+    /* The text box with its option beside it: an image from a web link (nothing is uploaded). */
     function sideBox(key, attrs) {
       return '<div class="ce-box"><textarea class="textarea ce-text" ' + attrs + ' rows="2" maxlength="5000"></textarea><div class="ce-side-opts">' +
-        '<button class="ce-opt" data-addimg="' + key + '" title="Add an image from this device" aria-label="Add image">' + I.image + '<span>Image</span></button>' +
-        '<button class="ce-opt" data-addaudio="' + key + '" title="Add a sound file" aria-label="Add sound">' + I.audio + '<span>Sound</span></button>' +
         '<button class="ce-opt" data-addurl="' + key + '" title="Use an image from a web link" aria-label="Image link">' + I.link + '<span>Image link</span></button></div></div>' +
         '<div class="ce-url" data-url-row="' + key + '" hidden><input class="input" type="url" inputmode="url" placeholder="Paste an image link" data-url-in><button class="btn sm primary" data-url-ok>Add</button><button class="btn sm ghost" data-url-x>Cancel</button></div>';
     }
@@ -3400,7 +3398,7 @@ var TextUtil = (function () {
         '<label class="ce-chip ce-speak-when" data-speak-when-box hidden>' + I.audio + '<select data-speak-when aria-label="When to read aloud"><option value="all">Every side, from the start</option><option value="flip">Only after the flip</option></select>' + I.chev + '</label></div>' : '') +
       '<div class="ce-more-links"><button class="ce-link" data-hint-on' + (st.hint ? ' hidden' : '') + '>' + I.plus + 'Add a hint</button>' +
       (card ? '' : '<button class="ce-link" data-paste-list>' + I.upload + 'Paste a list of cards</button>') + '</div>' +
-      '<p class="hint ce-keys">Enter goes to the next box and adds the card from the last one. Shift+Enter starts a new line. Paste an image straight into a box.</p>' +
+      '<p class="hint ce-keys">Enter goes to the next box and adds the card from the last one. Shift+Enter starts a new line.</p>' +
       '</div></details>' +
       '<div class="error" data-err></div>' +
       '<input type="file" data-file hidden accept="image/*,audio/*">',
@@ -3540,12 +3538,6 @@ var TextUtil = (function () {
     function order() { return [tf, tb].concat(exAreas(), st.hint ? [th] : []); }
     function wireBox(box) {
       if (box.tagName === 'TEXTAREA') box.addEventListener('input', function () { grow(box); });
-      if (box !== th) box.addEventListener('paste', function (e) {
-        var items = (e.clipboardData && e.clipboardData.files) || [];
-        for (var i = 0; i < items.length; i++) {
-          if (/^image/.test(items[i].type)) { e.preventDefault(); attach(items[i], box.getAttribute('data-key') || box.getAttribute('data-text')); return; }
-        }
-      });
       box.addEventListener('keydown', function (e) {
         if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
         if (e.metaKey || e.ctrlKey) { e.preventDefault(); save(); return; }
