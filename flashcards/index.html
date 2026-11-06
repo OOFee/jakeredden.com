@@ -2237,7 +2237,7 @@ var TextUtil = (function () {
   var GUEST_ERRORS = {
     uploadMedia: 'Make an account to add pictures and audio.', friends: 'Make an account to add friends.', friendRequest: 'Make an account to add friends.',
     catalog: 'Make an account to browse public decks.', catalogPreview: 'Make an account to browse public decks.', copyPublic: 'Make an account to copy public decks.',
-    sendDecks: 'Make an account to share decks.', inviteCollaborator: 'Make an account to share decks.', setPublic: 'Make an account to share decks.', deckMembers: 'Make an account to share decks.'
+    sendDecks: 'Make an account to share decks.', inviteCollaborator: 'Make an account to share decks.', setPublic: 'Make an account to share decks.', setPublicMany: 'Make an account to share decks.', deckMembers: 'Make an account to share decks.'
   };
   /* Without an account only image links can be kept (files need the server). */
   function guestMedia(m) { return m && typeof m.url === 'string' && /^https:[/][/]\S{3,1000}$/i.test(m.url) ? { url: m.url } : {}; }
@@ -3115,7 +3115,7 @@ var TextUtil = (function () {
         var box = $$('.wallet-tile').filter(function (b) { return b.getAttribute('data-folder') === f; })[0];
         if (box) toggleWallet(box, f);
       } },
-      { label: 'Share folder...', icon: 'share', run: function () { openShare(ids, 'Share the "' + f + '" folder'); } },
+      { label: 'Share folder...', icon: 'share', run: function () { openShare(ids, 'Share the "' + f + '" folder', f); } },
       { label: 'New deck in this folder', icon: 'plus', run: function () { openDeckEditor(null, f); } },
       { label: 'Reset progress for this folder', icon: 'reset', run: function () { resetDecks(ids, 'the "' + f + '" folder'); } },
       { label: 'Remove folder, keep decks', icon: 'x', run: function () { removeFolder(f); toast('Folder removed. Its decks are still here.'); } },
@@ -3385,9 +3385,10 @@ var TextUtil = (function () {
   function catLabel(id) { var c = TextUtil.category(id); return c ? (c.group === 'Languages' ? c.label : c.label) : ''; }
   /* Folder picker: a dropdown of your folders, No folder, or New folder (then type a name).
      A hidden [data-folder] input always holds the chosen name, so callers just read its value. */
-  function folderField(label, current) {
+  function folderField(label, current, offer) {
     var names = folderNames().slice();
     if (current && names.indexOf(current) < 0) names.push(current);
+    if (offer && names.indexOf(offer) < 0) names.push(offer);
     return '<div class="field"><span>' + esc(label) + '</span><input type="hidden" data-folder value="' + esc(current || '') + '">' +
       '<span class="ce-chip folder-chip">' + I.folder + '<select data-folder-sel aria-label="' + esc(label) + '"><option value="">No folder</option>' +
       names.map(function (f) { return '<option value="' + esc(f) + '"' + (f === current ? ' selected' : '') + '>' + esc(f) + '</option>'; }).join('') +
@@ -3794,7 +3795,37 @@ var TextUtil = (function () {
     S.user.settings.recent = r.slice(0, 8);
     saveSettingsSoon();
   }
-  function openShare(deckIds, title) {
+  /* A whole folder public: every deck you own in it goes public together, shown in Discover as one folder under your name. */
+  function folderIsPublic(own, f) { return own.length && own.every(function (d) { return d.public && d.pubFolder === f; }); }
+  function folderCat(own) { var c = own[0] && own[0].category || ''; return own.every(function (d) { return (d.category || '') === c; }) ? c : ''; }
+  function folderPublicHtml(own, f) {
+    var on = folderIsPublic(own, f), cat = folderCat(own);
+    return '<div class="sh-sec sh-pub"><label class="switch"><input type="checkbox" data-fpublic' + (on ? ' checked' : '') + (cat ? '' : ' disabled') + '><i></i><span><b>Public folder</b><small>All ' + plural(own.length, 'deck') + ' you own here show in Discover as one folder called "' + esc(f) + '". People can copy them, never change yours, and only your first name is shown.</small></span></label>' +
+      '<div class="sh-pubcat"><span>Category in Discover</span><span class="ce-chip">' + I.folder + '<select data-fcat aria-label="Category">' + catOptions(cat, 'Choose a category') + '</select>' + I.chev + '</span>' +
+      '<small class="hint" data-fcat-hint' + (cat ? ' hidden' : '') + '>Pick a category first, then switch Public folder on. Every deck in the folder gets it.</small></div></div>';
+  }
+  function wireFolderPublic(E, own, f) {
+    var sw = $('[data-fpublic]', E), sel = $('[data-fcat]', E);
+    function send(pub) {
+      sw.disabled = true; sel.disabled = true;
+      return api('setPublicMany', { deckIds: own.map(function (d) { return d.id; }), public: pub, folder: f, category: sel.value }).then(function (r) {
+        r.decks.forEach(function (nd) { var d = deckById(nd.id); if (d) Object.assign(d, nd); });
+        sw.disabled = false; sel.disabled = false; sw.checked = pub;
+        cacheNow(); render();
+        return r;
+      }, function (e) { sw.disabled = !sel.value; sel.disabled = false; sw.checked = !pub; $('[data-err]', E).textContent = e.message; throw e; });
+    }
+    sw.addEventListener('change', function () {
+      var to = sw.checked;
+      send(to).then(function () { toast(to ? '"' + f + '" is public in Discover.' : '"' + f + '" is private again.'); }, function () {});
+    });
+    sel.addEventListener('change', function () {
+      if (!sel.value) { sel.value = folderCat(own); return; }
+      $('[data-fcat-hint]', E).hidden = true; sw.disabled = false;
+      if (sw.checked) send(true).then(function () { toast('Category: ' + catLabel(sel.value) + '.'); }, function () {});
+    });
+  }
+  function openShare(deckIds, title, folderName) {
     if (isGuest()) { toast('Make an account to share decks.'); return; }
     var decks = deckIds.map(deckById).filter(Boolean);
     if (!decks.length) return;
@@ -3814,9 +3845,10 @@ var TextUtil = (function () {
         '<div class="sh-sec sh-pub"><label class="switch" data-pub-sw><input type="checkbox" data-public' + (single.public ? ' checked' : '') + (single.category ? '' : ' disabled') + '><i></i><span><b>Public</b><small>Anyone can find it in Discover and copy it. They can never change yours, and only your first name is shown.</small></span></label>' +
         '<div class="sh-pubcat"><span>Category in Discover</span><span class="ce-chip">' + I.folder + '<select data-pubcat-sel aria-label="Category">' + catOptions(single.category || '', 'Choose a category') + '</select>' + I.chev + '</span>' +
         '<small class="hint" data-pubcat-hint' + (single.category ? ' hidden' : '') + '>Pick a category first, then switch Public on.</small></div></div>' : '') +
-      (!single && own.length ? '<p class="hint" style="margin:14px 0 0">To make decks public or remove people, use Share on a single deck.</p>' : ''),
+      (folderName && own.length ? folderPublicHtml(own, folderName) : !single && own.length ? '<p class="hint" style="margin:14px 0 0">To make decks public or remove people, use Share on a single deck.</p>' : ''),
       '', { wide: false });
     var E = m.el, email = $('[data-email]', E);
+    if (folderName && own.length) wireFolderPublic(E, own, folderName);
     function paint() {
       $$('[data-m]', E).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-m') === mode); });
       $('[data-go]', E).textContent = mode === 'copy' ? 'Send copy' : 'Invite';
@@ -4024,8 +4056,9 @@ var TextUtil = (function () {
       list.forEach(function (d, i) {
         d.at = i;
         if (!d.folder) { tiles.push({ deck: d }); return; }
-        if (!groups[d.folder]) { groups[d.folder] = { name: d.folder, decks: [] }; tiles.push({ group: groups[d.folder] }); }
-        groups[d.folder].decks.push(d);
+        var key = d.folderKey || d.folder;
+        if (!groups[key]) { groups[key] = { key: key, name: d.folder, by: /^house:/.test(key) ? '' : d.by, decks: [] }; tiles.push({ group: groups[key] }); }
+        groups[key].decks.push(d);
       });
       tiles = tiles.map(function (t) { return t.group && t.group.decks.length === 1 ? { deck: t.group.decks[0] } : t; });
       tiles.sort(function (a, b) { return (a.group ? 0 : 1) - (b.group ? 0 : 1); });
@@ -4033,8 +4066,8 @@ var TextUtil = (function () {
         if (t.group) {
           var g = t.group, n = g.decks.reduce(function (s, x) { return s + x.cards; }, 0);
           g.decks.sort(function (a, b) { return a.order - b.order; });
-          return '<button class="disc-card disc-folder" data-fold="' + esc(g.name) + '" style="--c:' + esc(g.decks[0].color) + '"><span class="disc-top"></span><b>' + esc(g.name) + '</b>' +
-            '<span class="disc-meta">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(n, 'card') + '</span>' +
+          return '<button class="disc-card disc-folder" data-fold="' + esc(g.key) + '" style="--c:' + esc(g.decks[0].color) + '"><span class="disc-top"></span><b>' + esc(g.name) + '</b>' +
+            '<span class="disc-meta">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(n, 'card') + (g.by ? ' &middot; by ' + esc(g.by) : '') + '</span>' +
             '<span class="disc-foot"><span class="chip">' + I.folder + 'Folder</span><span class="disc-open">Open ' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</span></span></button>';
         }
         var d = t.deck, i = d.at;
@@ -4058,7 +4091,7 @@ var TextUtil = (function () {
   /* A ready-made folder: look inside, preview a deck, or add the lot. */
   function openPublicFolder(g) {
     var total = g.decks.reduce(function (s, x) { return s + x.cards; }, 0);
-    var m = modal(g.name, '<p class="hint" style="margin:-4px 0 12px">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(total, 'card') + '</p>' +
+    var m = modal(g.name, '<p class="hint" style="margin:-4px 0 12px">' + plural(g.decks.length, 'deck') + ' &middot; ' + plural(total, 'card') + (g.by ? ' &middot; by ' + esc(g.by) : '') + '</p>' +
       '<div class="pub-list">' + g.decks.map(function (d, i) {
         return '<button class="pub-row" data-pd="' + i + '" style="--c:' + esc(d.color) + '"><i></i><span><b></b><small>' + plural(d.cards, 'card') + '</small></span>' + I.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6') + '</button>';
       }).join('') + '</div>' + (isGuest() ? guestLockNote() : '') + '<div class="error" data-err></div>',
@@ -4103,7 +4136,7 @@ var TextUtil = (function () {
     }
     var m = modal(d.name, '<p class="hint" style="margin:-4px 0 12px">' + (d.cards ? plural(d.cards, 'card') : 'Public deck') + (d.by ? ' &middot; by ' + esc(d.by) : '') + (d.copies ? ' &middot; copied ' + plural(d.copies, 'time') : '') + '</p>' +
       '<div data-prev class="preview-list" style="max-height:320px"><div class="spinner"></div></div>' +
-      (d.mine ? '' : '<div style="margin-top:14px">' + folderField('Put it in a folder (optional)', d.folder || '') + '</div>') +
+      (d.mine ? '' : '<div style="margin-top:14px">' + folderField('Put it in a folder (optional)', '', d.folder || '') + '</div>') +
       '<div class="error" data-err></div>',
       '<span class="spacer"></span><button class="btn" data-close>Close</button>' + (d.mine ? '' : '<button class="btn primary" data-add>' + I.plus + 'Add to my decks</button>'), { wide: true });
     var E = m.el;
