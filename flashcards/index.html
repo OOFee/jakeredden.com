@@ -522,6 +522,8 @@ html.study-on .say-btn { border-color: var(--gl-btn-edge); }
 @keyframes pop { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: none; opacity: 1; } }
 
 /* ---------- modal ---------- */
+.scrim, .modal { overscroll-behavior: contain; }
+html.modal-open { overflow: hidden; }
 .scrim { position: fixed; inset: 0; z-index: 50; background: rgba(8, 9, 14, .5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; animation: fade .2s ease; }
 .modal { width: 100%; max-width: 560px; max-height: calc(100vh - 40px); overflow: auto; background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); border: 1px solid var(--line); animation: rise .3s var(--ease); }
 .modal.wide { max-width: 760px; }
@@ -1695,6 +1697,21 @@ var TextUtil = (function () {
   function fail(e) { toast(e && e.message ? e.message : 'Something went wrong.', true); }
 
   var openModals = [];
+  /* While a window is open the page behind it cannot scroll; it comes back exactly where it was. */
+  var scrollLock = null;
+  function syncScrollLock() {
+    var want = openModals.length > 0, body = document.body;
+    if (want && !scrollLock) {
+      scrollLock = { y: window.scrollY };
+      body.style.position = 'fixed'; body.style.top = -scrollLock.y + 'px'; body.style.left = '0'; body.style.right = '0';
+      document.documentElement.classList.add('modal-open');
+    } else if (!want && scrollLock) {
+      var y = scrollLock.y; scrollLock = null;
+      body.style.position = ''; body.style.top = ''; body.style.left = ''; body.style.right = '';
+      document.documentElement.classList.remove('modal-open');
+      window.scrollTo(0, y);
+    }
+  }
   function modal(title, bodyHtml, footHtml, opts) {
     opts = opts || {};
     var scrim = el('<div class="scrim"><div class="modal' + (opts.wide ? ' wide' : '') + '" role="dialog" aria-modal="true">' +
@@ -1706,12 +1723,14 @@ var TextUtil = (function () {
       if (!scrim.parentNode) return;
       scrim.remove();
       openModals.splice(openModals.indexOf(m), 1);
+      syncScrollLock();
       if (m.onClose) m.onClose();
     }
     scrim.addEventListener('mousedown', function (e) { if (e.target === scrim) close(); });
     $$('[data-close]', scrim).forEach(function (b) { b.addEventListener('click', close); });
     document.body.appendChild(scrim);
     openModals.push(m);
+    syncScrollLock();
     setTimeout(function () { var f = $('[autofocus]', scrim); if (f) f.focus(); }, 30);
     return m;
   }
@@ -4456,6 +4475,7 @@ var TextUtil = (function () {
     previewBack = { view: S.view, study: S.study, deckId: S.deckId, editor: editor, scroll: window.scrollY };
     editor.el.style.display = 'none';
     openModals.splice(openModals.indexOf(editor), 1);
+    syncScrollLock();
     var deck = deckById(d.deckId);
     S.study = { preview: true, free: true, simple: true, done: 0, skipped: 0, firstTry: 0, label: 'Test card', learn: [], review: items, later: [], fresh: [], n: 0, correct: 0, rested: 0, doneToday: 0,
       started: Date.now(), from: 'home', color: deck ? deck.color : DEFAULT_ACCENT, title: 'Test card', total: items.length, cur: null };
@@ -4472,6 +4492,7 @@ var TextUtil = (function () {
     window.scrollTo(0, b.scroll || 0);
     b.editor.el.style.display = '';
     openModals.push(b.editor);
+    syncScrollLock();
     var f = $('[data-text="f"]', b.editor.el); if (f) f.focus();
   }
   function nextItem() {
